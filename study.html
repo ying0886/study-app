@@ -3,9 +3,29 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.36.0
+  APP_VERSION: 3.38.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.36.0）内置「学习路径」——每科一张从零基础到学完的依赖导图——
+  本次变更: （3.38.0）学习路径改成 XMind「逻辑图」简洁彩色分支风格（数据未动）——
+             ①节点分层：一级分支＝阶段（实心胶囊、白字、每段一个色相循环），二级＝知识点（同色系浅底胶囊、深字），
+               去掉阶段卡片边框与阴影，节点直接浮在底色上，越往下越轻；
+             ②连线：阶段之间改无箭头细线，颜色随本段分支色、上一段学完才由灰变实（推进提示）；
+             ③配色：新增 PATH_BRANCH 六色循环（青/绿/橙/紫/粉/红），每段注入 --bc/--btint/--bink/--blite 四值，
+               深色模式自动换亮字；浅底用同色 rgba 半透明，明暗主题都成立；
+             ④点亮与映射不变：仍复用 isCountedDoneOf，done/part/todo 三态、阶段进度条、点节点跳卡、窄屏/深色全部保留；
+             ⑤自测 path-mastery-test 复跑全过。
+  上次变更: （3.37.0）把学习路径思维导图提为应用主界面，并与卡片掌握进度完全联动（数据未动）——
+             ①主界面：启动即打开「学习台 · 学习路径」导图，顶栏新增「学习台」切换键（导图 ↔ 卡片列表随时切），
+               导图头部加「刷题」入口、关闭键改「返回卡片」；原更多菜单「学习路径」入口保留；
+             ②节点点亮：每掌握一张卡片，导图里对应节点就点亮——口径与顶部进度条、分组进度、卡片徽标完全一致
+               （isCountedDoneOf：刷题判定已掌握 或 手动勾选，取并集），不另起一套；
+             ③三态视觉：节点「已掌握＝实心点＋✓」「进行中＝半实心点（多知识点节点掌握其中一部分）」「未开始＝空心点」；
+               阶段卡顶部进度条 + 「x/y 已掌握」计数，整段学完阶段标题加 ✔、主干箭头由灰变实表示「可推进到下一段」；
+             ④映射：一个节点＝ path.json 里 chip 的 k 数组（1～3 个知识点，即 1～3 张卡片），全掌握才点亮；
+               点节点仍直达卡片（关导图→必要时切科目→jumpToPoint 展开高亮）；
+             ⑤实时联动：卡片状态一变（刷题判分 / 手动勾选）即重算点亮（挂进 renderProgress 同一条刷新链），无需重开导图；
+             ⑥左侧栏新增「已掌握 x/y」统计与三态图例，头部提示同步显示当前科目已掌握数；
+             ⑦自测 path-mastery-test 27 项（默认打开、三态、映射、掌握即点亮、点节点跳卡、头部刷题、无 JS 报错）全过。
+  上次变更: （3.36.0）内置「学习路径」——每科一张从零基础到学完的依赖导图——
              ①入口：更多菜单 →「学习路径」，全屏面板，四科可切换，默认停在当前科目；
              ②分段依据：不按教材目录，按 knowledgePoints.network.prerequisite 的真实前置切；化学 8 / 高数 7 / 计算机 7 / 思政 7 段，
                29 段 188 张卡片恰好覆盖 207 个知识点（46/32/68/61），一点不漏、一点也不重；
@@ -380,7 +400,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.36.0">
+<meta name="app-version" content="3.38.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1380,7 +1400,8 @@
   body.mode-quiz #tocBtn,
   body.mode-quiz #searchBtn,
   body.mode-quiz #favBtn,
-  body.mode-quiz #ovBtn{display:none}
+  body.mode-quiz #ovBtn,
+  body.mode-quiz #mapBtn{display:none}
   .quiz{padding:18px 16px 64px}
   .qwrap{max-width:880px;margin:0 auto}
   .qtitle{margin:0 0 6px;font-size:17px;font-weight:600;color:var(--ink)}
@@ -1816,32 +1837,28 @@
 
   .pathcanvas{flex:1 1 auto;overflow:auto;padding:15px 16px 28px;overscroll-behavior:contain;position:relative}
   .pathtrack{display:flex;gap:44px;align-items:flex-start;width:max-content;padding-bottom:4px}
-  .pstage{position:relative;width:224px;flex:0 0 224px;background:var(--card);
-    border:1px solid var(--line2);border-radius:10px}
-  .pstage::before{content:'';position:absolute;left:-1px;right:-1px;top:-1px;height:3px;
-    background:var(--pc);border-radius:10px 10px 0 0}
-  .pstage.fc{border-color:var(--pc);box-shadow:0 0 0 2px var(--accentBg)}
-  .pjoin{position:absolute;left:-44px;top:38px;width:44px;height:12px;color:var(--pc);opacity:.5}
-  .pstage .ph{display:flex;gap:8px;padding:12px 10px 9px;border-bottom:1px dashed var(--line)}
-  .pstage .pn2{flex:0 0 21px;color:var(--pc);font-size:16.5px;line-height:1.25;text-align:center}
-  .pstage .pt{font-size:12.8px;font-weight:600;line-height:1.38}
-  .pstage .pm{font-size:9.5px;color:var(--ink2);margin-top:3px;font-variant-numeric:tabular-nums}
+  .pstage{position:relative;width:224px;flex:0 0 224px;background:transparent}
+  .pstage.fc .pt{box-shadow:0 0 0 3px var(--accentBg)}
+  .pjoin{position:absolute;left:-44px;top:40px;width:44px;height:12px;color:var(--bc);opacity:.45}
+  .pstage .ph{display:flex;align-items:center;gap:8px;padding:0 0 6px}
+  .pstage .pt{flex:1 1 auto;min-width:0;display:inline-flex;align-items:center;gap:6px;
+    background:var(--bc);color:#fff;border-radius:999px;padding:6px 12px;
+    font-size:12.8px;font-weight:600;line-height:1.35}
+  .pstage .pm{font-size:9.5px;color:var(--ink2);margin:2px 2px 8px;font-variant-numeric:tabular-nums}
 
-  .ppts{list-style:none;margin:0;padding:6px 9px 2px;position:relative}
-  .ppts::before{content:'';position:absolute;left:15px;top:13px;bottom:12px;width:1px;background:var(--line)}
-  .ppts li{position:relative;display:flex}
-  .pk{position:relative;display:flex;align-items:flex-start;gap:5px;width:100%;text-align:left;
-    padding:3px 2px 3px 15px;border:0;border-radius:4px;background:none;
-    color:var(--ink);font:inherit;font-size:11.8px;line-height:1.5;cursor:pointer}
-  .pk::before{content:'';position:absolute;left:9px;top:11px;width:6px;height:1px;background:var(--line2)}
-  .pk:hover{background:var(--accentBg);color:var(--accent)}
+  .ppts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .ppts li{display:flex}
+  .pk{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
+    padding:5px 8px;border:0;border-radius:9px;background:var(--btint);
+    color:var(--bink);font:inherit;font-size:11.8px;line-height:1.45;cursor:pointer}
+  .pk:hover{filter:brightness(.97)}
   .pk .pn3{flex:1 1 auto;overflow-wrap:anywhere}
-  .pk .pl{flex:0 0 auto;font-size:9px;line-height:13px;padding:0 3px;border-radius:2px;
-    margin-top:3px;font-weight:600;letter-spacing:.02em}
-  .pk .pl.A{background:var(--pc);color:#fff}
-  .pk .pl.B{border:1px solid var(--pc);color:var(--pc);opacity:.9}
+  .pk .pl{flex:0 0 auto;font-size:9px;line-height:14px;padding:0 4px;border-radius:3px;
+    font-weight:600;letter-spacing:.02em}
+  .pk .pl.A{background:var(--bc);color:#fff}
+  .pk .pl.B{border:1px solid var(--bc);color:var(--bink)}
   .pk .pl.C{border:1px solid var(--line2);color:var(--ink2)}
-  .pk .pkx{flex:0 0 auto;font-size:9px;color:var(--ink2);opacity:.6;margin-top:3px}
+  .pk .pkx{flex:0 0 auto;font-size:9px;color:var(--ink2);opacity:.6}
 
   .pgoal{margin:6px 9px 0;padding:7px 9px 8px;border-radius:6px;background:var(--accentBg)}
   .pgoal b{display:block;font-size:9px;letter-spacing:.07em;color:var(--accent);margin-bottom:3px}
@@ -1864,7 +1881,31 @@
   /* 深色模式下 color2 是亮色，选中块与 A 徽标改用深字，避免白字压亮底 */
   html[data-theme="dark"] .pathtab[aria-selected="true"]{color:#17181b}
   html[data-theme="dark"] .pathtab[aria-selected="true"] i{background:#17181b}
-  html[data-theme="dark"] .pk .pl.A{color:#17181b}
+  /* [path-mastery] 学习台节点点亮：done=全掌握（实心✓） part=进行中（半实） todo=未开始（空心） */
+  .pk .pkdot{flex:0 0 auto;width:13px;height:13px;border-radius:50%;
+    border:1.5px solid var(--line2);background:transparent;box-sizing:border-box;
+    display:flex;align-items:center;justify-content:center;
+    font-size:8.5px;line-height:1;color:#fff;transition:.2s}
+  .pk.part .pkdot{border-color:var(--bc);background:var(--bc);opacity:.5}
+  .pk.done .pkdot{border-color:var(--bc);background:var(--bc);opacity:1}
+  .pk.done .pn3{color:var(--bink);font-weight:600}
+  .pk.todo .pn3{color:var(--ink2)}
+  .pstage .pdone{flex:0 0 auto;font-size:9.5px;color:var(--ink2);
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  .pstage.done .pdone{color:var(--bc);font-weight:600}
+  .pstage .pbar{height:3px;margin:0 0 8px;background:var(--barBg);border-radius:2px;overflow:hidden}
+  .pstage .pbar i{display:block;height:100%;width:0;background:var(--bc);transition:width .3s ease}
+  .pstage.done .pt::after{content:' ✔'}
+  .pjoin.lit{opacity:1}
+  .plegend{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 4px 6px;font-size:10px;color:var(--ink2)}
+  .plegend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
+    vertical-align:-1px;border:1.5px solid var(--line2)}
+  .plegend .dot.done{border-color:var(--pc);background:var(--pc)}
+  .plegend .dot.part{border-color:var(--pc);background:var(--pc);opacity:.5}
+  html[data-theme="dark"] .pk{color:var(--blite)}
+  html[data-theme="dark"] .pk .pl.B{color:var(--blite)}
+  html[data-theme="dark"] .pk.done .pn3{color:var(--blite)}
+  #mapBtn.on{background:var(--accentBg);border-color:var(--accent);color:var(--accent);font-weight:600}
 
   @media (max-width:820px){
     .pathbody{flex-direction:column}
@@ -1903,6 +1944,7 @@
     <span class="bar"><i id="progBar"></i></span>
   </div>
   <div class="acts">
+    <button class="btn" id="mapBtn" type="button" aria-pressed="false" title="学习台：学习路径思维导图，掌握一张卡片就点亮一个节点">学习台</button>
     <button class="btn" id="quizBtn" type="button" aria-pressed="false" title="切换刷题模式（按知识点练题）">刷题</button>
     <button class="btn" id="tocBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="navDrawer" title="知识点目录">目录</button>
     <button class="btn" id="searchBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="navDrawer" title="搜索知识点">搜索</button>
@@ -2063,10 +2105,11 @@
 <!-- [path] 学习路径：每科一张「从零基础到学完」的依赖导图；点知识点可跳回对应卡片 -->
 <div class="pathov" id="pathPanel" role="dialog" aria-modal="true" aria-labelledby="pathTitle" hidden>
   <div class="pathhead">
-    <h2 id="pathTitle">学习路径</h2>
+    <h2 id="pathTitle">学习台 · 学习路径</h2>
     <div class="pathtabs" id="pathTabs" role="tablist" aria-label="选择科目"></div>
     <span class="pathhint" id="pathHint"></span>
-    <button class="btn small" id="pathClose" type="button">关闭</button>
+    <button class="btn small" id="pathQuiz" type="button" title="回到卡片列表后进入刷题">刷题</button>
+    <button class="btn small" id="pathClose" type="button">返回卡片</button>
   </div>
   <div class="pathbody">
     <aside class="pathrail" id="pathRail" aria-label="阶段导航"></aside>
@@ -14756,7 +14799,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.36.0";
+  var APP_VERSION = "3.38.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -15855,6 +15898,8 @@
     if (ip) ip.textContent = "已完成 " + done + " / " + list.length;
     paintGroupProgress();
     renderGrowth();   // [growth] 成长路径与进度同源，进度变了它就要跟着变
+    // [path] 学习台节点跟着进度实时点亮（同一份 isCountedDoneOf 口径）
+    if (window.__reviewPath && window.__reviewPath.paint) window.__reviewPath.paint();
 
     var pf = byId("printFooter");
     if (pf) {
@@ -22000,9 +22045,24 @@
   var pathTrack = byId("pathTrack");
   var pathHint = byId("pathHint");
   var pathCloseBtn = byId("pathClose");
+  var mapBtn = byId("mapBtn");
+  var pathQuizBtn = byId("pathQuiz");
   var PATH_NO = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"];
   var PATH_I = 0;
   var PATH_LOCK = 0;
+
+  /* [path] 分支配色：XMind 逻辑图风格——每段一个色相循环，实心胶囊 + 同色浅底 + 深/亮两套文字 */
+  var PATH_BRANCH = [
+    { s: "#0F6E56", tint: "rgba(15,110,86,.12)", ink: "#085041", lite: "#7ee0c0" },
+    { s: "#3B6D11", tint: "rgba(59,109,17,.12)", ink: "#27500A", lite: "#b7e07f" },
+    { s: "#BA7517", tint: "rgba(186,117,23,.13)", ink: "#633806", lite: "#f2c886" },
+    { s: "#534AB7", tint: "rgba(83,74,183,.12)", ink: "#3C3489", lite: "#c3bcf5" },
+    { s: "#D4537E", tint: "rgba(212,83,126,.12)", ink: "#72243E", lite: "#f2b8ca" },
+    { s: "#E24B4A", tint: "rgba(226,75,74,.12)", ink: "#791F1F", lite: "#f3aeae" }
+  ];
+  function pathBranch(i) {
+    return PATH_BRANCH[(i % PATH_BRANCH.length + PATH_BRANCH.length) % PATH_BRANCH.length];
+  }
 
   function pathEsc(s) {
     return String(s == null ? "" : s)
@@ -22046,7 +22106,12 @@
     h += '<p class="pmain">' + pathEsc(p.main || "") + '</p>';
     h += '<div class="pcnt"><span><b>' + (p.total || 0) + '</b>知识点</span>' +
       '<span><b>' + p.stages.length + '</b>阶段</span>' +
-      '<span><b>' + pathCountA(p) + '</b>A 级</span></div>';
+      '<span><b>' + pathCountA(p) + '</b>A 级</span>' +
+      '<span><b class="pdone-all">0/' + (p.total || 0) + '</b>已掌握</span></div>';
+    h += '<p class="plbl">节点点亮</p>';
+    h += '<div class="plegend"><span><i class="dot done"></i>已掌握</span>' +
+      '<span><i class="dot part"></i>进行中</span>' +
+      '<span><i class="dot"></i>未开始</span></div>';
     h += '<p class="plbl">阶段导航 · 点击跳转</p>';
     for (var i = 0; i < p.stages.length; i++) {
       h += '<button class="pnav" type="button" data-go="' + i + '"' +
@@ -22061,27 +22126,28 @@
     var h = "";
     for (var i = 0; i < p.stages.length; i++) {
       var st = p.stages[i];
-      h += '<div class="pstage" data-i="' + i + '">';
+      var bc = pathBranch(i);
+      h += '<div class="pstage" data-i="' + i + '" style="--bc:' + bc.s +
+        ';--btint:' + bc.tint + ';--bink:' + bc.ink + ';--blite:' + bc.lite + '">';
       if (i > 0) {
         h += '<span class="pjoin"><svg width="44" height="12" viewBox="0 0 44 12" fill="none">' +
-          '<path d="M1 6H31" stroke="currentColor" stroke-width="1.6"/>' +
-          '<path d="M31 2L38 6L31 10" stroke="currentColor" stroke-width="1.6" ' +
-          'stroke-linejoin="round" stroke-linecap="round"/></svg></span>';
+          '<path d="M1 6H40" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>';
       }
-      h += '<div class="ph"><span class="pn2">' + pathNo(i) + '</span><div>' +
-        '<div class="pt">' + pathEsc(st.t) + '</div>' +
+      h += '<div class="ph"><span class="pt">' + pathNo(i) + ' ' + pathEsc(st.t) + '</span>' +
+        '<span class="pdone">0/' + st.n + '</span></div>' +
         '<div class="pm">' + pathEsc(st.s) + ' · ' + st.n + ' 点 · ' + pathEsc(st.lv) + '</div>' +
-        '</div></div>';
+        '<div class="pbar"><i></i></div>';
 
       h += '<ul class="ppts">';
       for (var j = 0; j < st.pts.length; j++) {
         var pt = st.pts[j];
         var tip = pt.n + (pt.k.length > 1 ? "（含 " + pt.k.length + " 个知识点）" : "");
         h += '<li><button class="pk" type="button" data-kid="' + pathEsc(pt.k[0]) +
-          '" title="' + pathEsc(tip) + '：点开卡片">' +
+          '" data-si="' + i + '" data-sj="' + j + '" title="' + pathEsc(tip) + '：点开卡片">' +
           '<span class="pn3">' + pathEsc(pt.n) + '</span>' +
           (pt.k.length > 1 ? '<span class="pkx">×' + pt.k.length + '</span>' : '') +
-          '<span class="pl ' + pathEsc(pt.lv) + '">' + pathEsc(pt.lv) + '</span></button></li>';
+          '<span class="pl ' + pathEsc(pt.lv) + '">' + pathEsc(pt.lv) + '</span>' +
+          '<span class="pkdot" aria-hidden="true"></span></button></li>';
       }
       h += '</ul>';
 
@@ -22113,9 +22179,70 @@
     pathRenderTabs();
     pathRenderRail(p);
     pathRenderTrack(p);
-    var mine = pathIndexOf(SID) === PATH_I;
-    pathHint.textContent = (mine ? "" : "当前科目暂无路径 · 现显示「" + pathNameOf(p.id) + "」 · ") +
-      p.stages.length + " 阶段 / " + (p.total || 0) + " 点";
+    pathPaint();
+  }
+
+  /* [path] 节点点亮：复算每个 chip / 阶段的掌握进度，只改 class 与文案，不重建 DOM。
+     口径与顶部进度条、分组进度、卡片徽标完全一致（isCountedDoneOf）。 */
+  function pathPaint() {
+    if (!pathTrack || !pathPanel || pathPanel.hidden) return;
+    var p = PATH.subjects[PATH_I];
+    if (!p || !p.stages) return;
+    var stDone = [], stTotal = [], i, j, k, pt, ndone;
+    var doneAll = 0, totalAll = 0;
+
+    for (i = 0; i < p.stages.length; i++) {
+      stDone[i] = 0; stTotal[i] = 0;
+      for (j = 0; j < p.stages[i].pts.length; j++) {
+        pt = p.stages[i].pts[j];
+        ndone = 0;
+        for (k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) ndone++;
+        stDone[i] += ndone;
+        stTotal[i] += pt.k.length;
+        doneAll += ndone;
+        totalAll += pt.k.length;
+      }
+    }
+
+    var chips = pathTrack.querySelectorAll(".pk");
+    for (var c = 0; c < chips.length; c++) {
+      var si = parseInt(chips[c].getAttribute("data-si"), 10);
+      var sj = parseInt(chips[c].getAttribute("data-sj"), 10);
+      if (isNaN(si) || isNaN(sj) || !p.stages[si] || !p.stages[si].pts[sj]) continue;
+      pt = p.stages[si].pts[sj];
+      ndone = 0;
+      for (k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) ndone++;
+      var cls = ndone === 0 ? "todo" : (ndone === pt.k.length ? "done" : "part");
+      chips[c].className = chips[c].className.replace(/\s*(todo|part|done)\b/g, "") + " " + cls;
+      var dot = chips[c].querySelector(".pkdot");
+      if (dot) dot.textContent = cls === "done" ? "✓" : "";
+    }
+
+    for (i = 0; i < p.stages.length; i++) {
+      var stEl = pathTrack.querySelector('.pstage[data-i="' + i + '"]');
+      if (!stEl) continue;
+      var bar = stEl.querySelector(".pbar i");
+      if (bar) bar.style.width = stTotal[i] ? (stDone[i] / stTotal[i] * 100).toFixed(1) + "%" : "0%";
+      var cnt = stEl.querySelector(".pdone");
+      if (cnt) cnt.textContent = stDone[i] + "/" + stTotal[i];
+      var sc = stDone[i] === 0 ? "" : (stDone[i] === stTotal[i] ? "done" : "part");
+      stEl.className = stEl.className.replace(/\s*(part|done|fc)\b/g, "") + (sc ? " " + sc : "");
+      if (i > 0) {
+        var lit = stTotal[i - 1] > 0 && stDone[i - 1] >= stTotal[i - 1];
+        var arrow = stEl.querySelector(".pjoin");
+        if (arrow) arrow.className = "pjoin" + (lit ? " lit" : "");
+      }
+    }
+
+    var da = pathRail ? pathRail.querySelector(".pdone-all") : null;
+    if (da) da.textContent = doneAll + "/" + totalAll;
+
+    if (pathHint) {
+      var mine = pathIndexOf(SID) === PATH_I;
+      var base = (mine ? "" : "当前科目暂无路径 · 现显示「" + pathNameOf(p.id) + "」 · ") +
+        p.stages.length + " 阶段 / " + (p.total || 0) + " 点";
+      pathHint.textContent = "已掌握 " + doneAll + "/" + totalAll + " · " + base;
+    }
   }
 
   function pathGo(i, flash) {
@@ -22136,21 +22263,28 @@
     }
     if (flash) {
       node.className = "pstage fc";
-      setTimeout(function () { node.className = "pstage"; }, 900);
+      setTimeout(function () { pathPaint(); }, 900);
     }
   }
 
-  function pathOpen() {
+  function pathSetBtn() {
+    if (!mapBtn) return;
+    var open = !pathPanel.hidden;
+    mapBtn.setAttribute("aria-pressed", open ? "true" : "false");
+    if (open) mapBtn.classList.add("on"); else mapBtn.classList.remove("on");
+  }
+  function pathOpen(noFocus) {
     closeMore();
     if (!PATH.subjects || !PATH.subjects.length) return;
     var i = pathIndexOf(SID);
     PATH_I = i < 0 ? 0 : i;
-    pathRender();
     pathPanel.hidden = false;
     document.body.classList.add("drawerOpen");
     pathBtn.setAttribute("aria-expanded", "true");
+    pathSetBtn();
+    pathRender();
     pathGo(0, false);
-    if (pathCloseBtn.focus) pathCloseBtn.focus();
+    if (!noFocus && pathCloseBtn.focus) pathCloseBtn.focus();
   }
 
   function pathShut(keepFocus) {
@@ -22158,12 +22292,21 @@
     pathPanel.hidden = true;
     document.body.classList.remove("drawerOpen");
     pathBtn.setAttribute("aria-expanded", "false");
+    pathSetBtn();
     if (!keepFocus && pathBtn.focus) pathBtn.focus();
   }
 
   if (pathBtn) pathBtn.addEventListener("click", function (e) {
     if (e) e.stopPropagation();
     pathOpen();
+  });
+  if (mapBtn) mapBtn.addEventListener("click", function (e) {
+    if (e) e.stopPropagation();
+    if (!pathPanel.hidden) pathShut(false); else pathOpen();
+  });
+  if (pathQuizBtn) pathQuizBtn.addEventListener("click", function () {
+    pathShut(true);
+    if (typeof qzEnter === "function") qzEnter();
   });
   if (pathCloseBtn) pathCloseBtn.addEventListener("click", function () { pathShut(false); });
 
@@ -22241,8 +22384,12 @@
   // [path] 调试出口：仅供自动化测试
   window.__reviewPath = {
     PATH: PATH, open: pathOpen, shut: pathShut, go: pathGo,
+    paint: pathPaint,
     index: function () { return PATH_I; }
   };
+
+  // [path] 学习台作为主界面：启动后默认打开（不抢焦点），点节点即回卡片、点「返回卡片」回列表
+  if (PATH.subjects && PATH.subjects.length) pathOpen(true);
 })();
 </script>
 </body>
