@@ -3,9 +3,22 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.38.0
+  APP_VERSION: 3.39.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.38.0）学习路径改成 XMind「逻辑图」简洁彩色分支风格（数据未动）——
+  本次变更: （3.39.0）学习路径导图改成「中心放射式思维导图」，对齐 XMind 逻辑图的层级与连线（数据未动）——
+             ①结构：中心主题居中（科目名 + 段/点数），阶段按前后半左右放射（前半在右、后半在左），
+               三级层级＝阶段方框 → 知识点组方框 → 具体知识点纯文字，与样例一致；
+             ②节点样式：一级＝带分支色描边的圆角方框（标题 + 掌握目标 3 行 + 进度条/计数/级别），
+               二级＝小号描边方框（序号 1.1、状态点、A/B/C 徽标），三级＝无框纯文字，只在名字与组名不同或含多点时列出；
+             ③连线：SVG 贝塞尔曲线，颜色随本段分支色，全部无箭头，接到方框边缘；整段学完连线加深加粗；
+             ④阶段详情：掌握目标 / 常见崩点 / 前置依赖收进「点阶段方框」弹出的浮层（前置可点，跳段并续开浮层），
+               目标同时以 3 行摘要在方框内呈现，不再占导图版面；
+             ⑤窄屏（≤820px）自动切换竖排树：中心在上、阶段依次向下、知识点与三级各缩进一层，
+               连线改「竖干 + 横枝」，手机上一屏可读、无需横向拖拽；
+             ⑥保留：isCountedDoneOf 掌握口径、done/part/todo 三态点亮、点知识点跳卡片、四科切换、深色主题、
+               左栏统计与阶段导航；
+             ⑦自测：map-verify（21 项，含连线几何/无箭头/浮层/跳卡/深色/窄屏）与 path-mastery-test（27 项）全过。
+  上次变更: （3.38.0）学习路径改成 XMind「逻辑图」简洁彩色分支风格（数据未动）——
              ①节点分层：一级分支＝阶段（实心胶囊、白字、每段一个色相循环），二级＝知识点（同色系浅底胶囊、深字），
                去掉阶段卡片边框与阴影，节点直接浮在底色上，越往下越轻；
              ②连线：阶段之间改无箭头细线，颜色随本段分支色、上一段学完才由灰变实（推进提示）；
@@ -400,7 +413,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.38.0">
+<meta name="app-version" content="3.39.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1835,76 +1848,119 @@
   .pnav[aria-current="true"] span{font-weight:600}
   .pnav b{flex:0 0 auto;color:var(--pc);font-weight:700;font-size:11.5px;line-height:1.6}
 
-  .pathcanvas{flex:1 1 auto;overflow:auto;padding:15px 16px 28px;overscroll-behavior:contain;position:relative}
-  .pathtrack{display:flex;gap:44px;align-items:flex-start;width:max-content;padding-bottom:4px}
-  .pstage{position:relative;width:224px;flex:0 0 224px;background:transparent}
-  .pstage.fc .pt{box-shadow:0 0 0 3px var(--accentBg)}
-  .pjoin{position:absolute;left:-44px;top:40px;width:44px;height:12px;color:var(--bc);opacity:.45}
-  .pstage .ph{display:flex;align-items:center;gap:8px;padding:0 0 6px}
-  .pstage .pt{flex:1 1 auto;min-width:0;display:inline-flex;align-items:center;gap:6px;
-    background:var(--bc);color:#fff;border-radius:999px;padding:6px 12px;
-    font-size:12.8px;font-weight:600;line-height:1.35}
-  .pstage .pm{font-size:9.5px;color:var(--ink2);margin:2px 2px 8px;font-variant-numeric:tabular-nums}
+  /* [path-map] 中心放射式思维导图：中心主题居中，阶段分支左右放射
+     一级＝阶段（描边方框）｜二级＝知识点组（小方框）｜三级＝纯文字（具体知识点）
+     连线由 SVG 贝塞尔曲线绘制，颜色随本段分支色，无箭头 */
+  .pathcanvas{flex:1 1 auto;overflow:auto;padding:0;overscroll-behavior:contain;position:relative}
+  .mmap{position:relative;display:flex;align-items:center;justify-content:center;
+    width:max-content;min-width:100%;box-sizing:border-box;padding:48px 26px}
+  .mmap svg.mlinks{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}
 
-  .ppts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
-  .ppts li{display:flex}
-  .pk{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
-    padding:5px 8px;border:0;border-radius:9px;background:var(--btint);
-    color:var(--bink);font:inherit;font-size:11.8px;line-height:1.45;cursor:pointer}
-  .pk:hover{filter:brightness(.97)}
-  .pk .pn3{flex:1 1 auto;overflow-wrap:anywhere}
-  .pk .pl{flex:0 0 auto;font-size:9px;line-height:14px;padding:0 4px;border-radius:3px;
-    font-weight:600;letter-spacing:.02em}
-  .pk .pl.A{background:var(--bc);color:#fff}
-  .pk .pl.B{border:1px solid var(--bc);color:var(--bink)}
-  .pk .pl.C{border:1px solid var(--line2);color:var(--ink2)}
-  .pk .pkx{flex:0 0 auto;font-size:9px;color:var(--ink2);opacity:.6}
+  .mcenter{position:relative;z-index:2;flex:0 0 auto;max-width:190px;padding:0 22px;text-align:center}
+  .mcenter b{display:block;font-size:16.5px;font-weight:700;line-height:1.42;letter-spacing:-.01em}
+  .mcenter span{display:block;margin-top:5px;font-size:9.5px;letter-spacing:.05em;color:var(--ink2)}
 
-  .pgoal{margin:6px 9px 0;padding:7px 9px 8px;border-radius:6px;background:var(--accentBg)}
-  .pgoal b{display:block;font-size:9px;letter-spacing:.07em;color:var(--accent);margin-bottom:3px}
-  .pgoal p{margin:0;font-size:11.3px;line-height:1.6}
-  .prisk{margin:6px 9px 0;padding:6px 9px 7px;border-left:2px solid var(--warn);
-    border-radius:0 6px 6px 0;background:var(--warnBg)}
-  .prisk b{display:block;font-size:9px;letter-spacing:.07em;color:var(--warn);margin-bottom:2px}
-  .prisk p{margin:0;font-size:10.8px;line-height:1.55;color:var(--ink2)}
-  .pdeps{display:flex;flex-direction:column;gap:3px;padding:7px 9px 10px}
-  .pdeps .plbl2{font-size:9px;letter-spacing:.06em;color:var(--ink2);opacity:.7}
+  .mside{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:30px}
+  .mside.l{align-items:flex-end}
+  .mside.r{align-items:flex-start}
+  .mstage{position:relative;display:flex;align-items:center;flex:0 0 auto}
+  .mside.l .mstage{flex-direction:row-reverse}
+
+  .mnode1{position:relative;z-index:3;flex:0 0 auto;display:block;width:178px;box-sizing:border-box;
+    padding:8px 11px 9px;border-radius:7px;background:var(--card);text-align:center;
+    font:inherit;color:inherit;
+    border:1.5px solid var(--bc);cursor:pointer;transition:box-shadow .16s ease}
+  .mnode1:hover{box-shadow:0 3px 12px rgba(0,0,0,.10)}
+  .mnode1[data-fc]{box-shadow:0 0 0 4px var(--accentBg),0 3px 12px rgba(0,0,0,.10)}
+  .mnode1 .mt1{display:block;font-size:12.4px;font-weight:700;line-height:1.42;color:var(--bink)}
+  .mnode1 .mgoal{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+    margin-top:4px;font-size:9.5px;line-height:1.55;color:var(--ink2)}
+  .mnode1 .mmeta{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:6px;
+    font-size:9px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .mnode1 .mmeta i{font-style:normal}
+  .mnode1 .mmeta .mlv{letter-spacing:.04em;opacity:.85}
+  .mnode1 .mbar{display:block;height:2.5px;margin-top:5px;border-radius:2px;
+    background:var(--barBg);overflow:hidden}
+  .mnode1 .mbar i{display:block;height:100%;width:0;background:var(--bc);transition:width .3s ease}
+
+  .msub{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:5px}
+  .mside.l .msub{align-items:flex-end}
+  .mside.r .mstage>.msub{margin-left:22px}
+  .mside.l .mstage>.msub{margin-right:22px}
+  .mchip{display:flex;align-items:center;flex:0 0 auto}
+  .mside.l .mchip{flex-direction:row-reverse}
+
+  .mnode2{position:relative;z-index:2;flex:0 0 auto;box-sizing:border-box;max-width:202px;
+    display:flex;align-items:flex-start;gap:5px;padding:3px 8px;border-radius:5px;
+    border:1px solid var(--bc);background:var(--card);color:var(--bink);
+    font:inherit;font-size:10.5px;line-height:1.45;text-align:left;
+    cursor:pointer;transition:background .14s ease}
+  .mnode2:hover{background:var(--btint)}
+  .mnode2 .mn{flex:0 0 auto;font-style:normal;font-size:9px;line-height:1.62;
+    opacity:.62;font-variant-numeric:tabular-nums}
+  .mnode2 .pn2{flex:1 1 auto;overflow-wrap:anywhere}
+  .mnode2 .pl{flex:0 0 auto;font-size:8.5px;line-height:13px;padding:0 3px;margin-top:1px;
+    border-radius:3px;font-weight:600;letter-spacing:.02em}
+  .mnode2 .pl.A{background:var(--bc);color:#fff}
+  .mnode2 .pl.B{border:1px solid var(--bc);color:var(--bink)}
+  .mnode2 .pl.C{border:1px solid var(--line2);color:var(--ink2)}
+
+  .mdet{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:2px;
+    align-items:flex-start;max-width:198px;padding:0 2px;margin:0 0 0 15px}
+  .mside.l .mdet{align-items:flex-end;text-align:right;margin:0 15px 0 0}
+  .mdet .dl{display:block;border:0;background:none;padding:0;margin:0;
+    font:inherit;font-size:9.3px;line-height:1.5;text-align:inherit;
+    color:var(--ink2);cursor:pointer}
+  .mdet .dl:hover{color:var(--accent)}
+  .mdet .dl.kp:hover{text-decoration:underline}
+
+  /* 阶段详情浮层：掌握目标 / 常见崩点 / 前置依赖（点阶段方框打开） */
+  .mpop{position:absolute;z-index:12;width:252px;box-sizing:border-box;padding:10px 12px 11px;
+    border-radius:9px;border:1px solid var(--line2);background:var(--card);
+    box-shadow:0 8px 26px rgba(0,0,0,.16)}
+  .mpop[hidden]{display:none}
+  .mpop h4{margin:0 0 7px;padding-right:16px;font-size:11.6px;font-weight:700;
+    line-height:1.45;color:var(--bink)}
+  .mpop .mrow{margin:0 0 6px}
+  .mpop .mrow:last-child{margin-bottom:0}
+  .mpop .mrow>span{display:block;font-size:8.8px;letter-spacing:.06em;margin-bottom:2px;color:var(--pc)}
+  .mpop .mrow.risk>span{color:var(--warn)}
+  .mpop .mrow p{margin:0;font-size:10.4px;line-height:1.62;color:var(--ink)}
+  .mpop .mrow.risk p{color:var(--ink2)}
+  .mpop .mclose{position:absolute;right:5px;top:4px;border:0;background:none;color:var(--ink2);
+    font:inherit;font-size:13px;line-height:1;padding:2px 5px;cursor:pointer;border-radius:4px}
+  .mpop .mclose:hover{background:var(--accentBg);color:var(--accent)}
+
   .pdep{display:flex;align-items:center;gap:5px;width:100%;text-align:left;
-    font:inherit;font-size:10.8px;line-height:1.45;padding:3px 6px;
+    font:inherit;font-size:10.2px;line-height:1.45;padding:3px 6px;margin-top:3px;
     border:1px solid var(--line);border-radius:5px;background:var(--bg);
     color:var(--ink2);cursor:pointer}
   .pdep:hover{border-color:var(--pc);color:var(--accent)}
   .pdep i{font-style:normal;color:var(--pc);opacity:.85;flex:0 0 auto}
-  .pdep.entry{cursor:default;border-style:dashed;opacity:.7}
   .pempty{padding:44px 22px;font-size:13px;line-height:1.95;color:var(--ink2);max-width:560px}
 
   /* 深色模式下 color2 是亮色，选中块与 A 徽标改用深字，避免白字压亮底 */
   html[data-theme="dark"] .pathtab[aria-selected="true"]{color:#17181b}
   html[data-theme="dark"] .pathtab[aria-selected="true"] i{background:#17181b}
-  /* [path-mastery] 学习台节点点亮：done=全掌握（实心✓） part=进行中（半实） todo=未开始（空心） */
-  .pk .pkdot{flex:0 0 auto;width:13px;height:13px;border-radius:50%;
-    border:1.5px solid var(--line2);background:transparent;box-sizing:border-box;
+  /* [path-mastery] 节点点亮：done=全掌握（实心✓） part=进行中（半实） todo=未开始（空心） */
+  .mnode2 .mdot{flex:0 0 auto;box-sizing:border-box;width:8px;height:8px;margin-top:4px;
+    border-radius:50%;border:1.4px solid var(--line2);
     display:flex;align-items:center;justify-content:center;
-    font-size:8.5px;line-height:1;color:#fff;transition:.2s}
-  .pk.part .pkdot{border-color:var(--bc);background:var(--bc);opacity:.5}
-  .pk.done .pkdot{border-color:var(--bc);background:var(--bc);opacity:1}
-  .pk.done .pn3{color:var(--bink);font-weight:600}
-  .pk.todo .pn3{color:var(--ink2)}
-  .pstage .pdone{flex:0 0 auto;font-size:9.5px;color:var(--ink2);
-    font-variant-numeric:tabular-nums;white-space:nowrap}
-  .pstage.done .pdone{color:var(--bc);font-weight:600}
-  .pstage .pbar{height:3px;margin:0 0 8px;background:var(--barBg);border-radius:2px;overflow:hidden}
-  .pstage .pbar i{display:block;height:100%;width:0;background:var(--bc);transition:width .3s ease}
-  .pstage.done .pt::after{content:' ✔'}
-  .pjoin.lit{opacity:1}
+    font-size:6px;line-height:1;color:#fff;transition:.2s}
+  .mnode2.part .mdot{border-color:var(--bc);background:var(--bc);opacity:.5}
+  .mnode2.done .mdot{border-color:var(--bc);background:var(--bc);opacity:1}
+  .mnode2.done{border-width:1.5px;background:var(--btint)}
+  .mnode2.done .pn2{font-weight:600}
+  .mnode2.todo .pn2{color:var(--ink2)}
+  .mnode1.done .mt1::after{content:' ✔';color:var(--bc)}
+  .mnode1.done{border-width:2px}
   .plegend{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 4px 6px;font-size:10px;color:var(--ink2)}
   .plegend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
     vertical-align:-1px;border:1.5px solid var(--line2)}
   .plegend .dot.done{border-color:var(--pc);background:var(--pc)}
   .plegend .dot.part{border-color:var(--pc);background:var(--pc);opacity:.5}
-  html[data-theme="dark"] .pk{color:var(--blite)}
-  html[data-theme="dark"] .pk .pl.B{color:var(--blite)}
-  html[data-theme="dark"] .pk.done .pn3{color:var(--blite)}
+  html[data-theme="dark"] .mnode2,html[data-theme="dark"] .mnode1 .mt1{color:var(--blite)}
+  html[data-theme="dark"] .mnode2 .pl.B{color:var(--blite)}
   #mapBtn.on{background:var(--accentBg);border-color:var(--accent);color:var(--accent);font-weight:600}
 
   @media (max-width:820px){
@@ -1921,6 +1977,29 @@
     .pnav{display:inline-flex;align-items:baseline;width:auto;margin:0 5px 0 0;
       padding:4px 9px;border:1px solid var(--line);white-space:nowrap}
     .pnav b{margin-right:4px}
+    /* 窄屏改成竖排树：中心在上，阶段依次向下，知识点缩进一层、三级再缩一层
+       连线由 JS 按竖排几何重画（竖向干线 + 横向短枝） */
+    .mmap{flex-direction:column;align-items:stretch;width:auto;min-width:0;padding:14px 12px 34px}
+    .mcenter{order:0;align-self:center;max-width:none;padding:0 0 10px}
+    .mcenter b{font-size:14px}
+    .mcenter span{font-size:8.5px}
+    .mside.r{order:1}
+    .mside.l{order:2}
+    .mside{align-items:stretch;gap:14px;margin-top:8px}
+    .mstage,.mside.l .mstage{flex-direction:column;align-items:stretch}
+    .mside.r .mstage>.msub,.mside.l .mstage>.msub{margin:8px 0 0 16px}
+    .mnode1{width:auto;text-align:left;padding:7px 10px 8px}
+    .mnode1 .mt1{font-size:11.6px}
+    .mnode1 .mgoal{display:-webkit-box;-webkit-line-clamp:3;font-size:9.2px}
+    .mnode1 .mmeta{justify-content:flex-start;font-size:8.4px}
+    .msub{align-items:stretch}
+    .mside.l .msub{align-items:stretch}
+    .mchip,.mside.l .mchip{flex-direction:column;align-items:stretch}
+    .mnode2{max-width:none;font-size:10.2px}
+    .mdet,.mside.l .mdet{margin:4px 0 0 16px;max-width:none;
+      align-items:flex-start;text-align:left}
+    .mdet .dl{font-size:9.6px}
+    .mpop{width:220px}
   }
   @media print{ .pathov{display:none !important} }
 </style>
@@ -2114,7 +2193,7 @@
   <div class="pathbody">
     <aside class="pathrail" id="pathRail" aria-label="阶段导航"></aside>
     <div class="pathcanvas" id="pathCanvas">
-      <div class="pathtrack" id="pathTrack"></div>
+      <div class="mmap" id="pathTrack"></div>
     </div>
   </div>
 </div>
@@ -14799,7 +14878,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.38.0";
+  var APP_VERSION = "3.39.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -22118,57 +22197,218 @@
         (i === 0 ? ' aria-current="true"' : '') + '><b>' + pathNo(i) + '</b><span>' +
         pathEsc(p.stages[i].t) + '</span></button>';
     }
-    h += '<p class="plbl" style="margin-top:11px">点任意知识点可跳回卡片</p>';
+    h += '<p class="plbl" style="margin-top:11px">点阶段框看掌握目标 / 崩点 · 点知识点跳卡片</p>';
     pathRail.innerHTML = h;
   }
 
+  /* [path-map] 知识点名字：从当前科目知识点里取，用于三级纯文字节点 */
+  function pathKpName(sid, kid) {
+    var s = subjectById(sid), list = (s && s.knowledgePoints) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === kid) return list[i].name || "";
+    return "";
+  }
+
+  /* 结构：中心主题居中，阶段左右放射（与样例一致：前半在右、后半在左）
+     一级＝阶段方框，二级＝知识点组方框，三级＝具体知识点纯文字（挂在二级外侧） */
   function pathRenderTrack(p) {
-    var h = "";
-    for (var i = 0; i < p.stages.length; i++) {
-      var st = p.stages[i];
-      var bc = pathBranch(i);
-      h += '<div class="pstage" data-i="' + i + '" style="--bc:' + bc.s +
+    var n = p.stages.length;
+    var half = Math.ceil(n / 2);
+    var hl = "", hr = "", i, j, k;
+    for (i = 0; i < n; i++) {
+      var st = p.stages[i], bc = pathBranch(i);
+      var h = '<div class="mstage" data-i="' + i + '" style="--bc:' + bc.s +
         ';--btint:' + bc.tint + ';--bink:' + bc.ink + ';--blite:' + bc.lite + '">';
-      if (i > 0) {
-        h += '<span class="pjoin"><svg width="44" height="12" viewBox="0 0 44 12" fill="none">' +
-          '<path d="M1 6H40" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>';
-      }
-      h += '<div class="ph"><span class="pt">' + pathNo(i) + ' ' + pathEsc(st.t) + '</span>' +
-        '<span class="pdone">0/' + st.n + '</span></div>' +
-        '<div class="pm">' + pathEsc(st.s) + ' · ' + st.n + ' 点 · ' + pathEsc(st.lv) + '</div>' +
-        '<div class="pbar"><i></i></div>';
+      h += '<button class="mnode1" type="button" data-go="' + i + '" title="' +
+        pathEsc(st.t) + '：' + pathEsc(st.goal) + '（点开看掌握目标与崩点）">' +
+        '<span class="mt1">' + pathNo(i) + ' ' + pathEsc(st.t) + '</span>' +
+        '<span class="mgoal">' + pathEsc(st.goal) + '</span>' +
+        '<span class="mmeta"><i class="mcnt">0/' + st.n + '</i><i class="mlv">' +
+        pathEsc(st.lv) + '</i></span>' +
+        '<span class="mbar"><i></i></span></button>';
 
-      h += '<ul class="ppts">';
-      for (var j = 0; j < st.pts.length; j++) {
+      h += '<div class="msub">';
+      for (j = 0; j < st.pts.length; j++) {
         var pt = st.pts[j];
-        var tip = pt.n + (pt.k.length > 1 ? "（含 " + pt.k.length + " 个知识点）" : "");
-        h += '<li><button class="pk" type="button" data-kid="' + pathEsc(pt.k[0]) +
-          '" data-si="' + i + '" data-sj="' + j + '" title="' + pathEsc(tip) + '：点开卡片">' +
-          '<span class="pn3">' + pathEsc(pt.n) + '</span>' +
-          (pt.k.length > 1 ? '<span class="pkx">×' + pt.k.length + '</span>' : '') +
-          '<span class="pl ' + pathEsc(pt.lv) + '">' + pathEsc(pt.lv) + '</span>' +
-          '<span class="pkdot" aria-hidden="true"></span></button></li>';
-      }
-      h += '</ul>';
-
-      h += '<div class="pgoal"><b>✔ 掌握目标</b><p>' + pathEsc(st.goal) + '</p></div>';
-      h += '<div class="prisk"><b>⚠ 常见崩点</b><p>' + pathEsc(st.risk) + '</p></div>';
-
-      h += '<div class="pdeps"><span class="plbl2">⇠ 前置依赖</span>';
-      if (!st.dep.length) {
-        h += '<span class="pdep entry">本科目入口 · 无前置</span>';
-      } else {
-        for (var d = 0; d < st.dep.length; d++) {
-          var dp = st.dep[d];
-          h += '<button class="pdep" type="button" data-go="' + dp[0] + '"><i>' +
-            pathNo(dp[0]) + '</i>' + pathEsc(p.stages[dp[0]].t) + '　—　' +
-            pathEsc(dp[1]) + '</button>';
+        var det = "";
+        for (k = 0; k < pt.k.length; k++) {
+          var nm = pathKpName(p.id, pt.k[k]);
+          /* 单知识点且与组名同名时不重复列（否则同一件事在两级各说一遍） */
+          if (pt.k.length > 1 || (nm && nm !== pt.n)) {
+            det += '<button class="dl kp" type="button" data-kid="' + pathEsc(pt.k[k]) +
+              '" title="' + pathEsc(nm) + '：点开卡片">' + pathEsc(nm) + '</button>';
+          }
         }
+        h += '<div class="mchip">';
+        h += '<button class="mnode2" type="button" data-kid="' + pathEsc(pt.k[0]) + '" data-si="' + i +
+          '" data-sj="' + j + '" title="' + pathEsc(pt.n) + '：点开卡片">' +
+          '<span class="mdot" aria-hidden="true"></span>' +
+          '<i class="mn">' + (i + 1) + '.' + (j + 1) + '</i>' +
+          '<span class="pn2">' + pathEsc(pt.n) + '</span>' +
+          '<span class="pl ' + pathEsc(pt.lv) + '">' + pathEsc(pt.lv) + '</span></button>';
+        if (det) h += '<div class="mdet">' + det + '</div>';
+        h += '</div>';
       }
       h += '</div></div>';
+      if (i < half) hr += h; else hl += h;
     }
-    pathTrack.innerHTML = h;
+    pathTrack.innerHTML =
+      '<div class="mside l">' + hl + '</div>' +
+      '<div class="mcenter"><b>' + pathEsc(pathNameOf(p.id)) + '</b>' +
+      '<span>中心主题 · ' + n + ' 阶段 · ' + (p.total || 0) + ' 点</span></div>' +
+      '<div class="mside r">' + hr + '</div>' +
+      '<svg class="mlinks" aria-hidden="true"></svg>' +
+      '<div class="mpop" id="pathPop" hidden></div>';
     pathTrack.style.setProperty("--pc", pathTone(p));
+    pathDrawLinks();
+    /* 字体/滚动条落位后再补画一次，避免首帧测量偏差 */
+    setTimeout(function () {
+      if (pathPanel && !pathPanel.hidden) pathDrawLinks();
+    }, 80);
+  }
+
+  function pathNum(v) { return Math.round(v * 10) / 10; }
+  /* 横向 S 形贝塞尔：dir=1 向右、-1 向左；控制点按水平距离取，接近 XMind 的柔性连线 */
+  function pathCurve(x1, y1, x2, y2, dir) {
+    var dx = Math.abs(x2 - x1);
+    var c = Math.min(Math.max(18, dx * 0.55), Math.max(18, dx * 0.9));
+    return "M" + pathNum(x1) + " " + pathNum(y1) + "C" + pathNum(x1 + dir * c) + " " +
+      pathNum(y1) + " " + pathNum(x2 - dir * c) + " " + pathNum(y2) + " " +
+      pathNum(x2) + " " + pathNum(y2);
+  }
+
+  /* 窄屏竖排树：几何完全不同，连线改用「竖干 + 横枝」 */
+  function pathVert() { return window.innerWidth <= 820; }
+
+  /* 连线：全部按渲染后的实际位置算，随窗口/字号变化重画一次即可。
+     宽屏＝中心左右放射（横向 S 曲线）；窄屏＝竖排树（竖向干线 + 横向短枝）。 */
+  function pathDrawLinks() {
+    var svg = pathTrack ? pathTrack.querySelector("svg.mlinks") : null;
+    if (!svg) return;
+    var box = pathTrack.getBoundingClientRect();
+    var W = Math.max(pathTrack.offsetWidth, 1), H = Math.max(pathTrack.offsetHeight, 1);
+    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    function rectOf(el) {
+      var r = el.getBoundingClientRect();
+      return {
+        l: r.left - box.left, r: r.right - box.left,
+        t: r.top - box.top, b: r.bottom - box.top,
+        cx: r.left - box.left + r.width / 2, cy: r.top - box.top + r.height / 2
+      };
+    }
+    function seg(x1, y1, x2, y2, col, w, op, tag) {
+      return '<path' + (tag ? ' data-lk="' + tag + '"' : '') + ' d="M' + pathNum(x1) + " " +
+        pathNum(y1) + "L" + pathNum(x2) + " " + pathNum(y2) + '" stroke="' + col +
+        '" stroke-width="' + w + '" fill="none" stroke-linecap="round" opacity="' + op + '"/>';
+    }
+    var out = [], i, j, k;
+    var cen = pathTrack.querySelector(".mcenter");
+    var cr = cen ? rectOf(cen) : null;
+    var stages = pathTrack.querySelectorAll(".mstage");
+    var vert = pathVert();
+
+    if (vert) {
+      /* 竖排：中心 → 第一段，段与段按视觉顺序竖向串联（DOM 顺序是左组在前，必须按 top 排） */
+      var list = [];
+      for (i = 0; i < stages.length; i++) {
+        var si = parseInt(stages[i].getAttribute("data-i"), 10);
+        if (isNaN(si)) continue;
+        var n1v0 = stages[i].querySelector(".mnode1");
+        if (!n1v0) continue;
+        list.push({ el: stages[i], si: si, r: rectOf(n1v0) });
+      }
+      list.sort(function (a, b) { return a.r.t - b.r.t; });
+      var prevB = cr ? cr.b + 2 : 0;
+      for (i = 0; i < list.length; i++) {
+        var it = list[i];
+        var bc0 = pathBranch(it.si);
+        var r1v = it.r;
+        var vx = r1v.l + 9;
+        out.push(seg(vx, prevB, vx, r1v.t, bc0.s, 1.5, ".5", it.si));
+        prevB = r1v.b + 2;
+        var chipv = it.el.querySelectorAll(".mchip");
+        if (!chipv.length) continue;
+        var cvx = r1v.l + 9;
+        var lastC = rectOf(chipv[chipv.length - 1].querySelector(".mnode2") || chipv[chipv.length - 1]);
+        out.push(seg(cvx, r1v.b, cvx, lastC.cy, bc0.s, 1.2, ".45", ""));
+        for (j = 0; j < chipv.length; j++) {
+          var nd2v = chipv[j].querySelector(".mnode2");
+          if (!nd2v) continue;
+          var r2v = rectOf(nd2v);
+          out.push(seg(cvx, r2v.cy, r2v.l, r2v.cy, bc0.s, 1.2, ".45", ""));
+          var dlsv = chipv[j].querySelectorAll(".mdet .dl");
+          if (!dlsv.length) continue;
+          var dvx = r2v.l + 9;
+          var lastD = rectOf(dlsv[dlsv.length - 1]);
+          out.push(seg(dvx, r2v.b, dvx, lastD.cy, bc0.s, 1, ".38", ""));
+          for (k = 0; k < dlsv.length; k++) {
+            var rdv = rectOf(dlsv[k]);
+            out.push(seg(dvx, rdv.cy, rdv.l, rdv.cy, bc0.s, 1, ".38", ""));
+          }
+        }
+      }
+      svg.innerHTML = out.join("");
+      pathPaintLinks();
+      return;
+    }
+
+    for (i = 0; i < stages.length; i++) {
+      var si2 = parseInt(stages[i].getAttribute("data-i"), 10);
+      if (isNaN(si2)) continue;
+      var stEl = stages[i], bc = pathBranch(si2);
+      var par = stEl.parentNode;
+      var isL = par && String(par.className).indexOf("mside l") >= 0;
+      var dir = isL ? -1 : 1;
+      var n1 = stEl.querySelector(".mnode1");
+      if (!n1) continue;
+      var r1 = rectOf(n1);
+      if (cr) {
+        out.push('<path data-lk="' + si2 + '" d="' + pathCurve(
+          isL ? cr.l + 2 : cr.r - 2, cr.cy,
+          isL ? r1.r : r1.l, r1.cy, dir) +
+          '" stroke="' + bc.s + '" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".55"/>');
+      }
+      var chips = stEl.querySelectorAll(".mchip");
+      for (j = 0; j < chips.length; j++) {
+        var nd2 = chips[j].querySelector(".mnode2");
+        if (!nd2) continue;
+        var r2 = rectOf(nd2);
+        out.push('<path d="' + pathCurve(
+          isL ? r1.l : r1.r, r1.cy,
+          isL ? r2.r : r2.l, r2.cy, dir) +
+          '" stroke="' + bc.s + '" stroke-width="1.25" fill="none" stroke-linecap="round" opacity=".5"/>');
+        var dls = chips[j].querySelectorAll(".mdet .dl");
+        for (k = 0; k < dls.length; k++) {
+          var rd = rectOf(dls[k]);
+          out.push('<path d="' + pathCurve(
+            isL ? r2.l : r2.r, r2.cy,
+            isL ? rd.r : rd.l, rd.cy, dir) +
+            '" stroke="' + bc.s + '" stroke-width="1.05" fill="none" stroke-linecap="round" opacity=".38"/>');
+        }
+      }
+    }
+    svg.innerHTML = out.join("");
+    pathPaintLinks();
+  }
+
+  /* 连线随掌握度加深：整段学完＝实线，动过＝略实，没开始＝淡 */
+  function pathPaintLinks() {
+    if (!pathTrack) return;
+    var p = PATH.subjects[PATH_I];
+    if (!p || !p.stages) return;
+    for (var i = 0; i < p.stages.length; i++) {
+      var lk = pathTrack.querySelector('path[data-lk="' + i + '"]');
+      if (!lk) continue;
+      var total = 0, done = 0;
+      for (var j = 0; j < p.stages[i].pts.length; j++) {
+        var pt = p.stages[i].pts[j];
+        total += pt.k.length;
+        for (var k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) done++;
+      }
+      var full = total > 0 && done >= total;
+      lk.setAttribute("opacity", full ? ".92" : (done > 0 ? ".72" : ".5"));
+      lk.setAttribute("stroke-width", full ? "2.1" : "1.7");
+    }
   }
 
   function pathRender() {
@@ -22204,7 +22444,7 @@
       }
     }
 
-    var chips = pathTrack.querySelectorAll(".pk");
+    var chips = pathTrack.querySelectorAll(".mnode2");
     for (var c = 0; c < chips.length; c++) {
       var si = parseInt(chips[c].getAttribute("data-si"), 10);
       var sj = parseInt(chips[c].getAttribute("data-sj"), 10);
@@ -22213,26 +22453,22 @@
       ndone = 0;
       for (k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) ndone++;
       var cls = ndone === 0 ? "todo" : (ndone === pt.k.length ? "done" : "part");
-      chips[c].className = chips[c].className.replace(/\s*(todo|part|done)\b/g, "") + " " + cls;
-      var dot = chips[c].querySelector(".pkdot");
+      chips[c].className = "mnode2 " + cls;
+      var dot = chips[c].querySelector(".mdot");
       if (dot) dot.textContent = cls === "done" ? "✓" : "";
     }
 
     for (i = 0; i < p.stages.length; i++) {
-      var stEl = pathTrack.querySelector('.pstage[data-i="' + i + '"]');
+      var stEl = pathTrack.querySelector('.mstage[data-i="' + i + '"]');
       if (!stEl) continue;
-      var bar = stEl.querySelector(".pbar i");
+      var bar = stEl.querySelector(".mbar i");
       if (bar) bar.style.width = stTotal[i] ? (stDone[i] / stTotal[i] * 100).toFixed(1) + "%" : "0%";
-      var cnt = stEl.querySelector(".pdone");
+      var cnt = stEl.querySelector(".mcnt");
       if (cnt) cnt.textContent = stDone[i] + "/" + stTotal[i];
-      var sc = stDone[i] === 0 ? "" : (stDone[i] === stTotal[i] ? "done" : "part");
-      stEl.className = stEl.className.replace(/\s*(part|done|fc)\b/g, "") + (sc ? " " + sc : "");
-      if (i > 0) {
-        var lit = stTotal[i - 1] > 0 && stDone[i - 1] >= stTotal[i - 1];
-        var arrow = stEl.querySelector(".pjoin");
-        if (arrow) arrow.className = "pjoin" + (lit ? " lit" : "");
-      }
+      var n1 = stEl.querySelector(".mnode1");
+      if (n1) n1.className = "mnode1" + (stTotal[i] > 0 && stDone[i] >= stTotal[i] ? " done" : "");
     }
+    pathPaintLinks();
 
     var da = pathRail ? pathRail.querySelector(".pdone-all") : null;
     if (da) da.textContent = doneAll + "/" + totalAll;
@@ -22246,15 +22482,17 @@
   }
 
   function pathGo(i, flash) {
-    var node = pathTrack.querySelector('.pstage[data-i="' + i + '"]');
+    var node = pathTrack.querySelector('.mstage[data-i="' + i + '"]');
     if (!node) return;
-    PATH_LOCK = new Date().getTime() + 700;
-    var left = node.offsetLeft - 10;
+    PATH_LOCK = new Date().getTime() + 900;
+    var nr = node.getBoundingClientRect(), cr = pathCanvas.getBoundingClientRect();
+    var left = pathCanvas.scrollLeft + (nr.left - cr.left) - pathCanvas.clientWidth * 0.5 + nr.width * 0.5;
+    var top = pathCanvas.scrollTop + (nr.top - cr.top) - pathCanvas.clientHeight * 0.5 + nr.height * 0.5;
     try {
-      pathCanvas.scrollTo({ left: left, top: 0, behavior: "smooth" });
+      pathCanvas.scrollTo({ left: left, top: top, behavior: "smooth" });
     } catch (e) {
       pathCanvas.scrollLeft = left;
-      pathCanvas.scrollTop = 0;
+      pathCanvas.scrollTop = top;
     }
     var navs = pathRail.querySelectorAll(".pnav");
     for (var k = 0; k < navs.length; k++) {
@@ -22262,9 +22500,74 @@
       else navs[k].removeAttribute("aria-current");
     }
     if (flash) {
-      node.className = "pstage fc";
-      setTimeout(function () { pathPaint(); }, 900);
+      var n1 = node.querySelector(".mnode1");
+      if (n1) {
+        n1.setAttribute("data-fc", "1");
+        setTimeout(function () { n1.removeAttribute("data-fc"); }, 950);
+      }
     }
+  }
+
+  /* 首次进入：横向居中（让中心主题落在视野中间），纵向回到顶部 */
+  function pathHome() {
+    var left = Math.max(0, (pathTrack.offsetWidth - pathCanvas.clientWidth) / 2);
+    try {
+      pathCanvas.scrollTo({ left: left, top: 0, behavior: "auto" });
+    } catch (e) {
+      pathCanvas.scrollLeft = left;
+      pathCanvas.scrollTop = 0;
+    }
+    var navs = pathRail.querySelectorAll(".pnav");
+    for (var i = 0; i < navs.length; i++) {
+      if (i === 0) navs[i].setAttribute("aria-current", "true");
+      else navs[i].removeAttribute("aria-current");
+    }
+  }
+
+  /* 阶段详情浮层：掌握目标 / 常见崩点 / 前置依赖 */
+  function pathPopShut() {
+    var pop = pathTrack ? pathTrack.querySelector("#pathPop") : null;
+    if (pop) { pop.hidden = true; pop.removeAttribute("data-pi"); }
+  }
+  function pathPopOpen(i) {
+    var pop = pathTrack ? pathTrack.querySelector("#pathPop") : null;
+    var n1 = pathTrack ? pathTrack.querySelector('.mstage[data-i="' + i + '"] .mnode1') : null;
+    var p = PATH.subjects[PATH_I];
+    if (!pop || !n1 || !p || !p.stages[i]) return;
+    var st = p.stages[i], bc = pathBranch(i), d, h = "";
+    h += '<button class="mclose" type="button" aria-label="关闭">×</button>';
+    h += '<h4>' + pathNo(i) + ' ' + pathEsc(st.t) + '</h4>';
+    h += '<div class="mrow"><span>✔ 掌握目标</span><p>' + pathEsc(st.goal) + '</p></div>';
+    h += '<div class="mrow risk"><span>⚠ 常见崩点</span><p>' + pathEsc(st.risk) + '</p></div>';
+    h += '<div class="mrow"><span>⇠ 前置依赖</span>';
+    if (!st.dep.length) {
+      h += '<p style="opacity:.7">本科目入口 · 无前置</p>';
+    } else {
+      for (d = 0; d < st.dep.length; d++) {
+        h += '<button class="pdep" type="button" data-go="' + st.dep[d][0] + '"><i>' +
+          pathNo(st.dep[d][0]) + '</i>' + pathEsc(p.stages[st.dep[d][0]].t) + '　—　' +
+          pathEsc(st.dep[d][1]) + '</button>';
+      }
+    }
+    h += '</div>';
+    pop.innerHTML = h;
+    pop.style.setProperty("--pc", bc.s);
+    pop.hidden = false;
+    pop.setAttribute("data-pi", String(i));
+
+    /* 贴在阶段方框外侧，越界时夹回画布内 */
+    var box = pathTrack.getBoundingClientRect(), nr = n1.getBoundingClientRect();
+    var par = n1.parentNode ? n1.parentNode.parentNode : null;
+    var isL = par && String(par.className).indexOf("mside l") >= 0;
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = isL ? (nr.left - box.left - pw - 12) : (nr.right - box.left + 12);
+    var top = nr.top - box.top - 8;
+    if (left < 6) left = 6;
+    if (left + pw > box.width - 6) left = box.width - pw - 6;
+    if (top + ph > box.height - 6) top = box.height - ph - 6;
+    if (top < 6) top = 6;
+    pop.style.left = Math.round(left) + "px";
+    pop.style.top = Math.round(top) + "px";
   }
 
   function pathSetBtn() {
@@ -22283,12 +22586,13 @@
     pathBtn.setAttribute("aria-expanded", "true");
     pathSetBtn();
     pathRender();
-    pathGo(0, false);
+    pathHome();
     if (!noFocus && pathCloseBtn.focus) pathCloseBtn.focus();
   }
 
   function pathShut(keepFocus) {
     if (pathPanel.hidden) return;
+    pathPopShut();
     pathPanel.hidden = true;
     document.body.classList.remove("drawerOpen");
     pathBtn.setAttribute("aria-expanded", "false");
@@ -22317,8 +22621,9 @@
     var i = parseInt(b.getAttribute("data-pi"), 10);
     if (isNaN(i) || i === PATH_I) return;
     PATH_I = i;
+    pathPopShut();
     pathRender();
-    pathGo(0, false);
+    pathHome();
   });
 
   if (pathRail) pathRail.addEventListener("click", function (e) {
@@ -22329,20 +22634,40 @@
     if (!isNaN(i)) pathGo(i, true);
   });
 
-  if (pathTrack) pathTrack.addEventListener("click", function (e) {
-    var b = e.target;
-    while (b && b !== pathTrack && !b.getAttribute("data-go") && !b.getAttribute("data-kid")) {
-      b = b.parentNode;
+  /* 点击分派：× 关浮层 → 前置依赖跳段 → 阶段框开浮层 → 知识点跳卡片 */
+  function pathHas(el, cls) {
+    while (el && el !== pathTrack) {
+      if (el.className && String(el.className).indexOf(cls) >= 0) return el;
+      el = el.parentNode;
     }
-    if (!b || b === pathTrack) return;
+    return null;
+  }
 
-    var g = b.getAttribute("data-go");
-    if (g !== null && g !== undefined && g !== "") {
-      var gi = parseInt(g, 10);
-      if (!isNaN(gi)) pathGo(gi, true);
+  if (pathTrack) pathTrack.addEventListener("click", function (e) {
+    var t = e.target;
+    if (!t || t === pathTrack) return;
+
+    if (pathHas(t, "mclose")) { pathPopShut(); return; }
+
+    var dp = pathHas(t, "pdep");
+    if (dp) {
+      var gi0 = parseInt(dp.getAttribute("data-go"), 10);
+      if (!isNaN(gi0)) { pathGo(gi0, true); pathPopOpen(gi0); }
       return;
     }
-    var kid = b.getAttribute("data-kid");
+
+    var n1 = pathHas(t, "mnode1");
+    if (n1) {
+      var pi = parseInt(n1.getAttribute("data-go"), 10);
+      if (isNaN(pi)) return;
+      var pop = pathTrack.querySelector("#pathPop");
+      if (pop && !pop.hidden && pop.getAttribute("data-pi") === String(pi)) pathPopShut();
+      else pathPopOpen(pi);
+      return;
+    }
+
+    var kd = pathHas(t, "mnode2") || pathHas(t, "kp");
+    var kid = kd ? kd.getAttribute("data-kid") : null;
     if (!kid) return;
     var sid = PATH.subjects[PATH_I].id;
     pathShut(true);
@@ -22357,16 +22682,31 @@
     jumpToPoint(kid);
   });
 
+  /* 点空白处收起浮层 */
+  if (pathCanvas) pathCanvas.addEventListener("mousedown", function (e) {
+    var t = e.target;
+    if (!t) return;
+    if (pathHas(t, "mpop") || pathHas(t, "mnode1")) return;
+    pathPopShut();
+  });
+
   var pathTimer = null;
   if (pathCanvas) pathCanvas.addEventListener("scroll", function () {
     if (pathTimer) return;
     pathTimer = setTimeout(function () {
       pathTimer = null;
       if (new Date().getTime() < PATH_LOCK) return;
-      var nodes = pathTrack.querySelectorAll(".pstage");
-      var mid = pathCanvas.scrollLeft + pathCanvas.clientWidth * 0.5;
-      var best = 0, i;
-      for (i = 0; i < nodes.length; i++) if (nodes[i].offsetLeft <= mid) best = i;
+      var nodes = pathTrack.querySelectorAll(".mstage");
+      if (!nodes.length) return;
+      var cr = pathCanvas.getBoundingClientRect();
+      var mx = cr.left + cr.width / 2, my = cr.top + cr.height / 2;
+      var best = 0, bd = -1, i;
+      for (i = 0; i < nodes.length; i++) {
+        var r = nodes[i].getBoundingClientRect();
+        var dx = r.left + r.width / 2 - mx, dy = r.top + r.height / 2 - my;
+        var dd = dx * dx + dy * dy;
+        if (bd < 0 || dd < bd) { bd = dd; best = i; }
+      }
       var navs = pathRail.querySelectorAll(".pnav");
       for (i = 0; i < navs.length; i++) {
         if (i === best) navs[i].setAttribute("aria-current", "true");
@@ -22375,8 +22715,19 @@
     }, 120);
   });
 
+  /* 窗口尺寸变化：连线按新布局重画（防抖） */
+  var pathRsz = null;
+  window.addEventListener("resize", function () {
+    if (!pathPanel || pathPanel.hidden) return;
+    if (pathRsz) clearTimeout(pathRsz);
+    pathRsz = setTimeout(function () { pathRsz = null; pathDrawLinks(); }, 180);
+  });
+
   document.addEventListener("keydown", function (e) {
-    if ((e.key === "Escape" || e.keyCode === 27) && pathPanel && !pathPanel.hidden) {
+    if (e.key === "Escape" || e.keyCode === 27) {
+      if (!pathPanel || pathPanel.hidden) return;
+      var pop = pathTrack ? pathTrack.querySelector("#pathPop") : null;
+      if (pop && !pop.hidden) { pathPopShut(); return; }
       pathShut(false);
     }
   });
@@ -22384,7 +22735,7 @@
   // [path] 调试出口：仅供自动化测试
   window.__reviewPath = {
     PATH: PATH, open: pathOpen, shut: pathShut, go: pathGo,
-    paint: pathPaint,
+    paint: pathPaint, links: pathDrawLinks, pop: pathPopOpen,
     index: function () { return PATH_I; }
   };
 
