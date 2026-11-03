@@ -3,9 +3,26 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.40.0
+  APP_VERSION: 3.41.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.40.0）学习台跳到知识点后可以一键练这个考点，直接开刷（数据未动）——
+  本次变更: （3.41.0）UI 精修 + 学习反馈层（方案 B，数据未动、判定口径未动）——
+             ①设计令牌：补 --ink3 / --ok / --gold 三个语义色、圆角收成 6 与 13 两档、
+               阴影统一一档、动效曲线统一 cubic-bezier(.2,.7,.3,1)，时长 120/200/320ms；
+               深色与「跟随系统」两套同步给值；
+             ②卡片：完成态不再整卡 opacity .72（像失效），改成标题转灰 + ✓；
+               掌握徽标整颗上色（绿 / 灰 / 橙三档底色），不用读字也认得出；
+               易错点、最低拿分动作的色块加圆角与内边距，正文 14.5→15px、行高 1.78；
+             ③刷题判定：正确项整行淡绿 + 1.5px 绿边 + 字母底反转 + 右侧打勾，错误项同构变赭，
+               全部走 120ms 过渡；反馈条从「一句话」改成图标 + 主文案 + 一行即时数字
+               （连对 / 本题用时 / 该考点进度 / 这题已错几次），数据全部现算，不新增存储；
+             ④本组小结：环形正确率 + 答对 / 未改正错题 / 最长连对 / 题量四个数字；
+               新增「掌握度变化」——开组时快照各考点档位（QZ.mt0，只在内存），
+               收尾比对 qzMasteryOf 现算的档位，只报真正跨档的考点，没跨档就如实说没有；
+             ⑤学习路径点亮加 200ms 过渡；新增 F 键焦点阅读（收起顶栏与筛选），Esc 恢复；
+               新增 prefers-reduced-motion 降级与打印覆盖（色块退回黑白）；
+             ⑥实现方式：样式全部追加在样式表末尾并包在 @media screen 内，
+               删掉「[v3.41.0] 视觉精修 + 反馈层」整段即可整体回退；既有 class 一个没改名。
+  上次变更: （3.40.0）学习台跳到知识点后可以一键练这个考点，直接开刷（数据未动）——
              ①卡片内入口：正文第一行就是「▶ 练这个考点 N 题」实心按钮，右侧小字给「还没练过 · 共 N 道」
                或「已做 x/y · 待改正 n 道」，刷完回来自动刷新（挂进 qzRefreshMarks）；
              ②跳转后入口：从学习台（以及目录/搜索）跳到某知识点后，右下角浮出同名悬浮按钮，带考点名与题量；
@@ -423,7 +440,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.40.0">
+<meta name="app-version" content="3.41.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2058,6 +2075,144 @@
     .mpop{width:220px}
   }
   @media print{ .pathov{display:none !important} }
+
+  /* ============================================================
+     [v3.41.0] 视觉精修 + 反馈层（方案 B）
+     本段全部是叠加式覆盖：不改写上面的既有选择器、不重命名既有 class，
+     删掉本段即可整体回退到 v3.40.0 的观感。
+     所有观感规则都包在 @media screen 里，打印样式不受影响。
+     ============================================================ */
+  :root{
+    --ink3:#A9A296;            /* 第三级文字：编号、单位、脚注 */
+    --ok:#2F6B4F;              /* 语义-成功：已掌握 / 答对 */
+    --okBg:#E7F2EA;
+    --gold:#B08A3E;            /* 语义-成就：连对、里程碑，仅此一处用 */
+    --goldBg:#F6EEDA;
+    --r1:6px;--r2:13px;        /* 圆角只有两档：标签 / 卡片面板 */
+    --sh:0 8px 24px -6px rgba(61,53,41,.10);
+    --ease:cubic-bezier(.2,.7,.3,1);
+    --t1:120ms;--t2:200ms;--t3:320ms;
+  }
+  html[data-theme="dark"]{
+    --ink3:#8C877D;
+    --ok:#7FBF9B;--okBg:#1E3229;
+    --gold:#C9A87C;--goldBg:#2C2519;
+    --sh:0 8px 24px -6px rgba(0,0,0,.45);
+  }
+  @media (prefers-color-scheme:dark){
+    html:not([data-theme="light"]){
+      --ink3:#8C877D;
+      --ok:#7FBF9B;--okBg:#1E3229;
+      --gold:#C9A87C;--goldBg:#2C2519;
+      --sh:0 8px 24px -6px rgba(0,0,0,.45);
+    }
+  }
+
+  @media screen{
+    /* ---------- 1. 卡片：层级与状态 ---------- */
+    .card{border-radius:10px;transition:border-color var(--t2) var(--ease),box-shadow var(--t2) var(--ease)}
+    .card:hover{border-color:var(--line2)}
+    .card[open]{box-shadow:var(--sh);border-color:var(--line2)}
+    .card>summary .nm{transition:color var(--t1) var(--ease)}
+    .card>summary:hover .nm{color:var(--accent)}
+    /* 完成态：原来整卡 opacity .72 像「失效」，改成标题转灰 + 一枚对勾 */
+    .card.done{opacity:1}
+    .card.done .nm{color:var(--ink3);font-weight:500}
+
+    /* 掌握徽标整颗上色（原来只有描边与文字变色，必须读字才认得出）。
+       真正的档位 class 是 t-master / t-review / t-partial / t-weak / t-danger / t-none，
+       比旧样式里那组 .mid/.bad/.none 优先级高，所以必须按 t-* 覆盖。 */
+    .badge.qz{border-radius:999px;padding:2px 8px;letter-spacing:.02em}
+    .badge.qz.t-master{background:var(--okBg);border-color:transparent;color:var(--ok);font-weight:600}
+    .badge.qz.t-review{background:var(--actBg);border-color:transparent;color:var(--act)}
+    .badge.qz.t-partial{background:var(--chip);border-color:transparent;color:var(--ink2)}
+    .badge.qz.t-weak{background:var(--warnBg);border-color:transparent;color:var(--warn);font-weight:600}
+    .badge.qz.t-danger{background:var(--warn);border-color:var(--warn);color:#FFFDF8;font-weight:600}
+    .badge.qz.t-none{border:1px dashed var(--line2);background:transparent;color:var(--ink2);opacity:.8}
+    .badge.qz:hover{border-color:var(--accent);color:var(--accent);background:var(--accentBg)}
+    .badge.qz.t-danger:hover{background:var(--warn);color:#FFFDF8}
+
+    /* 易错点 / 最低拿分动作：从「字段行」升级为色块，先于正文被看见 */
+    .field-warn,.field-action{border-radius:0 8px 8px 0;padding:10px 12px 10px 13px}
+    .field-warn .k,.field-action .k{letter-spacing:.05em}
+    .field p{font-size:15px;line-height:1.78}
+
+    /* ---------- 2. 刷题：判定瞬间 ---------- */
+    .qopt{border-radius:9px;padding:11px 14px;margin-bottom:9px;
+      transition:background var(--t1) var(--ease),border-color var(--t1) var(--ease),
+                 transform var(--t1) var(--ease),box-shadow var(--t1) var(--ease)}
+    .qopt:not(:disabled):hover{border-color:var(--line2);background:var(--chip)}
+    .qopt:not(:disabled):active{transform:scale(.995)}
+    .qopt .qkey{width:24px;height:24px;font-size:12px;
+      transition:background var(--t1) var(--ease),color var(--t1) var(--ease),border-color var(--t1) var(--ease)}
+    .qopt.right{border-color:var(--ok);background:var(--okBg)}
+    .qopt.right .qkey{background:var(--ok);border-color:var(--ok);color:#FFFDF8;font-weight:600}
+    .qopt.wrong{border-color:var(--warn);background:var(--warnBg)}
+    .qopt.wrong .qkey{background:var(--warn);border-color:var(--warn);color:#FFFDF8;font-weight:600}
+    .qopt.right::after{content:"";flex:0 0 auto;align-self:center;margin-left:10px;width:6px;height:11px;
+      border-right:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(43deg) translateY(-2px)}
+    .qopt.wrong::after{content:"×";flex:0 0 auto;align-self:center;margin-left:10px;
+      font-size:17px;line-height:1;font-weight:600;color:var(--warn)}
+
+    /* 反馈条：一句话 → 图标 + 主文案 + 三个即时数字 */
+    .qfb{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;
+      animation:qfbIn var(--t2) var(--ease)}
+    .qfb[hidden]{display:none}
+    @keyframes qfbIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+    .qfb .qfbico{flex:0 0 auto;width:19px;height:19px;border-radius:50%;display:flex;
+      align-items:center;justify-content:center;font-size:11px;line-height:1;
+      color:#FFFDF8;background:var(--ok)}
+    .qfb .qfbico::after{content:"✓"}
+    .qfb.no .qfbico{background:var(--warn)}
+    .qfb.no .qfbico::after{content:"!";font-weight:700}
+    .qfb .qfbtxt{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .qfb .qfbtxt b{font-size:13.5px;font-weight:600}
+    .qfb .qfbtxt i{font-style:normal;font-size:11.5px;opacity:.86;font-variant-numeric:tabular-nums}
+    .qfb .qfbx{margin-left:auto;font-size:11.5px;opacity:.7;white-space:nowrap;padding-left:8px}
+
+    /* ---------- 3. 本组小结 ---------- */
+    .qsum{padding:22px 24px;border-radius:var(--r2);box-shadow:var(--sh)}
+    .qsum h3{margin:0;font-size:17px;letter-spacing:.01em}
+    .qsumsub{margin:5px 0 18px;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+    .qhead2{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+    .qring{position:relative;flex:0 0 auto;width:104px;height:104px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;background:var(--barBg)}
+    .qring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}
+    .qring>span{position:relative;font-size:23px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+    .qnums{display:flex;gap:26px;flex-wrap:wrap;flex:1 1 auto}
+    .qnum b{display:block;font-size:20px;font-weight:600;line-height:1.25;
+      font-variant-numeric:tabular-nums;margin-bottom:1px}
+    .qnum span{display:block;font-size:11.5px;color:var(--ink3)}
+    .qnum.ok b{color:var(--ok)}
+    .qnum.warn b{color:var(--warn)}
+    .qmtbox{margin:14px 0 0;padding:11px 13px;border-radius:9px;background:var(--bg);
+      font-size:12.5px;line-height:1.85;color:var(--ink2)}
+    .qmtbox b{color:var(--ink);font-weight:600}
+    .qmtline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;color:var(--ink)}
+    .qmtpill{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--ink2)}
+    .qmtpill.up{background:var(--okBg);color:var(--ok);font-weight:600}
+    .qmtpill.down{background:var(--warnBg);color:var(--warn);font-weight:600}
+
+    /* ---------- 4. 学习路径：点亮过渡 ---------- */
+    .mnode2,.mchip,.mdot,.mnode1{transition:background-color var(--t2) var(--ease),
+      border-color var(--t2) var(--ease),color var(--t2) var(--ease),
+      opacity var(--t2) var(--ease),box-shadow var(--t2) var(--ease)}
+    .mnode1 .mbar>i{transition:width var(--t3) var(--ease)}
+
+    /* ---------- 5. 舒适度：焦点阅读模式 ---------- */
+    body.reading .topbar,body.reading .filters{display:none !important}
+    body.reading .wrap{padding-top:16px}
+    body.reading .pathpanel .pathhead{display:none}
+  }
+  @media print{
+    /* 新增色块在纸上退回黑白 */
+    .field-warn,.field-action{background:#fff !important}
+    .qfb{border:1px solid #bbb}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
+      transition-duration:.001ms !important}
+  }
 </style>
 </head>
 <body>
@@ -14943,7 +15098,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.40.0";
+  var APP_VERSION = "3.41.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -15308,6 +15463,36 @@
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !moreMenu.hidden) closeMore();
+  });
+
+  /* [v3.41.0] 焦点阅读模式：F 收起顶栏与筛选，只留卡片正文；Esc 或再按 F 恢复。
+     纯显示层，不改任何状态、不写记录。 */
+  function readingOn() { return document.body.classList.contains("reading"); }
+  document.addEventListener("keydown", function (e) {
+    var isF = (e.key === "f" || e.key === "F");
+    var isEsc = (e.key === "Escape" || e.keyCode === 27);
+    if (!isF && !isEsc) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" ||
+      t.isContentEditable)) return;
+    if (document.body.classList.contains("mode-quiz") ||
+      document.body.classList.contains("drawerOpen")) return;
+    if (isEsc) {
+      if (!readingOn()) return;
+      e.preventDefault();
+      document.body.classList.remove("reading");
+      qzToast("已退出焦点阅读");
+      return;
+    }
+    e.preventDefault();
+    if (readingOn()) {
+      document.body.classList.remove("reading");
+      qzToast("已退出焦点阅读");
+    } else {
+      document.body.classList.add("reading");
+      qzToast("焦点阅读：只留卡片，按 F 或 Esc 恢复");
+    }
   });
   // 菜单项点击后先收起菜单，再执行原按钮行为（原监听会照常触发）
   ["themeBtn", "printBtn", "syncBtn", "recallBtn"].forEach(function (id) {
@@ -19383,8 +19568,15 @@
     state: "setup", done: {}, rec: null, startTs: 0,
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
     kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
+    /* [v3.41.0] 反馈层的运行时状态：只在内存里，不落快照、不进 schema */
+    streak: 0,        // 当前连对题数
+    streakBest: 0,    // 本组最长连对
+    qTs: 0,           // 本题开始作答的时刻（算单题用时）
+    mt0: null,        // 开组时各考点的掌握档快照，收尾比「这次改写了什么」
     cfg: { sec: "全部", type: "全部", order: "seq" }
   };
+  /* [v3.41.0] 掌握档的「好坏」序：只用于小结里判断升级/退步，与 QZ_TIERS.rank 的排序口径无关 */
+  var QZ_GOOD = { none: 0, danger: 1, weak: 2, partial: 3, review: 4, master: 5 };
   /* [sync] 旧的 review.quiz.v1 不再直接读写：内容由 migrateQuizToSnap() 并入快照，之后统一走 snap.quiz。 */
 
   function qzSubject(sid) {
@@ -20869,6 +21061,18 @@
     QZ.startTs = nowMs();
     QZ.calibDone = false;   // [calib] 每一组只写一条校准记录
     QZ.title = title || "";
+    /* [v3.41.0] 反馈层：开组时记下每个考点的掌握档，收尾才能说出「这次改了什么」 */
+    QZ.streak = 0;
+    QZ.streakBest = 0;
+    QZ.qTs = 0;
+    QZ.mt0 = {};
+    var sid0 = QZ.sid || SID;
+    for (var mi = 0; mi < list.length; mi++) {
+      var mk = list[mi] && list[mi].kp ? list[mi].kp.id : "";
+      if (!mk || Object.prototype.hasOwnProperty.call(QZ.mt0, mk)) continue;
+      var mo = qzMasteryOf(sid0, mk);
+      QZ.mt0[mk] = mo ? mo.tier.key : "none";
+    }
     qzShow("run");
     qzRenderQ();
   }
@@ -20877,6 +21081,7 @@
     var q = QZ.list[QZ.pos];
     if (!q) return;
     var it = q.it, mode = qzModeOf(it);
+    QZ.qTs = nowMs();   // [v3.41.0] 单题用时起点
 
     byId("qIdx").textContent = (QZ.pos + 1) + " / " + QZ.list.length;
     byId("qMeta").textContent = q.kp.section + " · " + q.ex.type + " · " + q.kp.name;
@@ -20962,7 +21167,8 @@
     QZ.done[QZ.pos] = { right: right, picked: idx, mode: "opt" };
     qzCount(right, q, right ? null : { wa: QMARKS.charAt(idx), wm: "opt" });
     qzMarkOpts(idx, it.a);
-    qzFeedback(right, it.a >= 0 ? "正确答案 " + QMARKS.charAt(it.a) : "");
+    /* [v3.41.0] 答对时不再重复报「正确答案 X」——图标和绿框已经说清楚了 */
+    qzFeedback(right, (!right && it.a >= 0) ? "正确答案 " + QMARKS.charAt(it.a) : "");
     if (!right) qzToggleExpl(true);
     byId("qShow").textContent = byId("qExpl").hidden ? "看解析" : "收起解析";
   }
@@ -21141,6 +21347,13 @@
 
   function qzCount(right, q, wrong) {
     var rec = QZ.rec;
+    /* [v3.41.0] 连对：只在内存里累计，答错即清零 */
+    if (right) {
+      QZ.streak = (QZ.streak || 0) + 1;
+      if (QZ.streak > (QZ.streakBest || 0)) QZ.streakBest = QZ.streak;
+    } else {
+      QZ.streak = 0;
+    }
     rec.answered++;
     if (right) rec.right++;
     else rec.wrong.push({
@@ -21156,14 +21369,39 @@
     qzRefreshKp(q.kp.id);   // [quiz] 卡片上的「刷过」标识与正确率即时跟上
   }
 
+  /* [v3.41.0] 反馈条改成「图标 + 主文案 + 一行即时数字」：
+     连对 / 本题用时 / 该考点进度都是现成数据现算，不新增存储；
+     答错时把「正确答案」放在副行第一位，并补一句这题历史上错过几次。 */
   function qzFeedback(right, extra) {
-    var fb = byId("qFb");
+    var fb = byId("qFb"), q = QZ.list[QZ.pos];
     fb.hidden = false;
     fb.className = "qfb " + (right ? "ok" : "no");
     fb.innerHTML = "";
-    fb.appendChild(txt("span", "qans", right ? "答对了 ✓" : "答错了 ✗"));
-    if (extra) fb.appendChild(document.createTextNode("　" + extra));
-    fb.appendChild(document.createTextNode(right ? "　已计入进度" : "　已记入错题"));
+
+    fb.appendChild(el("span", "qfbico"));
+
+    var box = el("span", "qfbtxt");
+    box.appendChild(txt("b", "", right ? "答对了" : "答错了"));
+
+    var bits = [];
+    if (!right && extra) bits.push(extra);
+    if (right && QZ.streak > 1) bits.push("连对 " + QZ.streak + " 题");
+    if (!right && q) {
+      var r = qzRecOf(QZ.sid, q.key);
+      var times = (r && r.w) ? qzNum(r.w) : 0;
+      if (times > 1) bits.push("这题已错 " + times + " 次");
+    }
+    var secs = QZ.qTs ? Math.max(1, Math.round((nowMs() - QZ.qTs) / 1000)) : 0;
+    if (secs && secs < 600) bits.push("用时 " + secs + " 秒");
+    if (q) {
+      var st = qzKpStat(QZ.sid, q.kp.id);
+      if (st && st.total) bits.push("该考点 " + st.done + "/" + st.total);
+    }
+    if (right && extra) bits.push(extra);
+    if (bits.length) box.appendChild(txt("i", "", bits.join(" · ")));
+    fb.appendChild(box);
+
+    fb.appendChild(txt("span", "qfbx", right ? "已计入进度" : "已记入错题"));
     qzGuessBar(right);
     qzHesBar();
   }
@@ -21302,6 +21540,40 @@
   }
 
   /* ---------- 小结 ---------- */
+  /* [v3.41.0] 小结里的单个数字块：值在上、说明在下 */
+  function qnumBox(v, label, tone) {
+    var b = el("div", "qnum" + (tone ? " " + tone : ""));
+    b.appendChild(txt("b", "", String(v)));
+    b.appendChild(txt("span", "", label));
+    return b;
+  }
+
+  /* [v3.41.0] 掌握度变化：开组时记下的档位 → 现在的档位，只报真正跨了档的考点。
+     一个都没跨档时如实说「没有跨档」，不编造进步。 */
+  function qzMasteryDelta() {
+    if (!QZ.mt0) return null;
+    var ids = [], i, kid;
+    for (i = 0; i < QZ.list.length; i++) {
+      kid = (QZ.list[i] && QZ.list[i].kp) ? QZ.list[i].kp.id : "";
+      if (kid && ids.indexOf(kid) < 0) ids.push(kid);
+    }
+    var moved = [], up = 0, down = 0;
+    for (i = 0; i < ids.length; i++) {
+      var m = qzMasteryOf(QZ.sid, ids[i]);
+      if (!m) continue;
+      var from = Object.prototype.hasOwnProperty.call(QZ.mt0, ids[i]) ? QZ.mt0[ids[i]] : "none";
+      var to = m.tier.key;
+      var d = (QZ_GOOD[to] || 0) - (QZ_GOOD[from] || 0);
+      /* 从「未开始」刚有记录、但还停在薄弱/危险，不算进步，也别拿来报喜 */
+      if (from === "none" && (QZ_GOOD[to] || 0) < 3) d = 0;
+      if (d > 0) up++;
+      else if (d < 0) down++;
+      if (d !== 0) moved.push({ name: m.name, kid: ids[i], from: from, to: to, dir: d });
+    }
+    moved.sort(function (a, b) { return b.dir - a.dir; });
+    return { total: ids.length, up: up, down: down, list: moved };
+  }
+
   function qzSummary() {
     var rec = QZ.rec;
     var secs = Math.max(1, Math.round((nowMs() - QZ.startTs) / 1000));
@@ -21310,9 +21582,51 @@
 
     qzSum.innerHTML = "";
     qzSum.appendChild(txt("h3", "", "本组完成"));
-    qzSum.appendChild(txt("div", "qbig", rate + "%"));
-    qzSum.appendChild(txt("div", "qsub", "答对 " + rec.right + " / 已答 " + rec.answered +
-      " · 共 " + rec.total + " 题 · 用时 " + mm + " 分 " + (ss < 10 ? "0" : "") + ss + " 秒"));
+    qzSum.appendChild(txt("div", "qsumsub",
+      "用时 " + mm + " 分 " + (ss < 10 ? "0" : "") + ss + " 秒 · 共 " + rec.total +
+      " 题 · 已答 " + rec.answered + " 题"));
+
+    /* 环形正确率 + 三个关键数字：把「一段文字统计」换成一眼能读的成绩行 */
+    var qhead2 = el("div", "qhead2");
+    var ring = el("div", "qring");
+    ring.style.background = "conic-gradient(var(--accent) 0 " + rate + "%, var(--barBg) " + rate +
+      "% 100%)";
+    ring.title = "本组正确率：答对 " + rec.right + " / 已答 " + rec.answered;
+    ring.appendChild(txt("span", "", rate + "%"));
+    qhead2.appendChild(ring);
+
+    var nums = el("div", "qnums");
+    nums.appendChild(qnumBox(rec.right + " / " + rec.answered, "答对", "ok"));
+    nums.appendChild(qnumBox(rec.wrong.length, "未改正错题", rec.wrong.length ? "warn" : ""));
+    nums.appendChild(qnumBox(QZ.streakBest || 0, "本轮最长连对", ""));
+    nums.appendChild(qnumBox(rec.total, "本组题量", ""));
+    qhead2.appendChild(nums);
+    qzSum.appendChild(qhead2);
+
+    /* 掌握度变化：这次到底改写了哪几个考点的档位（同一个 qzMasteryOf 口径，不新增记录） */
+    var dlt = qzMasteryDelta();
+    if (dlt && dlt.total) {
+      var mtb = el("div", "qmtbox");
+      var say = "本次涉及 " + dlt.total + " 个考点";
+      if (dlt.up) say += "，其中 <b>" + dlt.up + " 个</b>掌握度提升";
+      if (dlt.down) say += (dlt.up ? "、" : "，") + dlt.down + " 个因新错题退了一档";
+      if (!dlt.up && !dlt.down) say += "，本次没有跨档——把错题改正之后才会升级";
+      var line = el("div", "");
+      line.innerHTML = "掌握度变化：" + say;
+      mtb.appendChild(line);
+      for (var qi = 0; qi < dlt.list.length && qi < 3; qi++) {
+        (function (mv) {
+          var row = el("div", "qmtline");
+          row.appendChild(txt("span", "", mv.name));
+          row.appendChild(txt("span", "qmtpill", qzTierOf(mv.from).label));
+          row.appendChild(txt("span", "", "→"));
+          row.appendChild(txt("span", "qmtpill " + (mv.dir > 0 ? "up" : "down"),
+            qzTierOf(mv.to).label));
+          mtb.appendChild(row);
+        })(dlt.list[qi]);
+      }
+      qzSum.appendChild(mtb);
+    }
 
     var tb = el("table", "qtable");
     var types = Object.keys(rec.byType);
