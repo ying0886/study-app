@@ -3,9 +3,18 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.41.0
+  APP_VERSION: 3.42.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.41.0）UI 精修 + 学习反馈层（方案 B，数据未动、判定口径未动）——
+  本次变更: （3.42.0）刷题小结加「返回学习台」入口（数据未动、判分口径与存储均未动）——
+             ①本组小结的按钮区第一行新增实心「返回学习台」，与「返回设置」同一套 .btn 体系，
+               只多一个 primary 变体做视觉区分，不新增任何样式类；
+             ②点击即退出刷题（顺带把攒下的记录推一次同步）、再打开导图；顺序定死为「先退刷题后开图」，
+               导图打开时的 pathRender 会按最新记录重算点亮，不会停在进刷题前的旧进度上；
+             ③桌面与移动端同一份按钮：沿用 .qacts 的 flex 换行与移动端 42px 触控高度，
+               窄屏不会挤出横向滚动，触控区不小于其余按钮；
+             ④自测：_tmp/sum-mapback-test.mjs（12 项：按钮存在与文案、唯一性、退出刷题、导图打开、
+               点亮已更新、返回设置仍在、移动端 390px 视口可点、无横向溢出）。
+  上次变更: （3.41.0）UI 精修 + 学习反馈层（方案 B，数据未动、判定口径未动）——
              ①设计令牌：补 --ink3 / --ok / --gold 三个语义色、圆角收成 6 与 13 两档、
                阴影统一一档、动效曲线统一 cubic-bezier(.2,.7,.3,1)，时长 120/200/320ms；
                深色与「跟随系统」两套同步给值；
@@ -440,7 +449,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.41.0">
+<meta name="app-version" content="3.42.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -15098,7 +15107,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.41.0";
+  var APP_VERSION = "3.42.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -21574,6 +21583,14 @@
     return { total: ids.length, up: up, down: down, list: moved };
   }
 
+  /* [mapback] 小结页的「返回学习台」：先退出刷题（顺带把攒下的记录推一次），再打开导图。
+     顺序不能反 —— pathOpen 内部的 pathRender 会按最新记录重算点亮，先开图再刷新会慢一步。 */
+  function qzBackToMap() {
+    if (QZ.on) qzExit();
+    if (typeof pathOpen === "function") { pathOpen(); return; }
+    if (mapBtn) mapBtn.click();
+  }
+
   function qzSummary() {
     var rec = QZ.rec;
     var secs = Math.max(1, Math.round((nowMs() - QZ.startTs) / 1000));
@@ -21754,6 +21771,8 @@
     }
 
     var acts = el("div", "qacts");
+    /* [mapback] 收尾页的出口：先回学习台（导图），省得先「返回设置」再点顶栏 */
+    acts.appendChild(qzBtnNode("返回学习台", qzBackToMap, "small primary"));
     if (gsum) {
       acts.appendChild(qzBtnNode("重刷蒙对题（" + gsum + "）", function () {
         var only = [];
@@ -21863,8 +21882,8 @@
     return wrap;
   }
 
-  function qzBtnNode(label, fn) {
-    var b = txt("button", "btn small", label);
+  function qzBtnNode(label, fn, cls) {
+    var b = txt("button", "btn " + (cls || "small"), label);
     b.type = "button";
     b.addEventListener("click", fn);
     return b;
