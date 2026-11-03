@@ -3,9 +3,19 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.39.0
+  APP_VERSION: 3.40.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.39.0）学习路径导图改成「中心放射式思维导图」，对齐 XMind 逻辑图的层级与连线（数据未动）——
+  本次变更: （3.40.0）学习台跳到知识点后可以一键练这个考点，直接开刷（数据未动）——
+             ①卡片内入口：正文第一行就是「▶ 练这个考点 N 题」实心按钮，右侧小字给「还没练过 · 共 N 道」
+               或「已做 x/y · 待改正 n 道」，刷完回来自动刷新（挂进 qzRefreshMarks）；
+             ②跳转后入口：从学习台（以及目录/搜索）跳到某知识点后，右下角浮出同名悬浮按钮，带考点名与题量；
+               滚离卡片自动收起、滚回再现，进刷题 / 切科目 / 按 Esc 即隐去，不挡路；
+             ③零多余步骤：点按钮跳过设置页直接开刷，题量＝该考点题数，不改动既有的章节/题型/顺序筛选配置
+               （qzPracticeKp → qzStartRun(only, "考点练习", kid)）；
+             ④收尾页的「再来一组」在考点练习下改成「再练一遍这个考点」，仍只出该考点，不会突然变成整科题库；
+             ⑤自测：kp-practice-test（23 项：跳转浮出、视口内、题量一致、跳过设置页、滚动收起/再现、窄屏可点）
+               与 kp-again-test（7 项：再练一遍仍限考点）全过，path-mastery-test / map-verify 复跑无回归。
+  上次变更: （3.39.0）学习路径导图改成「中心放射式思维导图」，对齐 XMind 逻辑图的层级与连线（数据未动）——
              ①结构：中心主题居中（科目名 + 段/点数），阶段按前后半左右放射（前半在右、后半在左），
                三级层级＝阶段方框 → 知识点组方框 → 具体知识点纯文字，与样例一致；
              ②节点样式：一级＝带分支色描边的圆角方框（标题 + 掌握目标 3 行 + 进度条/计数/级别），
@@ -413,7 +423,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.39.0">
+<meta name="app-version" content="3.40.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -710,6 +720,52 @@
     border:1px solid var(--line2);border-radius:6px;color:var(--ink2);
   }
   .bodytagrow .form{font-size:11.5px}
+
+  /* ---------- [qzkp] 练这个考点：卡片内按钮 + 跳转后的悬浮入口 ---------- */
+  /* 卡片里紧跟正文开头，一眼能看到；点一下只出这个知识点的题并直接开始 */
+  .qzbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    padding:2px 0 12px;margin:0 0 2px;border-bottom:1px solid var(--line)}
+  .qzbarBtn{display:inline-flex;align-items:center;gap:8px;
+    font:inherit;font-size:13.5px;font-weight:600;line-height:1.2;
+    padding:9px 16px;border:1px solid var(--accent);border-radius:8px;
+    background:var(--accent);color:#fff;cursor:pointer;
+    box-shadow:0 2px 10px rgba(0,0,0,.12);
+    transition:transform .12s ease,box-shadow .16s ease}
+  .qzbarBtn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(0,0,0,.18)}
+  .qzbarBtn:active{transform:translateY(0)}
+  .qzbarBtn .ico{font-size:11px;line-height:1;opacity:.92}
+  .qzbarBtn .n{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;
+    background:rgba(255,255,255,.24)}
+  .qzbar.err .qzbarBtn{background:var(--bg);color:var(--ink3);border-color:var(--line2);
+    box-shadow:none;cursor:not-allowed;font-weight:500}
+  .qzbarHint{font-size:11.5px;line-height:1.6;color:var(--ink2)}
+
+  /* 跳转后的悬浮按钮：固定右下，卡片滚出视野/收起/进刷题时自动隐去 */
+  .kpgo{position:fixed;right:20px;bottom:20px;z-index:36;
+    display:inline-flex;align-items:center;gap:10px;
+    font:inherit;font-size:14px;font-weight:600;line-height:1.2;text-align:left;
+    padding:11px 18px;border-radius:999px;border:1px solid var(--accent);
+    background:var(--accent);color:#fff;cursor:pointer;
+    box-shadow:0 10px 30px rgba(0,0,0,.24);
+    transition:transform .14s ease,box-shadow .18s ease}
+  .kpgo:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(0,0,0,.3)}
+  .kpgo[hidden]{display:none}
+  .kpgo .ico{font-size:12px;line-height:1;opacity:.9}
+  .kpgo .kbody{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .kpgo .ktxt{display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .kpgo .n{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;
+    background:rgba(255,255,255,.24)}
+  .kpgo .ksub{font-size:10.5px;font-weight:400;opacity:.88;max-width:220px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:560px){
+    .qzbarBtn{width:100%;justify-content:center}
+    .qzbarHint{font-size:11px}
+    .kpgo{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
+      padding:12px 16px;font-size:14.5px;max-width:calc(100vw - 24px)}
+    .kpgo .ksub{max-width:150px}
+  }
+  body.mode-quiz .kpgo{display:none !important}
+  @media print{ .kpgo,.qzbar{display:none !important} }
 
   /* 勾选 */
   /* 手动标记（个人书签）：视觉降权——缩小、变灰、默认半透明；
@@ -2150,6 +2206,15 @@
 </section>
 
 <div class="toast" id="toast" role="status" aria-live="polite">点卡片展开，勾选即记录掌握</div>
+
+<!-- [qzkp] 跳转到知识点后浮出的「练这个考点」入口：点一下直接开始这一组题 -->
+<button class="kpgo" id="kpGo" type="button" hidden>
+  <span class="ico" aria-hidden="true">▶</span>
+  <span class="kbody">
+    <span class="ktxt">练这个考点<span class="n" id="kpGoN"></span></span>
+    <span class="ksub" id="kpGoName"></span>
+  </span>
+</button>
 
 <div class="drawerScrim" id="favScrim" hidden></div>
 <aside class="drawer" id="favDrawer" role="dialog" aria-modal="true" aria-labelledby="favTitle" tabindex="-1" hidden>
@@ -14878,7 +14943,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.39.0";
+  var APP_VERSION = "3.40.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -15656,6 +15721,10 @@
 
     var body = el("div", "body");
 
+    /* [qzkp] 卡片第一行就是「练这个考点」：只出这一考点的题，点了直接开始刷题 */
+    var qzbar = buildKpPractice(k);
+    if (qzbar) body.appendChild(qzbar);
+
     /* 信号只作「题干特征」提示，不再参与筛选：从可点 chip 降级为纯标签，
        点击不再改 filters、也不再高亮同类卡片 */
     var sigRow = el("div", "bodytagrow");
@@ -15709,6 +15778,38 @@
     });
     d.appendChild(body);
     return d;
+  }
+
+  /* [qzkp] 卡片内的「练这个考点」入口：题库里没这一考点就整块不渲染（自建科目没有题库） */
+  function kpBarText(st) {
+    if (!st || !st.total) return "";
+    if (!st.done) return "还没练过 · 共 " + st.total + " 道";
+    return "已做 " + st.done + "/" + st.total +
+      (st.wrong ? " · 待改正 " + st.wrong + " 道" : " · 全对");
+  }
+  function kpPaintBar(box, kid) {
+    if (!box) return;
+    var st = qzKpStat(SID, kid);
+    if (!st || !st.total) return;
+    var n = box.querySelector(".qzbarBtn .n"), h = box.querySelector(".qzbarHint");
+    if (n) n.textContent = st.total + " 题";
+    if (h) h.textContent = kpBarText(st);
+  }
+  function buildKpPractice(k) {
+    var st = qzKpStat(SID, k.id);
+    if (!st || !st.total) return null;
+    var box = el("div", "qzbar");
+    box.setAttribute("data-kp", k.id);
+    var b = el("button", "qzbarBtn");
+    b.type = "button";
+    b.appendChild(txt("span", "ico", "▶"));
+    b.appendChild(document.createTextNode("练这个考点"));
+    b.appendChild(txt("span", "n", st.total + " 题"));
+    b.title = "只出「" + k.name + "」的 " + st.total + " 道题，直接开始";
+    b.addEventListener("click", function () { qzPracticeKp(k.id); });
+    box.appendChild(b);
+    box.appendChild(txt("span", "qzbarHint", kpBarText(st)));
+    return box;
   }
 
   /* 新增字段：解题方法 / 知识网络 / 信号聚焦。字段缺失或为空时整块不渲染，旧数据照常显示。 */
@@ -16045,6 +16146,8 @@
     applyRecallBtn();   // [recall] 切科目后按钮状态跟着变（按科目独立）
     if (!favDrawer.hidden) renderFavDrawer();
     if (navDrawer && !navDrawer.hidden) renderNav();
+    /* [qzkp] 整表重建后旧卡片已作废，悬浮入口一并收起（新卡片自带卡片内按钮） */
+    if (typeof kpGoHide === "function") kpGoHide();
   }
 
   /* ---------------- 收藏 ---------------- */
@@ -18681,7 +18784,60 @@
     if (card.getAttribute("data-math") !== "1") { renderMath(card); card.setAttribute("data-math", "1"); }
     card.scrollIntoView({ block: "center", behavior: "smooth" });
     flashCard(card);
+    kpGoShow(kid, card);      // [qzkp] 跳过来就给一个显眼的「练这个考点」入口
   }
+
+  /* ---------------- [qzkp] 跳转后的悬浮入口 ---------------- */
+  /* 跟卡片绑定：卡片收起、滚出视野、切科目、进刷题都会自动隐去；滚回来还会再现。 */
+  var kpGo = byId("kpGo");
+  var kpGoN = byId("kpGoN");
+  var kpGoName = byId("kpGoName");
+  var KP_GO = { kid: "", card: null };
+
+  function kpGoShow(kid, card) {
+    if (!kpGo || !kid || !card) return;
+    var st = qzKpStat(SID, kid);
+    if (!st || !st.total) { kpGoHide(); return; }
+    KP_GO.kid = kid;
+    KP_GO.card = card;
+    var kp = findPoint(kid);
+    if (kpGoN) kpGoN.textContent = st.total + " 题";
+    if (kpGoName) kpGoName.textContent = kp ? kp.name : "";
+    kpGo.hidden = false;
+  }
+  function kpGoHide() {
+    KP_GO.kid = "";
+    KP_GO.card = null;
+    if (kpGo) kpGo.hidden = true;
+  }
+  function kpGoSync() {
+    if (!kpGo || !KP_GO.kid) return;
+    var c = KP_GO.card;
+    if (!c || !c.open || !document.body.contains(c)) { kpGo.hidden = true; return; }
+    var r = c.getBoundingClientRect();
+    var vh = window.innerHeight || 800;
+    kpGo.hidden = !(r.bottom > 90 && r.top < vh - 24);
+  }
+  if (kpGo) {
+    kpGo.addEventListener("click", function () {
+      var kid = KP_GO.kid;
+      if (!kid) return;
+      kpGoHide();
+      qzPracticeKp(kid);
+    });
+  }
+  (function () {
+    var t = null;
+    window.addEventListener("scroll", function () {
+      if (t || !KP_GO.kid) return;
+      t = setTimeout(function () { t = null; kpGoSync(); }, 120);
+    }, true);
+    window.addEventListener("resize", function () { if (KP_GO.kid) kpGoSync(); });
+    document.addEventListener("keydown", function (e) {
+      if (!KP_GO.kid) return;
+      if (e.key === "Escape" || e.keyCode === 27) kpGoHide();
+    });
+  })();
 
   /* ---------------- 抽屉开合与 tab ---------------- */
   function setNavTab(name, rebuild) {
@@ -19226,6 +19382,7 @@
     on: false, sid: null, pool: [], list: [], pos: 0,
     state: "setup", done: {}, rec: null, startTs: 0,
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
+    kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
     cfg: { sec: "全部", type: "全部", order: "seq" }
   };
   /* [sync] 旧的 review.quiz.v1 不再直接读写：内容由 migrateQuizToSnap() 并入快照，之后统一走 snap.quiz。 */
@@ -20466,18 +20623,23 @@
       for (var e = 0; e < exs.length; e++) {
         qzPaintEx(exs[e], kid, parseInt(exs[e].getAttribute("data-exi"), 10));
       }
+      kpPaintBar(cards[c].querySelector(".qzbar[data-kp]"), kid);   // [qzkp] 练题条上的「已做 x/y」跟着刷新
     }
     qzSyncProgress();
   }
 
   /* 从卡片徽标直接开这一组的题：进刷题模式后只放该知识点的题，不改动既有筛选配置 */
+  function qzPoolOfKp(sid, kid) {
+    var pool = qzPoolOf(sid), out = [];
+    for (var i = 0; i < pool.length; i++) if (pool[i].kp.id === kid) out.push(pool[i]);
+    return out;
+  }
   function qzPracticeKp(kid) {
     if (!QZ_READY) return;
     qzEnter();
-    var only = [];
-    for (var i = 0; i < QZ.pool.length; i++) if (QZ.pool[i].kp.id === kid) only.push(QZ.pool[i]);
+    var only = qzPoolOfKp(SID, kid);
     if (!only.length) { qzToast("该知识点暂无可用题目"); return; }
-    qzStartRun(only, "知识点练习");
+    qzStartRun(only, "考点练习", kid);
   }
 
   /* ---------- 视图切换 ---------- */
@@ -20498,6 +20660,7 @@
     QZ.on = true;
     QZ.sid = SID;
     QZ.pool = qzPoolOf(SID);
+    if (typeof kpGoHide === "function") kpGoHide();   // [qzkp] 进刷题页，悬浮入口收起
     document.body.className = document.body.className.replace(/\s*mode-quiz/g, "") + " mode-quiz";
     qzView.hidden = false;
     qzBtn.textContent = "卡片";
@@ -20693,12 +20856,13 @@
   }
 
   /* ---------- 答题 ---------- */
-  function qzStartRun(list, title) {
+  function qzStartRun(list, title, kpId) {
     if (!list.length) {
       qzToast("没有符合条件的题目，换个筛选试试");
       return;
     }
     QZ.list = list;
+    QZ.kpRun = kpId || "";
     QZ.pos = 0;
     QZ.done = {};
     QZ.rec = { total: list.length, answered: 0, right: 0, wrong: [], byType: {} };
@@ -21304,7 +21468,15 @@
         qzStartRun(only, "重刷错题");
       }));
     }
-    acts.appendChild(qzBtnNode("再来一组", function () { qzStartRun(qzBuildList(), "再来一组"); }));
+    /* [qzkp] 若是「练这个考点」开的组，再来一组还只出这个考点，别突然变成整科题库 */
+    acts.appendChild(qzBtnNode(QZ.kpRun ? "再练一遍这个考点" : "再来一组", function () {
+      if (QZ.kpRun) {
+        var kid = QZ.kpRun;
+        qzStartRun(qzPoolOfKp(QZ.sid, kid), "考点练习", kid);
+      } else {
+        qzStartRun(qzBuildList(), "再来一组");
+      }
+    }));
     /* [weak] 本组结束后直接跳到完整列表，省一次「返回设置 + 往下找」 */
     var wl = qzWeakList(QZ.sid);
     if (wl.length) {
