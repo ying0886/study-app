@@ -3,9 +3,28 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.46.0
+  APP_VERSION: 3.47.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.46.0）代码题按行显示、缩进分层（只改渲染，数据、判分与存储都没动）——
+  本次变更: （3.47.0）修好「同步弹报错、红点挂着不走」——问题出在失败后的措辞、退避与状态，不在合并算法（数据与判分未动）——
+             ①症状：刷题后弹「同步失败：网络错误：Failed to fetch」，状态点转红并停在「有本地改动待推送」，
+               过几分钟又自己好了；2026-11-03 20:01 那次的实测记录（本机 review.sync.meta.v1）是
+               {"lastError":"网络错误：Failed to fetch","pending":true}，紧接着 20:04 一次同步耗时 0.9 秒成功；
+             ②成因：fetch 被浏览器直接拒（断网 / 代理换节点 / 跨域预检被拦）时只会抛一句 "Failed to fetch"，
+               ⓐ 原样弹给用户，看不出是网络问题还是配置写错；
+               ⓑ 退避只有 3 次（3s/10s/30s，约 43 秒）就放弃，之后要等 15 分钟的定时同步才自愈，
+                 这段时间每答一题都会再撞一次失败、再弹一轮窗，观感就是「同步一直在报错」；
+               ⓒ navigator.onLine 在「代理或 CDN 拦掉 api.github.com」时仍是 true，走不到「离线待同步」那条友好分支；
+               ⓓ 失败只记一句错误文案，没记时刻与地址，事后分不清是哪个通道、哪台机器。
+             ③改法：网络类失败统一措辞「连不上同步服务器（断网、被代理拦截或跨域被拒）」，浏览器原话收进 meta.lastErrorRaw；
+               退避表拉长成 3s→10s→30s→2min→5min（约 7 分钟内自己恢复），提示写成「2 分钟后第 4/5 次重试」；
+               网络类失败且有改动待推时，状态点是「待重连（改动在本机）」而不是红色「同步失败」，
+               抽屉里同时给出失败时刻与通道主机；同一错误 60 秒内只弹一次窗，成功后退避与去重一起复位。
+             ④范围：只动同步的错误分级、退避与状态文案（httpReq / syncNow / refreshSyncDot / renderSyncStat），
+               合并算法、快照结构（仍是 schema 2）、请求往返次数、判分口径一律未动；
+               meta 只加三个可选字段 lastErrorAt / lastErrorRaw / lastErrorHost，老数据缺字段照旧可用。
+             ⑤自测：新增 _tmp/sync-netfail-test.mjs（12 项：网络类分档、措辞、状态点、退避表、去重、自愈），
+               sync-e2e / sync-quiz-merge / sync-timeout-test 三套既有回归全过。
+  上次变更: （3.46.0）代码题按行显示、缩进分层（只改渲染，数据、判分与存储都没动）——
              ①症状：题干里的 Python 代码在刷题页被压成一整段——「str = input(...) i = 0 for ch in str: if ch == ...」，
                换行没了、缩进也看不出层级，代码题基本没法读；
              ②成因：题干数据里是「<br> 分行 + 全角空格缩进」，但刷题页是 innerHTML 直出，HTML 会把换行折叠成空格，
@@ -493,7 +512,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.46.0">
+<meta name="app-version" content="3.47.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -15232,7 +15251,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.46.0";
+  var APP_VERSION = "3.47.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -17236,6 +17255,28 @@
     return Math.min(SYNC_TIMEOUT_MAX, SYNC_TIMEOUT_WRITE + extra);
   }
 
+  /* [sync] 网络层失败的统一说法。fetch 被浏览器直接拒时只会抛一句「Failed to fetch」
+     （断网、代理换节点、TLS 被重置、跨域预检被拦都是这一句），对用户是同一件事：
+     等网络或换网络，改动没有丢。所以合成一句人话，浏览器原话留到 meta.lastErrorRaw 里供排查。 */
+  function syncNetText(raw) {
+    var s = String(raw || "");
+    if (!s || /Failed to fetch|NetworkError|Load failed|fetch failed|network ?error/i.test(s)) {
+      return "连不上同步服务器（断网、被代理拦截或跨域被拒）";
+    }
+    return "连不上同步服务器：" + s;
+  }
+  /* [sync] 记录失败发生在哪个通道主机（不存完整 URL：自定义端点可能把令牌放在 query 里） */
+  function syncHostOf(u) {
+    try { return String(u || "").replace(/^[a-z]+:\/\//i, "").split(/[/?#]/)[0]; }
+    catch (e) { return ""; }
+  }
+  function syncEndpointHost() {
+    var c = syncCfg();
+    if (c.channel === "gist") return "api.github.com";
+    if (c.channel === "webdav") return syncHostOf(c.webdav && c.webdav.url);
+    return syncHostOf(c.custom && c.custom.url);
+  }
+
   function sErr(code, message, status) {
     var e = new Error(message || code);
     e.code = code || "error";
@@ -17301,7 +17342,9 @@
           if (finished) return;
           finished = true;
           try { if (ctrl) ctrl.abort(); } catch (e) {}
-          fail(sErr("timeout", "请求超时（" + Math.round(budget / 1000) + " 秒，网络较慢）"));
+          var te = sErr("timeout", "请求超时（" + Math.round(budget / 1000) + " 秒，网络较慢）");
+          te.host = syncHostOf(url);
+          fail(te);
         }, budget);
         function end(ok, val) {
           if (finished) return;
@@ -17321,9 +17364,13 @@
         }).catch(function (err) {
           if (finished) return;
           var code = (err && err.name === "AbortError") ? "timeout" : "network";
+          var raw = (err && err.message) || "";
           var msg = (code === "timeout") ? ("请求超时（" + Math.round(budget / 1000) + " 秒，网络较慢）")
-            : ("网络错误：" + ((err && err.message) || "无法连接（跨域请求可能被浏览器阻止）"));
-          end(false, sErr(code, msg));
+            : syncNetText(raw);
+          var e = sErr(code, msg);
+          e.raw = raw;                       // [sync] 浏览器原话，写进 meta.lastErrorRaw 备查
+          e.host = syncHostOf(url);
+          end(false, e);
         });
       }
 
@@ -17919,11 +17966,24 @@
     if (syncHintEl) syncHintEl.textContent = text || "";
     if (syncBtn) syncBtn.title = "多端进度同步 · " + (text || "");
   }
+  /* [sync] 网络类失败且还有改动没推上去：这不是「配置错了」，也不该一直挂红灯，
+     状态点用「待重连」——黄色，改动在本机，退避重试还在跑。 */
+  function syncNetStuck(meta) {
+    return !!(meta && meta.pending && meta.lastError && meta.lastErrorCode === "network");
+  }
+  function syncErrText(m) {
+    if (!m || !m.lastError) return "无";
+    var tail = [];
+    if (m.lastErrorAt) tail.push(fmtTime(m.lastErrorAt));
+    if (m.lastErrorHost) tail.push(m.lastErrorHost);
+    return m.lastError + (tail.length ? "（" + tail.join(" · ") + "）" : "");
+  }
   function refreshSyncDot() {
     var ad = syncAdapter(), meta = syncMeta();
     if (!ad) { setSyncState("", "未配置"); return; }
     if (SYNC_BUSY) { setSyncState("busy", "同步中"); return; }
     if (meta.pending && syncOffline()) { setSyncState("dirty", "离线待同步"); return; }   // [sync] 离线优先播报
+    if (syncNetStuck(meta)) { setSyncState("dirty", "待重连（改动在本机）"); return; }
     if (meta.lastError) { setSyncState("err", "同步失败"); return; }
     if (meta.pending) { setSyncState("dirty", "待推送"); return; }
     if (meta.lastSyncAt) { setSyncState("ok", "已同步"); return; }
@@ -17985,17 +18045,20 @@
       ["状态", !ad ? "未配置同步通道"
         : (SYNC_BUSY ? "同步中"
         : (syncOffline() ? "离线（改动留在本机）"
-        : (meta.pending ? "有本地改动待推送" : (meta.lastError ? "上次失败" : "空闲"))))],
+        : (syncNetStuck(meta) ? "连不上服务器，改动已存本机（会自动重试）"
+        : (meta.pending ? "有本地改动待推送" : (meta.lastError ? "上次失败" : "空闲")))))],
       ["自动同步", autoMin ? ("每 " + autoMin + " 分钟" + (ad ? "" : "（配好通道后生效）")) : "关闭（只靠改动触发）"],
       ["上次同步", fmtTime(meta.lastSyncAt) + (meta.lastCost ? "（耗时 " + (meta.lastCost / 1000).toFixed(1) + " 秒）" : "")],
       ["本地条目", countEntries(s.mastery) + " 掌握 / " + countEntries(s.favs) + " 收藏 / " +
         countNotesAll(s.notes) + " 笔记 / " + countEntries(s.quiz) + " 刷题"],
       ["远端条目", (rc === undefined || rc === null) ? "—"
         : (rc.mastery + " 掌握 / " + rc.favs + " 收藏 / " + (rc.quiz === undefined ? "—" : rc.quiz) + " 刷题")],
-      ["上次错误", meta.lastError ? meta.lastError : "无"],
+      ["上次错误", syncErrText(meta)],
       ["超时设置", "读取 " + (SYNC_TIMEOUT_READ / 1000) + " 秒 / 写入 " +
         (SYNC_TIMEOUT_WRITE / 1000) + "–" + (SYNC_TIMEOUT_MAX / 1000) + " 秒（按快照大小）"]
     ];
+    /* [sync] 浏览器原话单独一行：上面那行是给人看的，这行是给排查用的（跨域/断网/被拦都是同一句） */
+    if (meta.lastError && meta.lastErrorRaw) rows.splice(rows.length - 1, 0, ["原始信息", meta.lastErrorRaw]);
     rows.forEach(function (r) {
       var p = el("div", "sline");
       p.appendChild(txt("b", "", r[0] + "："));
@@ -18075,7 +18138,8 @@
     auBox.appendChild(auSel);
     syncBodyEl.appendChild(auBox);
     syncBodyEl.appendChild(snote("改动后 3 秒自动推送（连续改动最长 6 秒内必推一次）；刷题过程中先攒着，退出刷题时统一推送。" +
-      "定时同步负责把其他设备的改动拉回来（仅页面在前台时运行）。"));
+      "定时同步负责把其他设备的改动拉回来（仅页面在前台时运行）。" +
+      "推送失败会在 3 秒 / 10 秒 / 30 秒 / 2 分钟 / 5 分钟后自动重试，改动先留在本机，不会丢。"));
 
     var row = el("div", "srow");
     [["立即同步", "full"], ["仅拉取", "pull"], ["仅推送", "push"]].forEach(function (o) {
@@ -18547,7 +18611,23 @@
   var SYNC_DIRTY_AT = 0;                    // [sync] 连续改动的最早时间，用于给防抖加硬上限
   var SYNC_MAX_WAIT = 6000;                 // [sync] 再怎么连续改，6s 内必推一次
   var SYNC_RETRY_TIMER = null;
-  var SYNC_RETRY_WAITS = [3000, 10000, 30000];  // [sync] 失败退避：3s / 10s / 30s，最多 3 次
+  /* [sync] 失败退避：先 3 次快退避顶住抖动（3s / 10s / 30s），再给两次慢退避（2min / 5min）。
+     2026-11-03 那次「Failed to fetch」就是断网/代理换节点的瞬时失败：原表只有 3 次（约 43 秒），
+     之后要等 15 分钟的定时同步才自愈，这中间每答一题都会再弹一次「同步失败」——观感是「一直在报错」。 */
+  var SYNC_RETRY_WAITS = [3000, 10000, 30000, 120000, 300000];
+  var SYNC_TOAST_KEY = "";      // [sync] 同类错误去重：60 秒内只弹一次窗
+  var SYNC_TOAST_AT = 0;
+
+  function syncWaitText(ms) {
+    return (ms >= 60000) ? (Math.round(ms / 60000) + " 分钟") : (Math.round(ms / 1000) + " 秒");
+  }
+  function syncToastOnce(key, msg, ms) {
+    var now = nowMs();
+    if (SYNC_TOAST_KEY === key && (now - SYNC_TOAST_AT) < 60000) return;
+    SYNC_TOAST_KEY = key;
+    SYNC_TOAST_AT = now;
+    toastSync(msg, ms);
+  }
 
   function syncSetMeta(patch) {
     var m = syncMeta();
@@ -18659,9 +18739,10 @@
     return chain.then(function (res) {
       SYNC_BUSY = false;
       SYNC_DIRTY_AT = 0;
+      SYNC_TOAST_KEY = "";              // [sync] 成功了就把去重与退避一起复位，下次失败照常提示
       var patch = {
         lastSyncAt: nowMs(), lastCost: Math.max(1, nowMs() - startedAt),
-        lastError: "", lastErrorCode: "", pending: false, offline: false
+        lastError: "", lastErrorCode: "", lastErrorRaw: "", lastErrorHost: "", pending: false, offline: false
       };
       if (res && res.remoteCount) patch.remoteCount = res.remoteCount;
       syncSetMeta(patch);
@@ -18674,7 +18755,14 @@
       SYNC_BUSY = false;
       var msg = (err && err.message) || "同步失败";
       var code = (err && err.code) || "error";
-      var patch2 = { lastError: msg, lastErrorCode: code, lastCost: Math.max(1, nowMs() - startedAt) };
+      var patch2 = {
+        lastError: msg, lastErrorCode: code, lastCost: Math.max(1, nowMs() - startedAt),
+        /* [sync] 失败时刻与通道主机：抽屉里能看出「几点、打哪个地址失败的」，
+           不必再靠复现（2026-11-03 那次只留了一句 Failed to fetch，无从判断是断网还是配错） */
+        lastErrorAt: nowMs(),
+        lastErrorRaw: (err && err.raw) || "",
+        lastErrorHost: (err && err.host) || syncEndpointHost()
+      };
       /* [sync] 只有「写」失败才说明本地有改动没上去；pull 失败不代表有待推送，
          否则面板会一直显示「有本地改动待推送」，误导读了好几遍。 */
       if (mode !== "pull") patch2.pending = true;
@@ -18699,9 +18787,11 @@
       var wait = SYNC_RETRY_WAITS[attempt || 0];
       if (wait !== undefined) {
         var nth = (attempt || 0) + 1;
-        /* [sync] 自动同步（silent）失败不弹窗：隔几分钟弹一次很吵，状态点与面板已经写明 */
-        if (!silent) toastSync("同步失败：" + msg + "（" + Math.round(wait / 1000) + " 秒后第 " + nth + "/" +
-          SYNC_RETRY_WAITS.length + " 次重试）", 5200);
+        /* [sync] 自动同步（silent）失败不弹窗：隔几分钟弹一次很吵，状态点与面板已经写明。
+           连续失败也只弹一次（同类错误 60 秒内去重），避免「每答一题弹一次」。 */
+        if (!silent) syncToastOnce(code + "|" + msg,
+          "同步失败：" + msg + "（" + syncWaitText(wait) + "后第 " + nth + "/" +
+          SYNC_RETRY_WAITS.length + " 次重试，改动已存本机）", 5200);
         if (SYNC_RETRY_TIMER) clearTimeout(SYNC_RETRY_TIMER);
         SYNC_RETRY_TIMER = setTimeout(function () {
           SYNC_RETRY_TIMER = null;
@@ -18711,8 +18801,13 @@
           syncNow(mode === "pull" ? "pull" : "push", (attempt || 0) + 1, silent === true);
         }, wait);
       } else {
-        if (!silent) toastSync("同步失败：" + msg);
-        else { syncSetMeta({ pending: mode !== "pull" ? true : syncMeta().pending }); refreshSyncDot(); renderSyncStat(); }
+        /* [sync] 退避全用完了：不再当「配置错误」处理，状态点按网络类走「待重连」，
+           改动留在本机、下次定时同步（或下一次作答）接着试。 */
+        if (!silent) syncToastOnce(code + "|" + msg,
+          "同步失败：" + msg + "（已自动重试 " + SYNC_RETRY_WAITS.length + " 次，改动留在本机，稍后继续）", 5600);
+        else { syncSetMeta({ pending: mode !== "pull" ? true : syncMeta().pending }); }
+        refreshSyncDot();
+        renderSyncStat();
       }
       return false;
     });
@@ -22835,7 +22930,12 @@
     importSnapFile: importSnapFile, countEntries: countEntries, deviceInfo: deviceInfo,
     syncTouched: syncTouched, toastSync: toastSync,
     syncAutoArm: syncAutoArm, syncAutoMin: syncAutoMin, syncAutoTick: syncAutoTick, syncOffline: syncOffline,
-    mergeQuizMap: mergeQuizMap, mergeResetMap: mergeResetMap, dropReset: dropReset, sameQuiz: sameQuiz
+    mergeQuizMap: mergeQuizMap, mergeResetMap: mergeResetMap, dropReset: dropReset, sameQuiz: sameQuiz,
+    /* [sync] 网络类失败的措辞/去重/退避：给自动化测试用，不参与业务逻辑 */
+    syncNetText: syncNetText, syncNetStuck: syncNetStuck, syncErrText: syncErrText,
+    syncEndpointHost: syncEndpointHost, syncHostOf: syncHostOf, syncWaitText: syncWaitText,
+    refreshSyncDot: refreshSyncDot, renderSyncStat: renderSyncStat, renderSyncDrawer: renderSyncDrawer,
+    SYNC_RETRY_WAITS: SYNC_RETRY_WAITS, syncWaitList: function () { return SYNC_RETRY_WAITS.slice(0); }
   };
   // [update] 调试出口：仅供自动化测试读取更新模块内部状态，不参与业务逻辑
   window.__reviewUpdate = {
