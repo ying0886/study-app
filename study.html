@@ -3,9 +3,31 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.43.0
+  APP_VERSION: 3.45.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.43.0）修窄屏反馈条的文字溢出（只改样式，数据、判分与存储都没动）——
+  本次变更: （3.45.0）学习台按刷题状态分三档着色：已掌握 / 待加强 / 未刷题（只改展示，数据、判分与存储都没动）——
+             ①判定：新增 pathStateOf 一处口径——该点一道没答过＝未刷题；答过且 tier=master＝已掌握；
+               其余答过（待复核/待巩固/薄弱/危险）＝待加强；没有题库的点回落手动勾选（勾了算已掌握），
+               一旦有作答记录就以刷题判定为准；
+             ②外观：绿实线+浅绿底+✓＝已掌握，琥珀实线+浅琥珀底+!＝待加强，灰虚线+空心圈＝未刷题；
+               三级知识点文字同色并挂状态符（✓/!/○），阶段框底部加「彩点+数字」三态计数，
+               页头提示给出全局三数（✓n 已掌握 · !n 待加强 · ○n 未刷题），左栏图例带计数；
+             ③排序：节点位置永远按前置依赖结构固定，状态变化只换颜色不挪位置；左栏图例即筛选，
+               点一下只看该组（其余淡化到 0.24，不删节点、不重排），再点一次取消；
+             ④同步：作答/改判/标蒙对/退出刷题/同步合并后都走 renderProgress → pathPaint 重算，
+               只改 data-st 与文案、不重建 DOM，连线几何不变；重开导图按最新记录重算；
+             ⑤自测：_tmp/path-mastery-test.mjs 重写为 48 项（三态判定与配色、组内聚合、三级同口径、
+               筛选只淡化不重排、重开保持、跳卡与刷题入口回归），map-verify 21 项与 check.mjs 全过。
+  上次变更: （3.44.0）学习台（思维导图）整体放大字号、行距与间距，长时间看不费眼（只改样式，数据、判分与存储都没动）——
+             ①症状：三级知识点 9.3px、二级方框 10.5px、阶段说明 9.5px、左栏 12px，13 寸屏或投影上要凑近才看得清；
+             ②字号：正文整体上浮约 16%——三级 9.3→11、二级 10.5→12.2、组内目标 9.5→11.2、阶段标题 12.4→14、
+               中心主题 16.5→19、页头 15.5→17、左栏阶段项 12→13.5、浮层正文 10.4→12.2；
+             ③行距：二级 1.45→1.55、三级 1.5→1.6、阶段目标 1.55→1.65、左栏简述 1.72→1.82，段间加 1–2px；
+             ④配套间距（字大了不能挤成两行）：节点内边距与宽度 178→196 / 202→218 / 198→214、
+               组间距 5→7、分支间距 30→34、三级缩进 15→17、左栏 232→258、浮层 252→288；
+             ⑤窄屏（≤820px）另推一套：二级 12.4、三级 11.2、阶段标题 13.2，缩进与间距等比放大，竖排树不断行；
+             ⑥自测：_tmp/path-font-shot.mjs（1440 / 390 两档：字号到位、连线 61 / 90 条照常绘制、页面无横向溢出、无 JS 报错）。
+  上次变更: （3.43.0）修窄屏反馈条的文字溢出（只改样式，数据、判分与存储都没动）——
              ①症状：iPhone 390 宽答错一道填空时，「这题想了很久」被压成一字一列的竖条，
                「我答的其实等价」整颗挤出黄底、跑到卡片外被视口裁掉，整页还能横向拖；
              ②成因：.qfb 是不可换行的 flex 行，而 .qgzbtn / .btn 没有收缩保护——文案一长，
@@ -458,7 +480,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.43.0">
+<meta name="app-version" content="3.45.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1908,189 +1930,233 @@
   .pathov[hidden]{display:none !important}
   .pathhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
     padding:9px 14px;border-bottom:1px solid var(--line2);background:var(--card)}
-  .pathhead h2{margin:0;font-size:15.5px;font-weight:700;letter-spacing:-.01em;flex:0 0 auto}
-  .pathtabs{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
-  .pathtab{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;
+  .pathhead h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;flex:0 0 auto}
+  .pathtabs{display:flex;gap:7px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+  .pathtab{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;
     border:1px solid var(--line2);background:var(--bg);color:var(--ink2);
-    font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
-  .pathtab i{width:7px;height:7px;border-radius:50%;background:var(--pc);flex:0 0 auto}
+    font:inherit;font-size:13.5px;cursor:pointer;white-space:nowrap}
+  .pathtab i{width:8px;height:8px;border-radius:50%;background:var(--pc);flex:0 0 auto}
   .pathtab:hover{border-color:var(--pc);color:var(--pc)}
   .pathtab[aria-selected="true"]{color:#fff;border-color:var(--pc);background:var(--pc)}
   .pathtab[aria-selected="true"] i{background:#fff}
-  .pathhint{font-size:11px;color:var(--ink2);font-variant-numeric:tabular-nums;flex:0 0 auto}
+  .pathhint{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;flex:0 0 auto}
   .pathbody{flex:1 1 auto;display:flex;min-height:0}
 
-  .pathrail{flex:0 0 232px;width:232px;overflow-y:auto;padding:13px 11px 24px;
+  .pathrail{flex:0 0 258px;width:258px;overflow-y:auto;padding:14px 12px 26px;
     border-right:1px solid var(--line2);background:var(--card);overscroll-behavior:contain}
-  .pathrail h3{margin:0 0 4px;font-size:14px;font-weight:700;line-height:1.35}
-  .pathrail .pmain{margin:0 0 11px;padding:8px 10px;border-left:2px solid var(--pc);
+  .pathrail h3{margin:0 0 5px;font-size:15.5px;font-weight:700;line-height:1.4}
+  .pathrail .pmain{margin:0 0 12px;padding:9px 11px;border-left:2px solid var(--pc);
     border-radius:0 6px 6px 0;background:var(--bg);
-    font-size:11.5px;line-height:1.72;color:var(--ink2)}
-  .pathrail .pcnt{display:flex;gap:5px;margin:0 0 12px}
-  .pathrail .pcnt span{flex:1;text-align:center;padding:5px 0;border:1px solid var(--line);
-    border-radius:6px;background:var(--bg);font-size:10px;color:var(--ink2);line-height:1.5}
-  .pathrail .pcnt b{display:block;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
-  .pathrail .plbl{font-size:9.5px;letter-spacing:.07em;color:var(--ink2);
-    margin:0 0 4px 6px;opacity:.8}
-  .pnav{display:flex;gap:7px;width:100%;text-align:left;padding:5px 6px;border:0;border-radius:6px;
-    background:none;color:var(--ink);font:inherit;font-size:12px;line-height:1.45;cursor:pointer}
+    font-size:12.8px;line-height:1.82;color:var(--ink2)}
+  .pathrail .pcnt{display:flex;gap:6px;margin:0 0 13px}
+  .pathrail .pcnt span{flex:1;text-align:center;padding:6px 0;border:1px solid var(--line);
+    border-radius:6px;background:var(--bg);font-size:11.5px;color:var(--ink2);line-height:1.55}
+  .pathrail .pcnt b{display:block;font-size:15.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pathrail .plbl{font-size:11px;letter-spacing:.06em;color:var(--ink2);
+    margin:0 0 5px 6px;opacity:.82}
+  .pnav{display:flex;gap:8px;width:100%;text-align:left;padding:6px 7px;border:0;border-radius:6px;
+    background:none;color:var(--ink);font:inherit;font-size:13.5px;line-height:1.5;cursor:pointer}
   .pnav:hover{background:var(--accentBg)}
   .pnav[aria-current="true"]{background:var(--accentBg)}
   .pnav[aria-current="true"] span{font-weight:600}
-  .pnav b{flex:0 0 auto;color:var(--pc);font-weight:700;font-size:11.5px;line-height:1.6}
+  .pnav b{flex:0 0 auto;color:var(--pc);font-weight:700;font-size:13px;line-height:1.6}
 
   /* [path-map] 中心放射式思维导图：中心主题居中，阶段分支左右放射
      一级＝阶段（描边方框）｜二级＝知识点组（小方框）｜三级＝纯文字（具体知识点）
      连线由 SVG 贝塞尔曲线绘制，颜色随本段分支色，无箭头 */
   .pathcanvas{flex:1 1 auto;overflow:auto;padding:0;overscroll-behavior:contain;position:relative}
   .mmap{position:relative;display:flex;align-items:center;justify-content:center;
-    width:max-content;min-width:100%;box-sizing:border-box;padding:48px 26px}
+    width:max-content;min-width:100%;box-sizing:border-box;padding:52px 30px}
   .mmap svg.mlinks{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}
 
-  .mcenter{position:relative;z-index:2;flex:0 0 auto;max-width:190px;padding:0 22px;text-align:center}
-  .mcenter b{display:block;font-size:16.5px;font-weight:700;line-height:1.42;letter-spacing:-.01em}
-  .mcenter span{display:block;margin-top:5px;font-size:9.5px;letter-spacing:.05em;color:var(--ink2)}
+  .mcenter{position:relative;z-index:2;flex:0 0 auto;max-width:210px;padding:0 24px;text-align:center}
+  .mcenter b{display:block;font-size:19px;font-weight:700;line-height:1.45;letter-spacing:-.01em}
+  .mcenter span{display:block;margin-top:6px;font-size:11px;letter-spacing:.04em;color:var(--ink2)}
 
-  .mside{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:30px}
+  .mside{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:34px}
   .mside.l{align-items:flex-end}
   .mside.r{align-items:flex-start}
   .mstage{position:relative;display:flex;align-items:center;flex:0 0 auto}
   .mside.l .mstage{flex-direction:row-reverse}
 
-  .mnode1{position:relative;z-index:3;flex:0 0 auto;display:block;width:178px;box-sizing:border-box;
-    padding:8px 11px 9px;border-radius:7px;background:var(--card);text-align:center;
+  .mnode1{position:relative;z-index:3;flex:0 0 auto;display:block;width:196px;box-sizing:border-box;
+    padding:10px 12px 11px;border-radius:8px;background:var(--card);text-align:center;
     font:inherit;color:inherit;
     border:1.5px solid var(--bc);cursor:pointer;transition:box-shadow .16s ease}
   .mnode1:hover{box-shadow:0 3px 12px rgba(0,0,0,.10)}
   .mnode1[data-fc]{box-shadow:0 0 0 4px var(--accentBg),0 3px 12px rgba(0,0,0,.10)}
-  .mnode1 .mt1{display:block;font-size:12.4px;font-weight:700;line-height:1.42;color:var(--bink)}
+  .mnode1 .mt1{display:block;font-size:14px;font-weight:700;line-height:1.5;color:var(--bink)}
   .mnode1 .mgoal{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-    margin-top:4px;font-size:9.5px;line-height:1.55;color:var(--ink2)}
-  .mnode1 .mmeta{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:6px;
-    font-size:9px;color:var(--ink2);font-variant-numeric:tabular-nums}
+    margin-top:5px;font-size:11.2px;line-height:1.65;color:var(--ink2)}
+  .mnode1 .mmeta{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;
+    font-size:10.6px;color:var(--ink2);font-variant-numeric:tabular-nums}
   .mnode1 .mmeta i{font-style:normal}
   .mnode1 .mmeta .mlv{letter-spacing:.04em;opacity:.85}
-  .mnode1 .mbar{display:block;height:2.5px;margin-top:5px;border-radius:2px;
+  .mnode1 .mbar{display:block;height:3px;margin-top:6px;border-radius:2px;
     background:var(--barBg);overflow:hidden}
   .mnode1 .mbar i{display:block;height:100%;width:0;background:var(--bc);transition:width .3s ease}
 
-  .msub{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:5px}
+  .msub{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:7px}
   .mside.l .msub{align-items:flex-end}
-  .mside.r .mstage>.msub{margin-left:22px}
-  .mside.l .mstage>.msub{margin-right:22px}
+  .mside.r .mstage>.msub{margin-left:24px}
+  .mside.l .mstage>.msub{margin-right:24px}
   .mchip{display:flex;align-items:center;flex:0 0 auto}
   .mside.l .mchip{flex-direction:row-reverse}
 
-  .mnode2{position:relative;z-index:2;flex:0 0 auto;box-sizing:border-box;max-width:202px;
-    display:flex;align-items:flex-start;gap:5px;padding:3px 8px;border-radius:5px;
+  .mnode2{position:relative;z-index:2;flex:0 0 auto;box-sizing:border-box;max-width:218px;
+    display:flex;align-items:flex-start;gap:6px;padding:5px 9px;border-radius:6px;
     border:1px solid var(--bc);background:var(--card);color:var(--bink);
-    font:inherit;font-size:10.5px;line-height:1.45;text-align:left;
+    font:inherit;font-size:12.2px;line-height:1.55;text-align:left;
     cursor:pointer;transition:background .14s ease}
   .mnode2:hover{background:var(--btint)}
-  .mnode2 .mn{flex:0 0 auto;font-style:normal;font-size:9px;line-height:1.62;
+  .mnode2 .mn{flex:0 0 auto;font-style:normal;font-size:10.2px;line-height:1.72;
     opacity:.62;font-variant-numeric:tabular-nums}
   .mnode2 .pn2{flex:1 1 auto;overflow-wrap:anywhere}
-  .mnode2 .pl{flex:0 0 auto;font-size:8.5px;line-height:13px;padding:0 3px;margin-top:1px;
+  .mnode2 .pl{flex:0 0 auto;font-size:9.8px;line-height:15px;padding:0 4px;margin-top:1px;
     border-radius:3px;font-weight:600;letter-spacing:.02em}
   .mnode2 .pl.A{background:var(--bc);color:#fff}
   .mnode2 .pl.B{border:1px solid var(--bc);color:var(--bink)}
   .mnode2 .pl.C{border:1px solid var(--line2);color:var(--ink2)}
 
-  .mdet{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:2px;
-    align-items:flex-start;max-width:198px;padding:0 2px;margin:0 0 0 15px}
-  .mside.l .mdet{align-items:flex-end;text-align:right;margin:0 15px 0 0}
+  .mdet{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;gap:3px;
+    align-items:flex-start;max-width:214px;padding:0 2px;margin:0 0 0 17px}
+  .mside.l .mdet{align-items:flex-end;text-align:right;margin:0 17px 0 0}
   .mdet .dl{display:block;border:0;background:none;padding:0;margin:0;
-    font:inherit;font-size:9.3px;line-height:1.5;text-align:inherit;
+    font:inherit;font-size:11px;line-height:1.6;text-align:inherit;
     color:var(--ink2);cursor:pointer}
   .mdet .dl:hover{color:var(--accent)}
   .mdet .dl.kp:hover{text-decoration:underline}
 
   /* 阶段详情浮层：掌握目标 / 常见崩点 / 前置依赖（点阶段方框打开） */
-  .mpop{position:absolute;z-index:12;width:252px;box-sizing:border-box;padding:10px 12px 11px;
-    border-radius:9px;border:1px solid var(--line2);background:var(--card);
+  .mpop{position:absolute;z-index:12;width:288px;box-sizing:border-box;padding:12px 14px 13px;
+    border-radius:10px;border:1px solid var(--line2);background:var(--card);
     box-shadow:0 8px 26px rgba(0,0,0,.16)}
   .mpop[hidden]{display:none}
-  .mpop h4{margin:0 0 7px;padding-right:16px;font-size:11.6px;font-weight:700;
-    line-height:1.45;color:var(--bink)}
-  .mpop .mrow{margin:0 0 6px}
+  .mpop h4{margin:0 0 8px;padding-right:18px;font-size:13px;font-weight:700;
+    line-height:1.5;color:var(--bink)}
+  .mpop .mrow{margin:0 0 7px}
   .mpop .mrow:last-child{margin-bottom:0}
-  .mpop .mrow>span{display:block;font-size:8.8px;letter-spacing:.06em;margin-bottom:2px;color:var(--pc)}
+  .mpop .mrow>span{display:block;font-size:10px;letter-spacing:.06em;margin-bottom:3px;color:var(--pc)}
   .mpop .mrow.risk>span{color:var(--warn)}
-  .mpop .mrow p{margin:0;font-size:10.4px;line-height:1.62;color:var(--ink)}
+  .mpop .mrow p{margin:0;font-size:12.2px;line-height:1.72;color:var(--ink)}
   .mpop .mrow.risk p{color:var(--ink2)}
-  .mpop .mclose{position:absolute;right:5px;top:4px;border:0;background:none;color:var(--ink2);
-    font:inherit;font-size:13px;line-height:1;padding:2px 5px;cursor:pointer;border-radius:4px}
+  .mpop .mclose{position:absolute;right:6px;top:5px;border:0;background:none;color:var(--ink2);
+    font:inherit;font-size:14px;line-height:1;padding:2px 6px;cursor:pointer;border-radius:4px}
   .mpop .mclose:hover{background:var(--accentBg);color:var(--accent)}
 
-  .pdep{display:flex;align-items:center;gap:5px;width:100%;text-align:left;
-    font:inherit;font-size:10.2px;line-height:1.45;padding:3px 6px;margin-top:3px;
+  .pdep{display:flex;align-items:center;gap:6px;width:100%;text-align:left;
+    font:inherit;font-size:11.6px;line-height:1.5;padding:4px 7px;margin-top:4px;
     border:1px solid var(--line);border-radius:5px;background:var(--bg);
     color:var(--ink2);cursor:pointer}
   .pdep:hover{border-color:var(--pc);color:var(--accent)}
   .pdep i{font-style:normal;color:var(--pc);opacity:.85;flex:0 0 auto}
-  .pempty{padding:44px 22px;font-size:13px;line-height:1.95;color:var(--ink2);max-width:560px}
+  .pempty{padding:44px 22px;font-size:14px;line-height:1.95;color:var(--ink2);max-width:560px}
 
   /* 深色模式下 color2 是亮色，选中块与 A 徽标改用深字，避免白字压亮底 */
   html[data-theme="dark"] .pathtab[aria-selected="true"]{color:#17181b}
   html[data-theme="dark"] .pathtab[aria-selected="true"] i{background:#17181b}
-  /* [path-mastery] 节点点亮：done=全掌握（实心✓） part=进行中（半实） todo=未开始（空心） */
-  .mnode2 .mdot{flex:0 0 auto;box-sizing:border-box;width:8px;height:8px;margin-top:4px;
+  /* [path-mastery] 节点三态（v3.45.0 起以「刷题状态」为准，不再用 done/part/todo）：
+     ok＝已刷且已掌握（绿实心✓）｜miss＝已刷但未掌握（琥珀实心!）｜new＝尚未刷题（灰虚线圈○）
+     状态写在 data-st 属性上，颜色/边框/图例/三级文字四处同源；结构顺序固定，不因状态重排 */
+  .mnode2 .mdot{flex:0 0 auto;box-sizing:border-box;width:9px;height:9px;margin-top:5px;
     border-radius:50%;border:1.4px solid var(--line2);
     display:flex;align-items:center;justify-content:center;
-    font-size:6px;line-height:1;color:#fff;transition:.2s}
-  .mnode2.part .mdot{border-color:var(--bc);background:var(--bc);opacity:.5}
-  .mnode2.done .mdot{border-color:var(--bc);background:var(--bc);opacity:1}
-  .mnode2.done{border-width:1.5px;background:var(--btint)}
-  .mnode2.done .pn2{font-weight:600}
-  .mnode2.todo .pn2{color:var(--ink2)}
-  .mnode1.done .mt1::after{content:' ✔';color:var(--bc)}
+    font-size:7px;line-height:1;color:#fff;transition:.2s}
+  .mnode2[data-st="ok"]{border-color:var(--ok);border-width:1.5px;background:var(--okBg)}
+  .mnode2[data-st="ok"] .mdot{border-color:var(--ok);background:var(--ok);font-size:8px}
+  .mnode2[data-st="ok"] .pn2{font-weight:600}
+  .mnode2[data-st="miss"]{border-color:var(--warn);border-width:1.5px;background:var(--warnBg)}
+  .mnode2[data-st="miss"] .mdot{border-color:var(--warn);background:var(--warn);font-weight:700}
+  .mnode2[data-st="miss"] .pn2{color:var(--ink)}
+  .mnode2[data-st="new"]{border-style:dashed;border-color:var(--line2);background:var(--card)}
+  .mnode2[data-st="new"] .pn2{color:var(--ink2)}
+  .mnode2[data-dim="1"]{opacity:.24;filter:saturate(.4)}
+  /* 状态底色优先级高于默认 hover，这里补回悬停反馈（不许丢手感） */
+  .mnode2[data-st="ok"]:hover,.mnode2[data-st="miss"]:hover,.mnode2[data-st="new"]:hover{
+    box-shadow:0 1px 7px rgba(0,0,0,.12)}
+  /* 三级（具体知识点）同口径着色，并在文字外侧挂一枚状态符，左右两栏都贴外沿 */
+  .mdet .dl[data-st]{position:relative}
+  .mdet .dl[data-st="ok"]{color:var(--ok);padding-left:12px}
+  .mdet .dl[data-st="miss"]{color:var(--warn);padding-left:12px}
+  .mdet .dl[data-st="new"]{color:var(--ink3);padding-left:12px}
+  .mside.l .mdet .dl[data-st]{padding-left:0;padding-right:12px}
+  .mdet .dl[data-st]::before{position:absolute;left:0;top:0;font-weight:700;
+    font-size:9.5px;line-height:inherit}
+  .mside.l .mdet .dl[data-st]::before{left:auto;right:0}
+  .mdet .dl[data-st="ok"]::before{content:"✓";color:var(--ok)}
+  .mdet .dl[data-st="miss"]::before{content:"!";color:var(--warn)}
+  .mdet .dl[data-st="new"]::before{content:"○";color:var(--line2)}
+  .mdet .dl[data-dim="1"]{opacity:.26}
+  .mdet .dl[data-st]:hover{color:var(--accent);text-decoration:underline}
+  /* 阶段框内的三态计数：✓n !n ○n */
+  /* 阶段框内的三态计数：彩色圆点 + 数字（点形状同节点：实心已掌握/实心待加强/空心未刷） */
+  .mnode1 .mstat{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:5px;
+    font-size:10.5px;line-height:1.5;font-weight:600;font-variant-numeric:tabular-nums}
+  .mnode1 .mstat i{display:inline-flex;align-items:center;gap:4px;font-style:normal}
+  .mnode1 .mstat i::before{content:"";width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .mnode1 .mstat .s-ok{color:var(--ok)}
+  .mnode1 .mstat .s-ok::before{background:var(--ok)}
+  .mnode1 .mstat .s-miss{color:var(--warn)}
+  .mnode1 .mstat .s-miss::before{background:var(--warn)}
+  .mnode1 .mstat .s-new{color:var(--ink3)}
+  .mnode1 .mstat .s-new::before{box-sizing:border-box;border:1.3px solid var(--ink3);background:transparent}
+  .mnode1.done .mt1::after{content:' ✔';color:var(--ok)}
   .mnode1.done{border-width:2px}
-  .plegend{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 4px 6px;font-size:10px;color:var(--ink2)}
-  .plegend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
-    vertical-align:-1px;border:1.5px solid var(--line2)}
-  .plegend .dot.done{border-color:var(--pc);background:var(--pc)}
-  .plegend .dot.part{border-color:var(--pc);background:var(--pc);opacity:.5}
+  /* 图例改成可点的状态筛选（再点一次取消）：只淡化其它两组，不删除、不重排 */
+  .plegend{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 5px 6px}
+  .plg{display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 5px;
+    border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink2);
+    font:inherit;font-size:11.5px;line-height:1.4;cursor:pointer}
+  .plg:hover{border-color:var(--pc);color:var(--pc)}
+  .plg[aria-pressed="true"]{border-color:var(--pc);background:var(--accentBg);color:var(--accent);font-weight:600}
+  .plg .dot{display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;
+    margin:0;border-radius:50%;border:1.4px solid var(--line2);background:transparent;
+    font-size:8px;line-height:1;font-weight:700;color:#fff;font-style:normal}
+  .plg[data-st="ok"] .dot{border-color:var(--ok);background:var(--ok)}
+  .plg[data-st="miss"] .dot{border-color:var(--warn);background:var(--warn)}
+  .plg .plgn{font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);font-size:10.5px}
+  .plg[aria-pressed="true"] .plgn{color:inherit}
   html[data-theme="dark"] .mnode2,html[data-theme="dark"] .mnode1 .mt1{color:var(--blite)}
   html[data-theme="dark"] .mnode2 .pl.B{color:var(--blite)}
   #mapBtn.on{background:var(--accentBg);border-color:var(--accent);color:var(--accent);font-weight:600}
 
   @media (max-width:820px){
     .pathbody{flex-direction:column}
-    .pathhead{padding:8px 10px}
-    .pathhead h2{font-size:14px}
+    .pathhead{padding:9px 11px}
+    .pathhead h2{font-size:15.5px}
     .pathhint{display:none}
     .pathtabs{order:3;flex:1 1 100%}
     /* 窄屏把左栏压成一行横向可滑的阶段条，而不是截断的竖列表 */
-    .pathrail{flex:0 0 auto;width:auto;max-height:none;padding:8px 10px 5px;
+    .pathrail{flex:0 0 auto;width:auto;max-height:none;padding:9px 11px 6px;
       border-right:0;border-bottom:1px solid var(--line2);
       white-space:nowrap;overflow-x:auto;overflow-y:hidden}
     .pathrail h3,.pathrail .pmain,.pathrail .pcnt,.pathrail .plbl{display:none}
-    .pnav{display:inline-flex;align-items:baseline;width:auto;margin:0 5px 0 0;
-      padding:4px 9px;border:1px solid var(--line);white-space:nowrap}
-    .pnav b{margin-right:4px}
+    .pnav{display:inline-flex;align-items:baseline;width:auto;margin:0 6px 0 0;
+      padding:5px 10px;border:1px solid var(--line);white-space:nowrap}
+    .pnav b{margin-right:5px}
     /* 窄屏改成竖排树：中心在上，阶段依次向下，知识点缩进一层、三级再缩一层
        连线由 JS 按竖排几何重画（竖向干线 + 横向短枝） */
-    .mmap{flex-direction:column;align-items:stretch;width:auto;min-width:0;padding:14px 12px 34px}
-    .mcenter{order:0;align-self:center;max-width:none;padding:0 0 10px}
-    .mcenter b{font-size:14px}
-    .mcenter span{font-size:8.5px}
+    .mmap{flex-direction:column;align-items:stretch;width:auto;min-width:0;padding:16px 13px 36px}
+    .mcenter{order:0;align-self:center;max-width:none;padding:0 0 11px}
+    .mcenter b{font-size:16.5px}
+    .mcenter span{font-size:10px}
     .mside.r{order:1}
     .mside.l{order:2}
-    .mside{align-items:stretch;gap:14px;margin-top:8px}
+    .mside{align-items:stretch;gap:16px;margin-top:9px}
     .mstage,.mside.l .mstage{flex-direction:column;align-items:stretch}
-    .mside.r .mstage>.msub,.mside.l .mstage>.msub{margin:8px 0 0 16px}
-    .mnode1{width:auto;text-align:left;padding:7px 10px 8px}
-    .mnode1 .mt1{font-size:11.6px}
-    .mnode1 .mgoal{display:-webkit-box;-webkit-line-clamp:3;font-size:9.2px}
-    .mnode1 .mmeta{justify-content:flex-start;font-size:8.4px}
+    .mside.r .mstage>.msub,.mside.l .mstage>.msub{margin:10px 0 0 18px}
+    .mnode1{width:auto;text-align:left;padding:9px 12px 10px}
+    .mnode1 .mt1{font-size:13.2px}
+    .mnode1 .mgoal{display:-webkit-box;-webkit-line-clamp:3;font-size:10.8px}
+    .mnode1 .mmeta{justify-content:flex-start;font-size:10px}
     .msub{align-items:stretch}
     .mside.l .msub{align-items:stretch}
     .mchip,.mside.l .mchip{flex-direction:column;align-items:stretch}
-    .mnode2{max-width:none;font-size:10.2px}
-    .mdet,.mside.l .mdet{margin:4px 0 0 16px;max-width:none;
+    .mnode2{max-width:none;font-size:12.4px}
+    .mdet,.mside.l .mdet{margin:5px 0 0 18px;max-width:none;
       align-items:flex-start;text-align:left}
-    .mdet .dl{font-size:9.6px}
-    .mpop{width:220px}
+    .mdet .dl{font-size:11.2px}
+    .mpop{width:264px}
   }
   @media print{ .pathov{display:none !important} }
 
@@ -15136,7 +15202,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.43.0";
+  var APP_VERSION = "3.45.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -22702,6 +22768,36 @@
   }
   function pathNo(i) { return PATH_NO[i] || String(i + 1); }
 
+  /* [path-state] 学习台三态：ok=已刷且已掌握｜miss=已刷但未掌握｜new=尚未刷题。
+     判定只看刷题记录（snap.quiz 派生的 qzMasteryOf），与卡片徽标、掌握程度页同一口径：
+       ①该知识点有题且一道都没答过（done=0）→ new；
+       ②有作答记录且 tier=master（全对、无蒙对）→ ok；
+       ③其余有作答记录的情形（待复核/待巩固/薄弱/危险）→ miss。
+     题库缺失或该点无题时，回落到手动勾选：勾了算 ok，否则 new。
+     一旦有作答记录，就以刷题判定为准，手动勾选不再盖过它。 */
+  var PATH_ST_ICON = { ok: "✓", miss: "!", "new": "" };
+  var PATH_FILTER = "";   /* "" 不过滤｜ok｜miss｜new（只淡化其它两组，不删节点、不重排） */
+
+  function pathStateOf(sid, kid) {
+    var mt = QZ_READY ? qzMasteryOf(sid, kid) : null;
+    if (mt && mt.total) {
+      if (mt.done <= 0) return "new";
+      return mt.tier.key === "master" ? "ok" : "miss";
+    }
+    var e = entryOf(snap().mastery, sid, kid);
+    return (e && e.on === 1) ? "ok" : "new";
+  }
+  /* 层级聚合：一组知识点全部 ok 才是 ok；只要动过（有 ok 或 miss）就是 miss；全没动是 new */
+  function pathStateOfGroup(sid, kids) {
+    var ok = 0, miss = 0, i, s;
+    for (i = 0; i < kids.length; i++) {
+      s = pathStateOf(sid, kids[i]);
+      if (s === "ok") ok++; else if (s === "miss") miss++;
+    }
+    if (ok > 0 && ok === kids.length) return "ok";
+    return (ok + miss > 0) ? "miss" : "new";
+  }
+
   function pathRenderTabs() {
     var h = "";
     for (var i = 0; i < PATH.subjects.length; i++) {
@@ -22721,10 +22817,16 @@
       '<span><b>' + p.stages.length + '</b>阶段</span>' +
       '<span><b>' + pathCountA(p) + '</b>A 级</span>' +
       '<span><b class="pdone-all">0/' + (p.total || 0) + '</b>已掌握</span></div>';
-    h += '<p class="plbl">节点点亮</p>';
-    h += '<div class="plegend"><span><i class="dot done"></i>已掌握</span>' +
-      '<span><i class="dot part"></i>进行中</span>' +
-      '<span><i class="dot"></i>未开始</span></div>';
+    /* 图例同时是筛选器：点一下只看该状态（再点取消），只淡化不删除，节点位置不变 */
+    var lg = [["ok", "✓", "已掌握"], ["miss", "!", "待加强"], ["new", "", "未刷题"]];
+    h += '<p class="plbl">刷题状态 · 点一下只看该状态</p>';
+    h += '<div class="plegend" role="group" aria-label="按刷题状态筛选">';
+    for (var g = 0; g < lg.length; g++) {
+      h += '<button type="button" class="plg" data-st="' + lg[g][0] + '" aria-pressed="' +
+        (PATH_FILTER === lg[g][0] ? "true" : "false") + '"><i class="dot">' + lg[g][1] +
+        '</i>' + lg[g][2] + '<b class="plgn">0</b></button>';
+    }
+    h += '</div>';
     h += '<p class="plbl">阶段导航 · 点击跳转</p>';
     for (var i = 0; i < p.stages.length; i++) {
       h += '<button class="pnav" type="button" data-go="' + i + '"' +
@@ -22758,6 +22860,8 @@
         '<span class="mgoal">' + pathEsc(st.goal) + '</span>' +
         '<span class="mmeta"><i class="mcnt">0/' + st.n + '</i><i class="mlv">' +
         pathEsc(st.lv) + '</i></span>' +
+        '<span class="mstat" aria-hidden="true"><i class="s-ok">0</i><i class="s-miss">0</i>' +
+        '<i class="s-new">0</i></span>' +
         '<span class="mbar"><i></i></span></button>';
 
       h += '<div class="msub">';
@@ -22937,7 +23041,7 @@
       for (var j = 0; j < p.stages[i].pts.length; j++) {
         var pt = p.stages[i].pts[j];
         total += pt.k.length;
-        for (var k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) done++;
+        for (var k = 0; k < pt.k.length; k++) if (pathStateOf(p.id, pt.k[k]) === "ok") done++;
       }
       var full = total > 0 && done >= total;
       lk.setAttribute("opacity", full ? ".92" : (done > 0 ? ".72" : ".5"));
@@ -22956,27 +23060,34 @@
     pathPaint();
   }
 
-  /* [path] 节点点亮：复算每个 chip / 阶段的掌握进度，只改 class 与文案，不重建 DOM。
-     口径与顶部进度条、分组进度、卡片徽标完全一致（isCountedDoneOf）。 */
+  /* [path-state] 三态上色：复算每个具体知识点 / 知识点组 / 阶段的状态，只改属性与文案，
+     不重建 DOM、不动顺序——状态变了只换颜色，节点位置永远按结构固定。
+     口径＝pathStateOf（刷题记录派生），与卡片徽标、掌握程度页同源。 */
   function pathPaint() {
     if (!pathTrack || !pathPanel || pathPanel.hidden) return;
     var p = PATH.subjects[PATH_I];
     if (!p || !p.stages) return;
-    var stDone = [], stTotal = [], i, j, k, pt, ndone;
-    var doneAll = 0, totalAll = 0;
+    var sid = p.id, i, j, k, pt;
+    var stOk = [], stMiss = [], stNew = [], stTotal = [];
+    var all = { ok: 0, miss: 0, "new": 0 }, totalAll = 0;
 
     for (i = 0; i < p.stages.length; i++) {
-      stDone[i] = 0; stTotal[i] = 0;
+      stOk[i] = 0; stMiss[i] = 0; stNew[i] = 0; stTotal[i] = 0;
       for (j = 0; j < p.stages[i].pts.length; j++) {
         pt = p.stages[i].pts[j];
-        ndone = 0;
-        for (k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) ndone++;
-        stDone[i] += ndone;
-        stTotal[i] += pt.k.length;
-        doneAll += ndone;
-        totalAll += pt.k.length;
+        for (k = 0; k < pt.k.length; k++) {
+          var s0 = pathStateOf(sid, pt.k[k]);
+          if (s0 === "ok") stOk[i]++;
+          else if (s0 === "miss") stMiss[i]++;
+          else stNew[i]++;
+          all[s0]++;
+          stTotal[i]++;
+        }
       }
+      totalAll += stTotal[i];
     }
+
+    function dimOf(st) { return PATH_FILTER && PATH_FILTER !== st ? "1" : "0"; }
 
     var chips = pathTrack.querySelectorAll(".mnode2");
     for (var c = 0; c < chips.length; c++) {
@@ -22984,34 +23095,55 @@
       var sj = parseInt(chips[c].getAttribute("data-sj"), 10);
       if (isNaN(si) || isNaN(sj) || !p.stages[si] || !p.stages[si].pts[sj]) continue;
       pt = p.stages[si].pts[sj];
-      ndone = 0;
-      for (k = 0; k < pt.k.length; k++) if (isCountedDoneOf(p.id, pt.k[k])) ndone++;
-      var cls = ndone === 0 ? "todo" : (ndone === pt.k.length ? "done" : "part");
-      chips[c].className = "mnode2 " + cls;
+      var cls = pathStateOfGroup(sid, pt.k);
+      chips[c].className = "mnode2";
+      chips[c].setAttribute("data-st", cls);
+      chips[c].setAttribute("data-dim", dimOf(cls));
       var dot = chips[c].querySelector(".mdot");
-      if (dot) dot.textContent = cls === "done" ? "✓" : "";
+      if (dot) dot.textContent = PATH_ST_ICON[cls] || "";
+    }
+
+    /* 三级文字逐个上色：即使组内混合，也能看出哪个知识点还没掌握 */
+    var dls = pathTrack.querySelectorAll(".mdet .dl");
+    for (var d = 0; d < dls.length; d++) {
+      var kd = dls[d].getAttribute("data-kid");
+      var s2 = kd ? pathStateOf(sid, kd) : "new";
+      dls[d].setAttribute("data-st", s2);
+      dls[d].setAttribute("data-dim", dimOf(s2));
     }
 
     for (i = 0; i < p.stages.length; i++) {
       var stEl = pathTrack.querySelector('.mstage[data-i="' + i + '"]');
       if (!stEl) continue;
       var bar = stEl.querySelector(".mbar i");
-      if (bar) bar.style.width = stTotal[i] ? (stDone[i] / stTotal[i] * 100).toFixed(1) + "%" : "0%";
+      if (bar) bar.style.width = stTotal[i] ? (stOk[i] / stTotal[i] * 100).toFixed(1) + "%" : "0%";
       var cnt = stEl.querySelector(".mcnt");
-      if (cnt) cnt.textContent = stDone[i] + "/" + stTotal[i];
+      if (cnt) cnt.textContent = stOk[i] + "/" + stTotal[i];
+      var so = stEl.querySelector(".mstat .s-ok");
+      var sm = stEl.querySelector(".mstat .s-miss");
+      var sn = stEl.querySelector(".mstat .s-new");
+      if (so) so.textContent = stOk[i];
+      if (sm) sm.textContent = stMiss[i];
+      if (sn) sn.textContent = stNew[i];
       var n1 = stEl.querySelector(".mnode1");
-      if (n1) n1.className = "mnode1" + (stTotal[i] > 0 && stDone[i] >= stTotal[i] ? " done" : "");
+      if (n1) n1.className = "mnode1" + (stTotal[i] > 0 && stOk[i] >= stTotal[i] ? " done" : "");
     }
     pathPaintLinks();
 
     var da = pathRail ? pathRail.querySelector(".pdone-all") : null;
-    if (da) da.textContent = doneAll + "/" + totalAll;
+    if (da) da.textContent = all.ok + "/" + totalAll;
+    var keys = ["ok", "miss", "new"];
+    for (i = 0; i < keys.length; i++) {
+      var cell = pathRail ? pathRail.querySelector('.plg[data-st="' + keys[i] + '"] .plgn') : null;
+      if (cell) cell.textContent = all[keys[i]];
+    }
 
     if (pathHint) {
       var mine = pathIndexOf(SID) === PATH_I;
       var base = (mine ? "" : "当前科目暂无路径 · 现显示「" + pathNameOf(p.id) + "」 · ") +
         p.stages.length + " 阶段 / " + (p.total || 0) + " 点";
-      pathHint.textContent = "已掌握 " + doneAll + "/" + totalAll + " · " + base;
+      pathHint.textContent = "✓" + all.ok + " 已掌握 · !" + all.miss + " 待加强 · ○" +
+        all["new"] + " 未刷题 ／ " + base;
     }
   }
 
@@ -23161,6 +23293,19 @@
   });
 
   if (pathRail) pathRail.addEventListener("click", function (e) {
+    /* 图例即筛选：点「已掌握 / 待加强 / 未刷题」只看该组，再点一次取消 */
+    var lg = e.target;
+    while (lg && lg !== pathRail && !lg.getAttribute("data-st")) lg = lg.parentNode;
+    if (lg && lg !== pathRail) {
+      var want = lg.getAttribute("data-st");
+      PATH_FILTER = PATH_FILTER === want ? "" : want;
+      var all = pathRail.querySelectorAll(".plg");
+      for (var q = 0; q < all.length; q++) {
+        all[q].setAttribute("aria-pressed", String(all[q].getAttribute("data-st") === PATH_FILTER));
+      }
+      pathPaint();
+      return;
+    }
     var b = e.target;
     while (b && b !== pathRail && !b.getAttribute("data-go")) b = b.parentNode;
     if (!b || b === pathRail) return;
