@@ -3,9 +3,18 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.42.0
+  APP_VERSION: 3.43.0
   DATA_VERSION: 2026-11-02
-  本次变更: （3.42.0）刷题小结加「返回学习台」入口（数据未动、判分口径与存储均未动）——
+  本次变更: （3.43.0）修窄屏反馈条的文字溢出（只改样式，数据、判分与存储都没动）——
+             ①症状：iPhone 390 宽答错一道填空时，「这题想了很久」被压成一字一列的竖条，
+               「我答的其实等价」整颗挤出黄底、跑到卡片外被视口裁掉，整页还能横向拖；
+             ②成因：.qfb 是不可换行的 flex 行，而 .qgzbtn / .btn 没有收缩保护——文案一长，
+               浏览器就把按钮宽度一路压到单个字，压不下去的只能溢出容器；
+             ③改法：按钮统一 flex:0 0 auto + white-space:nowrap 保住单行，整条 flex-wrap:wrap 兜底；
+               ≤820px 让文案与图标同行占满、动作按钮整体换行另起一行，.qfbx 取消 margin-left:auto；
+             ④自测：_tmp/fb-overflow-test.mjs（16 项：390 / 320 / 1280 三档均无溢出、按钮文本行数=1、
+               无横向滚动、长文案「已标「想了很久」· 点一下取消」仍不溢出、答对态正常）。
+  上次变更: （3.42.0）刷题小结加「返回学习台」入口（数据未动、判分口径与存储均未动）——
              ①本组小结的按钮区第一行新增实心「返回学习台」，与「返回设置」同一套 .btn 体系，
                只多一个 primary 变体做视觉区分，不新增任何样式类；
              ②点击即退出刷题（顺带把攒下的记录推一次同步）、再打开导图；顺序定死为「先退刷题后开图」，
@@ -449,7 +458,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.42.0">
+<meta name="app-version" content="3.43.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2213,6 +2222,26 @@
     body.reading .wrap{padding-top:16px}
     body.reading .pathpanel .pathhead{display:none}
   }
+  /* ---------- [v3.43.0] 反馈条防挤压 ----------
+     症状：窄屏（iPhone 390）答完填空错题时，「这题想了很久」被压成一字一列的竖条、
+     「我答的其实等价」整颗挤出黄底、跑到卡片外被视口裁掉。
+     成因：.qfb 是 nowrap 的 flex 行，而 .qgzbtn 与 .btn 没有 flex 收缩保护 ——
+     文案一长，浏览器就把按钮宽度一路压到 1 个字；压不下去的按钮只能溢出容器。
+     做法：按钮统一「不收缩 + 不换行」，整条允许换行；窄屏让文案独占一行、动作另起一行。 */
+  .qfb{flex-wrap:wrap;row-gap:8px}
+  .qfb .qfbtxt{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+  .qfb .qfbx{flex:0 0 auto}
+  .qfb .qgzbtn,
+  .qfb .btn{flex:0 0 auto;white-space:nowrap}
+  @media (max-width:820px){
+    .qfb{align-items:flex-start}
+    .qfb .qfbico{margin-top:3px}
+    .qfb .qfbtxt{flex:1 1 calc(100% - 29px)}   /* 图标 19 + 间距 10：文案与图标同行占满，动作整体换行 */
+    .qfb .qfbx{margin-left:0;padding-left:0;order:2}
+    .qfb .qgzbtn{margin-left:0;order:3}
+    .qfb .btn{order:4;margin-left:0 !important}
+  }
+
   @media print{
     /* 新增色块在纸上退回黑白 */
     .field-warn,.field-action{background:#fff !important}
@@ -15107,7 +15136,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.42.0";
+  var APP_VERSION = "3.43.0";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
