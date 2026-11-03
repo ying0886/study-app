@@ -3,9 +3,32 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.47.0
+  APP_VERSION: 3.47.1
   DATA_VERSION: 2026-11-02
-  本次变更: （3.47.0）修好「同步弹报错、红点挂着不走」——问题出在失败后的措辞、退避与状态，不在合并算法（数据与判分未动）——
+  本次变更: （3.47.1）全面排查后的一次补丁：修 5 处「特定操作才出现」的逻辑错、2 处缓存不刷新、2 处健壮性缺口，
+             并删掉一段死代码（数据、判分口径、快照 schema 2 与存储键都没动）——
+             ①症状：答对后标「其实是蒙的」，隔壁「这题想了很久」按钮凭空消失；改判「我答的其实等价」后同样；
+             ②成因：反馈条上这两个手动标记按钮共用 .qgzbtn 这套外观，qzGuessBar() 重画时按 .qgzbtn 整批摘除，
+               把带 .qhzbtn 的迟疑按钮一起删了；改判那条路径直接清空整条反馈条后只补回蒙对按钮；
+             ③改法：只摘不带 .qhzbtn 的那个，改判后补调 qzHesBar()；
+             ④症状：另一台设备同步来的收藏星标不亮、刚同步进来的笔记搜不到；主题下次冷启动还要闪一下；
+             ⑤成因：afterRemoteApply() 只调 renderAll()，而 isFav() 走 favCache、搜索走 navIdx，
+               两个缓存都还按合并前的数据算；主题只改了当前页面的 data-theme，没写回 LS_THEME；
+             ⑥改法：合并后清 favCache 与 navIdx，主题同时写回本地键；启动时改为「快照 prefs 优先、本地键兜底」；
+             ⑦症状：刷题时 Tab 到选项，按回车只展开解析、按空格直接跳过本题，键盘反而答不了题；
+             ⑧成因：qzKey() 在捕获阶段先拦了 Enter / Space，按钮的原生激活轮不到；
+             ⑨改法：焦点在 BUTTON 上时把这两个键交回浏览器原生行为，字母键与方向键照旧；
+             ⑩症状：本地自建科目列表被写成 [null, …] 后，大纲导入整条中断（无提示、新科目没进来）；
+             ⑪成因：userSubjectList() 原样返回，commitImport 的内层循环 list[j].id 抛 TypeError；
+             ⑫改法：读取时就地清洗（丢 null 与无 id 条目），内层循环再挡一层；isBuiltinId() 改成只读一次列表
+               （原来循环条件里两次 getItem + JSON.parse，导入时是 O(n²) 的字符串解析）；
+             ⑬范围：掌握度 score 的 errs − open 夹到 ≥0（脏记录 r=0 而 w=0 时相减为负、反而加分）；
+               删掉 qzRenderQ() 里没用到的 same 变量与空 if 块。合并算法、判分、存储结构一律未动；
+             ⑭自测：新增 _tmp/fix-3471-test.mjs（11 项，逐条复现上面 5 个现象）、_tmp/edge-audit.mjs
+               （14 种损坏存储 + 刷题/路径/窄屏/写盘失败边界，全部无异常）、_tmp/click-all.mjs（面板逐元素点一遍）；
+               修好过期的 js-syntax-check（文件头注释里的 <script 字样导致误报）、guess-test 选择器、
+               weak-test 文案断言、ui-v341 版本断言。既有 26 套自测全过。
+  上次变更: （3.47.0）修好「同步弹报错、红点挂着不走」——问题出在失败后的措辞、退避与状态，不在合并算法（数据与判分未动）——
              ①症状：刷题后弹「同步失败：网络错误：Failed to fetch」，状态点转红并停在「有本地改动待推送」，
                过几分钟又自己好了；2026-11-03 20:01 那次的实测记录（本机 review.sync.meta.v1）是
                {"lastError":"网络错误：Failed to fetch","pending":true}，紧接着 20:04 一次同步耗时 0.9 秒成功；
@@ -512,7 +535,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.47.0">
+<meta name="app-version" content="3.47.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -15251,7 +15274,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.47.0";
+  var APP_VERSION = "3.47.1";
   var DATA_VERSION = "2026-11-02";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -18653,7 +18676,15 @@
 
   function afterRemoteApply() {
     var s = snap(), th = s.prefs.theme;
-    if (th === "dark" || th === "light") applyTheme(th);
+    /* [v3.47.1] 主题跟着快照走，但同时写回本地键：否则下次冷启动 applyTheme(lsGet(LS_THEME))
+       读到的还是旧值，先按旧主题渲染一次再被同步纠正，肉眼就是一闪。 */
+    if (th === "dark" || th === "light") { applyTheme(th); lsSet(LS_THEME, th); }
+    /* [v3.47.1] 两处缓存必须跟着远端失效，否则 renderAll 只是「按旧缓存重画」——
+       收藏缓存会让他端收藏的星标一直不亮，搜索索引会让刚同步进来的笔记搜不到。 */
+    favCache.sid = null;
+    favCache.map = null;
+    navIdx.sid = null;
+    navIdx.list = null;
     renderAll();
     qzRefreshMarks();   // [sync] 他端带来的刷题记录要立刻反映到卡片徽标
     if (!favDrawer.hidden) renderFavDrawer();
@@ -20438,7 +20469,11 @@
     else if (open <= cap && rate >= 50) key = "weak";
     else key = "danger";
 
-    var score = 100 * (total ? right / total : 0) - 10 * open - 3 * (errs - open) - 8 * guess;
+    /* [v3.47.1] errs 是累计错次、open 是尚未改正的错题数，两者理论上 errs ≥ open；
+       但合并/导入来的记录可能出现 r=0 而 w=0（历史字段缺失），相减会变负、反而加分，
+       这里夹一下下限，保证「错得越多分越低」这条单调性不被脏数据破坏。 */
+    var healed = Math.max(0, errs - open);
+    var score = 100 * (total ? right / total : 0) - 10 * open - 3 * healed - 8 * guess;
     score = Math.round(Math.max(0, Math.min(100, score)));
     var tier = qzTierOf(key);
     return {
@@ -21436,8 +21471,6 @@
 
     var opts = byId("qOpts");
     opts.innerHTML = "";
-    var same = q.ex.q === (it.q || q.ex.q);
-    if (mode === "opt" && !same) { /* 题干已由题库给出，不再重复 */ }
     byId("qFillWrap").hidden = mode !== "fill";
     byId("qFb").hidden = true;
     byId("qFb").className = "qfb";
@@ -21682,6 +21715,7 @@
       fb.innerHTML = "";
       fb.appendChild(txt("span", "", "已记作正确。参考答案：" + qzPlain(q.it.e)));
       qzGuessBar(true);   // [guess] 改判为对之后同样可以标「蒙对」
+      qzHesBar();         // [hesitate] 上面清了整条反馈条，迟疑按钮要跟着补回来
     });
     fb.appendChild(b);
   }
@@ -21748,13 +21782,19 @@
   }
 
   /* [guess] 刚答完的那一刻最清楚自己是猜的，所以按钮就放在反馈条上。
-     只在答对时出现：答错属于错题，标「蒙对」没有意义。 */
+     只在答对时出现：答错属于错题，标「蒙对」没有意义。
+     注意：反馈条上两个手动标记按钮共用 .qgzbtn 这套外观（见 CSS），
+     「想了很久」另外带 .qhzbtn 作为语义标记——重画蒙对按钮时只能摘掉不带 .qhzbtn 的那个，
+     否则点一下「其实是蒙的」会把隔壁「这题想了很久」一起删掉。 */
   function qzGuessBar(right) {
     var fb = byId("qFb"), q = QZ.list[QZ.pos];
     if (!fb) return;
     /* 先摘掉旧按钮再决定要不要画新的：切换标记后是就地重画，不清会叠出两个 */
     var olds = fb.querySelectorAll(".qgzbtn");
-    for (var i = 0; i < olds.length; i++) fb.removeChild(olds[i]);
+    for (var i = 0; i < olds.length; i++) {
+      if (String(olds[i].className).indexOf("qhzbtn") >= 0) continue;
+      fb.removeChild(olds[i]);
+    }
     if (!q || !right) return;
     var on = qzGuessOn(qzRecOf(QZ.sid, q.key));
     var b = el("button", "qgzbtn" + (on ? " on" : ""));
@@ -22230,6 +22270,11 @@
 
     if (k === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); qzQuit(); return; }
 
+    /* [v3.47.1] 焦点已经停在按钮上（选项 / 下一题 / 蒙对 / 想了很久…）时，回车与空格
+       交回浏览器原生激活：以前这里先拦截，于是 Tab 到选项按回车只会展开解析、按空格直接跳过本题，
+       键盘用户反而答不了题。字母键与方向键仍然照常接管。 */
+    if (tag === "BUTTON" && (k === "Enter" || k === " " || k === "Spacebar")) return;
+
     if (inField) {
       if (k === "Enter") {
         e.preventDefault(); e.stopImmediatePropagation();
@@ -22306,12 +22351,25 @@
      这样「加科目」不需要重新构建、不会污染内嵌数据，删掉也只影响这一层。 */
 
   function userSubjectList() {
-    var a = lsGet(LS_USER, null);
-    return Array.isArray(a) ? a : [];
+    /* [v3.47.1] 读的时候就地清洗：本地键可能被旧版本、手改或半截写入弄成
+       [null, {...}]、[{...}, 123] 这类形状。以前原样返回，后续 any[j].id 会抛
+       TypeError（大纲导入时整条链路中断）。没有 id 的条目本来也进不了 DATA，一并丢掉。 */
+    var a = lsGet(LS_USER, null), out = [], i, s;
+    if (!Array.isArray(a)) return out;
+    for (i = 0; i < a.length; i++) {
+      s = a[i];
+      if (!s || typeof s !== "object" || String(s.id == null ? "" : s.id) === "") continue;
+      out.push(s);
+    }
+    return out;
   }
   function saveUserSubjectList(arr) { lsPut(LS_USER, JSON.stringify(arr)); }
   function isBuiltinId(id) {
-    for (var i = 0; i < userSubjectList().length; i++) if (userSubjectList()[i].id === id) return false;
+    /* 只读一次本地列表：原来在循环条件里两次调用 userSubjectList()，
+       每轮都要 localStorage.getItem + JSON.parse，commitImport 里因此成了 O(n²) 的字符串解析。
+       顺带挡掉损坏数据里的 null 元素（以前会在取 .id 时抛 TypeError）。 */
+    var list = userSubjectList();
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return false;
     return true;
   }
 
@@ -22455,7 +22513,7 @@
         while (taken[s.id]) { s.id = base + "-" + n; n++; }
       }
       at = -1;
-      for (j = 0; j < list.length; j++) if (list[j].id === s.id) { at = j; break; }
+      for (j = 0; j < list.length; j++) if (list[j] && list[j].id === s.id) { at = j; break; }   // [v3.47.1] 兜底：清洗后理论上无 null，仍多挡一层
       if (at >= 0) { list[at] = s; rep++; } else { list.push(s); added++; }
     }
     saveUserSubjectList(list);
@@ -22890,7 +22948,10 @@
     migrateQuizToSnap();   // [sync] 旧版 review.quiz.v1 并入 snap.quiz（幂等）
     SID = pickSubject();
     lsSet(LS_ACTIVE, SID);
-    applyTheme(lsGet(LS_THEME, null));
+    /* [v3.47.1] 主题以快照 prefs 为准、本地键为兜底：换设备或清过本地键时，
+       同步下来的主题不会因为 LS_THEME 缺失而回落到系统配色。 */
+    var th0 = snap().prefs.theme;
+    applyTheme(th0 === "dark" || th0 === "light" ? th0 : lsGet(LS_THEME, null));
     renderAll();
     renderDailyQuote();
 
