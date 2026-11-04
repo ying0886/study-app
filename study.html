@@ -3,9 +3,38 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.47.1
-  DATA_VERSION: 2026-11-02
-  本次变更: （3.47.1）全面排查后的一次补丁：修 5 处「特定操作才出现」的逻辑错、2 处缓存不刷新、2 处健壮性缺口，
+  APP_VERSION: 3.48.0
+  DATA_VERSION: 2026-11-04
+  本次变更: （3.49.0）教学层内容推广到三科 A 级点（高数本期跳过），并把内容源拆成按科目分文件——
+             ①规模：teach 条目 8 → 85，覆盖计算机 26/26、化学 17/17、思政 42/42 的 A 级点；
+               高数 16 个 A 级点按你的要求先不做，仍走「动作 + 完整解析」回落，随时可补；
+             ②拆分：_build/teach.json → _build/teach/{ai,chem,law1..4}.json；同一考点被两份文件重复定义时
+               build.mjs 直接报错，宁可构建失败也不静默取后者；check.mjs 同步改为扫目录并报「文件数/条数」；
+             ③写法：思政是概念辨析科，四句改成「抓题眼 → 调对照框架 → 说内在逻辑 → 防最易混处」，
+               不再套理科的「读题/方法/步骤/易错」，避免所有点读起来一个腔调；
+             ④自测：新增 _tmp/learn-cov.mjs 跨科巡检（思政 2 点 + 化学 1 点各走一遍三拍，31 项），
+               另修 _tmp/learn-test.mjs 里「无 teach 回落」的样点——原用的 a2s5-01 已补上 teach，改取 B 级 a1s1-01；
+             ⑤未动：题库、判分、三态着色、快照 schema 2、学习台图例与筛选语义一律照旧。
+  上次变更: （3.48.0）新增「从零学」教学层：把「看懂了」推到「写得出」，题库、判分、三态着色一律未动（schema 仍 2）——
+             ①定位：现有 content 是「学过之后」的浓缩（中位 209 字），缺的不是讲解而是示范与输出；523 题、
+               207 个考点里有 140 个只有 2 道题，所以教学层不新造题、也不新造学习顺序；
+             ②结构：一课 3 个点，顺序直取 path.json；不按 network.prerequisite 拓扑排序——化学
+               c1s4-01 ↔ c1s4-02 互为前置，自排要么撞环、要么把错点在诊断里静默丢掉；
+             ③三拍：讲解（读完 content 必须写一句复述，再展开 action 对照，逼先输出）
+               → 示范（teach.w 四段思路逐层揭开；没有 teach.w 自动回落成「动作 + 完整解析」）
+               → 渐隐（同一道例题遮三档：全给 / 只留首句 / 全遮；编程题第三档给白屏默写 + 行级 LCS diff）；
+             ④内容：新增 _build/teach.json（8 个 A 级点 × 4 句思考链），由 build.mjs 校验并合并注入；
+               单独成文件是为了重跑 gen-v3.mjs 时不把 teach 冲掉，缺 teach 的点自动回落、无需补全 68 点；
+             ⑤进度：新增可选字段 snap.teach{sid:{kid:{p,t}}}，五处补齐（emptySnap / snapFillTeach /
+               loadSnap.needFill / mergeSnapshot / sameProgress）；合并取 p 的 max（幂等、可交换），旧档缺字段照旧合法；
+             ⑥界面：新增 mode-learn 三屏（本课目标 / 逐点三拍 / 本课收尾）；入口三处：卡片「从零学」、
+               学习台阶段浮层的「从零学」、⋯ 菜单「从零学」；学习台节点加 n/3 角标——只读 snap.teach，
+               不改 data-st、不进图例、不参与筛选，保住 v3.45「一处判定、四处渲染」；
+             ⑦闭环：收尾页「练这一课」把本课全部题目交给现有 qzStartRun，判分/记录/掌握度全走原口径；
+               刷完 qzExit 自动回到收尾页看跨档，不掉回卡片；
+             ⑧自测：_tmp/learn-test.mjs（三拍走通、遮三档、diff 定向、进度只进不退）、
+               _tmp/learn-sync-test.mjs（合并幂等/交换/旧档缺字段）、_tmp/learn-layout-test.mjs（390/320/1280 + 深色）。
+  上次变更: （3.47.1）全面排查后的一次补丁：修 5 处「特定操作才出现」的逻辑错、2 处缓存不刷新、2 处健壮性缺口，
              并删掉一段死代码（数据、判分口径、快照 schema 2 与存储键都没动）——
              ①症状：答对后标「其实是蒙的」，隔壁「这题想了很久」按钮凭空消失；改判「我答的其实等价」后同样；
              ②成因：反馈条上这两个手动标记按钮共用 .qgzbtn 这套外观，qzGuessBar() 重画时按 .qgzbtn 整批摘除，
@@ -535,7 +564,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.47.1">
+<meta name="app-version" content="3.49.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2389,6 +2418,117 @@
     *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;
       transition-duration:.001ms !important}
   }
+
+  /* ---------- [v3.48.0] 从零学：教学层 ---------- */
+  /* 整段可整块删除即回退：只依赖本段样式，不改任何既有选择器 */
+  body.mode-learn .wrap{display:none}
+  body.mode-learn #tocBtn,
+  body.mode-learn #searchBtn,
+  body.mode-learn #favBtn,
+  body.mode-learn #ovBtn,
+  body.mode-learn #mapBtn,
+  body.mode-learn .kpgo{display:none !important}
+
+  .learn{padding:18px 16px 72px}
+  .lwrap{max-width:880px;margin:0 auto}
+  .lhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+  .lidx{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ltitle{flex:1 1 180px;min-width:0;font-size:15px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+  .lbar{height:3px;background:var(--barBg);border-radius:2px;overflow:hidden;margin:0 0 16px}
+  .lbar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .25s ease}
+
+  .lcard{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px}
+  .lsec{margin:0 0 14px}
+  .lsec:last-child{margin-bottom:0}
+  .lsec+.lsec{padding-top:14px;border-top:1px dashed var(--line)}
+  .lsec>h4{margin:0 0 7px;font-size:11.5px;font-weight:500;letter-spacing:.04em;color:var(--ink2)}
+  .lsec>h4.act{color:var(--accent)}
+  .lsec>h4.warn{color:var(--warn)}
+  .lsec p{margin:.3em 0;font-size:14px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+  .lstem{font-size:15px;line-height:1.8;color:var(--ink);overflow-wrap:anywhere}
+  .lstem p{margin:.35em 0}
+  .lstem code{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:13px;
+    background:var(--chip);padding:1px 4px;border-radius:3px}
+
+  .llist{list-style:none;margin:0;padding:0}
+  .llist li{display:flex;gap:9px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+  .llist li:last-child{border-bottom:0}
+  .llist .ln2{flex:0 0 auto;font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .llist .lg{flex:1 1 auto;min-width:0;font-size:13.5px;color:var(--ink);overflow-wrap:anywhere}
+  .llist .lp{flex:0 0 auto;font-size:11px;color:var(--ink3);text-align:right}
+
+  .lrecall{margin:14px 0 0;padding:12px;border-radius:8px;background:var(--chip)}
+  .lrecall>p{margin:0 0 8px;font-size:12.5px;line-height:1.7;color:var(--ink2)}
+  .lrecall textarea{display:block;width:100%;box-sizing:border-box;min-height:62px;padding:9px 10px;
+    border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);
+    font:inherit;font-size:13.5px;line-height:1.7;resize:vertical}
+  .lrecall textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .lrecall .lrecallacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  .lblk{margin:10px 0 0;padding:11px 13px;border-radius:8px;background:var(--chip);
+    border-left:3px solid var(--accent);font-size:13.5px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+  .lblk>b{display:block;margin:0 0 4px;font-size:11px;font-weight:500;color:var(--ink2);letter-spacing:.03em}
+  .lblk p{margin:.3em 0}
+  .lblk.last{border-left-color:var(--warn)}
+  .lblk.last>b{color:var(--warn)}
+  .lblk.in{animation:lnIn .18s ease both}
+  @keyframes lnIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+  .lfadebar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+  .lfadebar .fdtag{font-size:11.5px;color:var(--ink2);margin-right:auto}
+  .lmask{display:flex;gap:6px}
+  .lmask i{display:block;width:22px;height:4px;border-radius:2px;background:var(--barBg)}
+  .lmask i.on{background:var(--accent)}
+  .lansbox{margin:12px 0 0;padding:12px;border-radius:8px;background:var(--chip);
+    font-size:13.5px;line-height:1.8;color:var(--ink);overflow-wrap:anywhere}
+  .lansbox p{margin:.3em 0}
+
+  .lcode{display:block;width:100%;box-sizing:border-box;min-height:140px;padding:10px 12px;
+    border:1px solid var(--line2);border-radius:8px;background:var(--chip);color:var(--ink);
+    font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;
+    font-size:13px;line-height:1.72;resize:vertical;tab-size:4}
+  .lcode:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .ldiff{margin:12px 0 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .ldiff .r{display:flex;gap:8px;padding:1px 10px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:12.5px;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
+  .ldiff .r.s{color:var(--ink2)}
+  .ldiff .r.i{background:var(--accentBg);color:var(--ink)}
+  .ldiff .r.d{background:var(--warnBg);color:var(--warn)}
+  .ldiff .m{flex:0 0 auto;width:12px;text-align:center;font-weight:600}
+  .ldiff .t{flex:1 1 auto;min-width:0}
+  .ldverdict{margin:10px 0 0;font-size:13px;line-height:1.75;color:var(--ink2)}
+  .ldverdict b{color:var(--accent)}
+
+  .lacts{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 0}
+  .lacts .btn{flex:0 0 auto}
+  .lacts .sp{flex:1 1 0}
+
+  /* 卡片入口条：从零学（描边、次要） + 练这个考点（实心、主要） */
+  .qzbarBtn.lzbtn{background:var(--card);color:var(--accent);border-color:var(--accent);box-shadow:none}
+  .qzbarBtn.lzbtn:hover{background:var(--accentBg);box-shadow:none}
+  .qzbarBtn.lzbtn .ico{font-size:12px}
+  .lzbarHint{font-size:11.5px;line-height:1.6;color:var(--ink2)}
+
+  /* 学习台节点上的教学进度角标：只作提示，不参与三态着色与筛选 */
+  .mnode2 .mt{flex:0 0 auto;font-size:9.2px;line-height:15px;padding:0 4px;margin-top:1px;border-radius:3px;
+    background:var(--bc);color:#fff;font-style:normal;opacity:.82}
+  .mnode2 .mt[hidden]{display:none}
+  .mpop .plearn{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;text-align:left;
+    font:inherit;font-size:11.8px;line-height:1.6;padding:6px 8px;border-radius:6px;
+    border:1px dashed var(--pc);background:transparent;color:var(--ink);cursor:pointer}
+  .mpop .plearn:hover{background:var(--accentBg);color:var(--accent);border-style:solid}
+  .mpop .plearn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  @media (max-width:560px){
+    .learn{padding:12px 10px 80px}
+    .lcard{padding:14px 12px}
+    .lacts .btn{flex:1 1 auto}
+    .llist .lp{font-size:10.5px}
+  }
+  @media print{
+    .learn{display:none !important}
+  }
 </style>
 </head>
 <body>
@@ -2422,6 +2562,7 @@
       <button class="btn" id="printBtn" type="button" role="menuitem">打印</button>
       <button class="btn" id="dataBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="dataDrawer">资料</button>
       <button class="btn" id="pathBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="pathPanel">学习路径</button>
+      <button class="btn" id="learnBtn" type="button" role="menuitem">从零学</button>
       <button class="btn" id="syncBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncDrawer"><span class="dot" id="syncDot"></span>同步</button>
     </div>
   </div>
@@ -2533,6 +2674,20 @@
 
     <div class="qsum" id="qSum" hidden></div>
 
+  </div>
+</section>
+
+<!-- [learn] 从零学：讲解（读 + 一句复述）→ 示范（逐步揭示）→ 渐隐（同一题遮三档） -->
+<section class="learn" id="learnView" aria-label="从零学" hidden>
+  <div class="lwrap">
+    <div class="lhead">
+      <span class="lidx" id="lnIdx"></span>
+      <span class="ltitle" id="lnTitle"></span>
+      <button class="btn small" id="lnQuit" type="button">退出</button>
+    </div>
+    <div class="lbar" role="progressbar" aria-label="本课进度" aria-valuemin="0" aria-valuemax="100"><i id="lnBar"></i></div>
+    <div id="lnBody"></div>
+    <div class="lacts" id="lnActs"></div>
   </div>
 </section>
 
@@ -2778,7 +2933,15 @@
               "c1s2-02"
             ]
           },
-          "examPattern": "判断题考「Q 是状态函数」类错误表述；选择题从一组量里挑出全是状态函数的组合"
+          "examPattern": "判断题考「Q 是状态函数」类错误表述；选择题从一组量里挑出全是状态函数的组合",
+          "teach": {
+            "w": [
+              "先问一句：这个量是不是只由始末态决定——是就是状态函数，写 Δ；不是就是途径函数，只写 Q、W。",
+              "看到 ΔQ、ΔW 这种写法可以直接判错，这是本题最省时间的一刀。",
+              "「H 是状态函数、ΔH=Qp，所以 Qp 也是状态函数」错在把数值相等当成性质相同：换条路径 Q 会变、ΔH 不变。",
+              "最容易错的就是这一句；另外符号约定要在草稿第一行抄下来——吸热 Q 正、环境对系统作功 W 正。"
+            ]
+          }
         },
         {
           "id": "c1s2-02",
@@ -2854,7 +3017,15 @@
               "c1s2-03"
             ]
           },
-          "examPattern": "计算题第一步求 ΔU 或 Q；选择题考「膨胀功的符号」"
+          "examPattern": "计算题第一步求 ΔU 或 Q；选择题考「膨胀功的符号」",
+          "teach": {
+            "w": [
+              "读题第一步不是算，是抄约定：本教材 ΔU=Q+W，吸热 Q>0，环境对系统作功 W>0。",
+              "然后把每句中文翻译成带符号的数：「失去热量 15 kJ」写作 Q=−15，「内能增加 5」写作 ΔU=+5。",
+              "代进 +5=(−15)+W 得 W=+20，再用「内能增加说明总输入为正」做一次合理性检验。",
+              "最容易错的是把「系统对外作功 40 J」直接写成 W=+40——它等于环境对系统作功 −40。"
+            ]
+          }
         },
         {
           "id": "c1s2-03",
@@ -3002,7 +3173,15 @@
               "c1s2-05"
             ]
           },
-          "examPattern": "计算题主考；选择题考「单质生成焓一定为 0」的反例（如 O3、金刚石）"
+          "examPattern": "计算题主考；选择题考「单质生成焓一定为 0」的反例（如 O3、金刚石）",
+          "teach": {
+            "w": [
+              "看到「等于某物质生成焓的反应」，先过三道闸：生成物系数是不是 1、反应物是不是全为最稳定单质、状态标注对不对。",
+              "最稳定单质的生成焓规定为 0：O2(g)、N2(g)、H2(g)、C(石墨)、Br2(l)、I2(s)，注意溴取液态。",
+              "三道闸全过才是生成焓；有一道不过，就改用「产物求和减反应物求和」。",
+              "最容易错的是「Br2(l) 是 0，所以 Br2(g) 也是 0」——把元素当成了物质。"
+            ]
+          }
         },
         {
           "id": "c1s2-05",
@@ -3073,7 +3252,15 @@
               "c1s3-02"
             ]
           },
-          "examPattern": "计算题必考组合；填空题要求填某反应的 ΔrH° 数值"
+          "examPattern": "计算题必考组合；填空题要求填某反应的 ΔrH° 数值",
+          "teach": {
+            "w": [
+              "先配平目标方程，再问：它能由哪几个已知方程加减乘出来。",
+              "系数怎么组合，ΔH 就怎么组合：正向相加、逆写变号、整式乘 n 时 ΔH 同乘 n。",
+              "组合完逐项核对中间物种是否恰好消掉——系数没对齐，ΔH 的组合就会错位。",
+              "最容易错的是只乘了方程式系数忘了乘 ΔH，以及逆写方程时忘记变号、答案符号相反。"
+            ]
+          }
         },
         {
           "id": "c1s3-01",
@@ -3154,7 +3341,15 @@
               "c1s3-02"
             ]
           },
-          "examPattern": "判断题考「熵增原理适用于一切体系」；选择题给 ΔH、ΔS 组合问是否自发"
+          "examPattern": "判断题考「熵增原理适用于一切体系」；选择题给 ΔH、ΔS 组合问是否自发",
+          "teach": {
+            "w": [
+              "先数气体分子数的变化：气态产物多于气态反应物就是 ΔS>0，反之 ΔS<0。",
+              "固体变液体变气体、固体溶解、升温都使 ΔS>0，可以当快速判断的旁证。",
+              "判自发性绝不能用体系熵单独下结论——熵增原理说的是「体系熵＋环境熵≥0」，而且只对孤立系统成立。",
+              "最容易错的是把熵当强度性质（只有摩尔熵才是），以及用水结冰来反驳「熵增才能自发」。"
+            ]
+          }
         },
         {
           "id": "c1s3-02",
@@ -3242,7 +3437,15 @@
               "c1s4-02"
             ]
           },
-          "examPattern": "计算题求转变温度；选择题判断「高温自发还是低温自发」"
+          "examPattern": "计算题求转变温度；选择题判断「高温自发还是低温自发」",
+          "teach": {
+            "w": [
+              "先在草稿上标出 ΔH、ΔS 各自的符号；两个符号一确定，四种情况就只剩查表。",
+              "四象限：都负则低温自发，都正则高温自发，ΔH<0 且 ΔS>0 任意温度自发，ΔH>0 且 ΔS<0 永不自发。",
+              "求转变温度用 T=ΔH/ΔS，但必须先把 ΔH 换成 J，否则差 1000 倍（50000/100=500 K，不是 0.5）。",
+              "最容易错的是量纲不统一，以及把「高温自发」那一格的条件记反。"
+            ]
+          }
         },
         {
           "id": "c1s3-03",
@@ -3372,7 +3575,15 @@
               "c1s4-03"
             ]
           },
-          "examPattern": "填空题写 K° 表达式；选择题考「加固体平衡是否移动」"
+          "examPattern": "填空题写 K° 表达式；选择题考「加固体平衡是否移动」",
+          "teach": {
+            "w": [
+              "写平衡常数表达式第一件事：把纯固体、纯液体、稀溶液里的溶剂划掉。",
+              "剩下的每个分压除以 p°、每个浓度除以 c°，所以 K° 一定无量纲。",
+              "指数按计量数写，SO3 前面系数是 2 就要平方；最后看一眼量级是否合理。",
+              "最容易错的是把 CaCO3(s)、CaO(s) 写进表达式，或者直接拿 Pa 的数值代进去没除 p°。"
+            ]
+          }
         },
         {
           "id": "c1s4-02",
@@ -3455,7 +3666,15 @@
               "c1s4-03"
             ]
           },
-          "examPattern": "计算题主考；选择题考「K° 只与温度有关」"
+          "examPattern": "计算题主考；选择题考「K° 只与温度有关」",
+          "teach": {
+            "w": [
+              "先看题目给的是 ΔG° 还是 ΔG——平衡时等于零的是 ΔrG，不是 ΔrG°。",
+              "换算用 ΔG°=−RT lnK°，R 取 8.314，ΔG° 一律换成 J；要 lg 再除以 2.303。",
+              "反查更快：K° 很大说明 ΔG° 是大负数；298 K 可用 lgK°=−ΔG°(kJ)/5.708 快速估。",
+              "最容易错的是 ln 与 lg 混用（差 2.303 倍），以及拿 298 K 的 ΔG° 去算别的温度下的 K°。"
+            ]
+          }
         },
         {
           "id": "c1s4-03",
@@ -3607,7 +3826,15 @@
               "c1s4-05"
             ]
           },
-          "examPattern": "选择题高频；判断题考「加催化剂使平衡移动」"
+          "examPattern": "选择题高频；判断题考「加催化剂使平衡移动」",
+          "teach": {
+            "w": [
+              "先算 Δn(g)：气态产物计量数减气态反应物计量数，这一个数决定加压往哪边走。",
+              "再判断操作改的是分压、体积还是温度；浓度和压力只改 Q，只有温度改 K°。",
+              "惰性气体分两种情形：恒容加不影响各组分分压；恒压加使体积变大，等效于减压。",
+              "最容易错的是「加惰性气体一定不移动」，以及把 Δn(g) 的符号用反、把加压方向判反。"
+            ]
+          }
         },
         {
           "id": "c1s4-05",
@@ -3737,7 +3964,15 @@
               "c1s5-02"
             ]
           },
-          "examPattern": "选择题考「用不同物质表示速率数值是否相同」；填空题给速率比"
+          "examPattern": "选择题考「用不同物质表示速率数值是否相同」；填空题给速率比",
+          "teach": {
+            "w": [
+              "先配平，再对每个物种的浓度变化率除以它的计量数。",
+              "同一反应里各物种速率之比恒等于计量数之比：N2 是 0.10，则 H2 是 0.30、NH3 是 0.20。",
+              "时间单位统一到秒——给的是每分钟就先换成每秒。",
+              "最容易错的是直接比较两个物种的浓度变化率大小，忘了除以计量数。"
+            ]
+          }
         },
         {
           "id": "c1s5-02",
@@ -3819,7 +4054,15 @@
               "c1s5-03"
             ]
           },
-          "examPattern": "计算题给表格求级数与 k；选择题给 k 的单位反推级数"
+          "examPattern": "计算题给表格求级数与 k；选择题给 k 的单位反推级数",
+          "teach": {
+            "w": [
+              "看到「速率常数单位是 mol·dm⁻³·s⁻¹」，先反查级数：零级。",
+              "反查口诀：零级不带浓度、一级 s⁻¹、二级 dm³·mol⁻¹·s⁻¹。",
+              "级数只能由实验定，不能从配平系数读；只有基元反应才按计量数写速率方程。",
+              "最容易错的是把 2NO+O2 的级数直接写成 2 和 1，以及以为 k 随浓度变化（k 只随温度和催化剂变）。"
+            ]
+          }
         },
         {
           "id": "c1s5-03",
@@ -3906,7 +4149,15 @@
               "c1s5-04"
             ]
           },
-          "examPattern": "计算题求 Ea；判断题考「催化剂使 K° 增大」"
+          "examPattern": "计算题求 Ea；判断题考「催化剂使 K° 增大」",
+          "teach": {
+            "w": [
+              "先看题给的是两组速率还是两组温度，两类题最后都落在同一个两点式上。",
+              "两点式 ln(k2/k1)=−(Ea/R)(1/T2−1/T1)：温度先换成 K，Ea 统一用 J。",
+              "活化能越大，速率对温度越敏感；催化剂降低 Ea，正逆反应同等降低。",
+              "最容易错的是把 1/T2−1/T1 写成 T2−T1，或者答催化剂「提高产率」——它只缩短到达平衡的时间。"
+            ]
+          }
         },
         {
           "id": "c1s5-04",
@@ -4319,7 +4570,15 @@
               "c2s4-01"
             ]
           },
-          "examPattern": "选择题判断酸碱性；填空题写共轭对或质子条件式"
+          "examPattern": "选择题判断酸碱性；填空题写共轭对或质子条件式",
+          "teach": {
+            "w": [
+              "先判这个物种是给质子还是接质子：给就是酸，接就是碱。",
+              "配对只认一条：两者只差一个 H+，差两个就不成对（H2SO4 对的是 HSO4−，不是 SO4 2−）。",
+              "HCO3−、H2O、HSO4− 这类要主动标两性；反应方向永远由强酸强碱一侧指向弱酸弱碱一侧。",
+              "最容易错的是把「能电离出几个 H+」当强弱判据，或者配出跨两个质子的「共轭对」。"
+            ]
+          }
         },
         {
           "id": "c2s3-02",
@@ -4458,7 +4717,15 @@
               "c2s4-02"
             ]
           },
-          "examPattern": "计算题求 pH 与解离度；选择题考「稀释后解离度增大」"
+          "examPattern": "计算题求 pH 与解离度；选择题考「稀释后解离度增大」",
+          "teach": {
+            "w": [
+              "先写解离方程和 Ka 表达式，再看 c/Ka 是否不小于 500——不够就不能开方近似。",
+              "能用近似式时 [H+]=根号(Ka·c)，pH 再取负对数；α 用 [H+]/c 化成百分数。",
+              "弱碱反过来算：先求 [OH−]=根号(Kb·c)，再 pH=14−pOH。",
+              "最容易错的是把百分数直接代进 α²（数值缩 10000 倍），以及求出 [H+] 后忘了取负对数。"
+            ]
+          }
         },
         {
           "id": "c2s4-02",
@@ -4662,7 +4929,15 @@
               "c2s5-01"
             ]
           },
-          "examPattern": "计算题配缓冲液或求 pH；选择题判断哪组能配成缓冲液"
+          "examPattern": "计算题配缓冲液或求 pH；选择题判断哪组能配成缓冲液",
+          "teach": {
+            "w": [
+              "先确认体系里同时存在共轭酸碱对，再查或算 pKa。",
+              "pH=pKa+lg(c碱/c酸)：盐在分子、酸在分母，写反就跑到另一侧。",
+              "两者浓度相等时 pH=pKa，缓冲容量最大；有效范围是 pKa±1，超出就没有缓冲能力。",
+              "最容易错的是浓度位置写反，以及认为稀释后 pH 完全不变——比值不变所以 pH 近似不变，但容量下降。"
+            ]
+          }
         },
         {
           "id": "c2s5-01",
@@ -5783,7 +6058,15 @@
               "q": "催化剂导致反应速率明显增加的主要原因是（　）<br>A. 反应温度增加　B. 降低了反应的活化能　C. 活化能升高　D. 增大了平衡常数",
               "a": "<p><b>答案：B</b></p><p>催化剂改变反应历程，提供活化能更低的途径，使活化分子百分数增大，速率加快。它不改变体系温度（A 错）、不升高活化能（C 错）、不改变平衡常数（D 错）。</p><p>易错：选 D——催化剂只加快达到平衡的速度，不改变 Kθ；选 A——催化剂不提供热量。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "一句话判据先摆出来：催化剂只动 Ea 和速率，不动 ΔH、ΔG°、K° 与转化率。",
+              "它提供活化能更低的新途径，正逆反应同等加快，所以只缩短到达平衡的时间。",
+              "「缩短时间」不等于「提高产率」，答题时这两个词必须分开说。",
+              "最容易错的是答「催化剂提高平衡转化率」或「增大平衡常数」。"
+            ]
+          }
         },
         {
           "id": "c1s5-06",
@@ -5854,7 +6137,15 @@
               "q": "基元反应 2NO(g) + O2(g) = 2NO2(g)，在一定温度下，p(O2) 不变，p(NO) 增加到原来的 2 倍，则反应速率增加到原来的（　）<br>A. 2 倍　B. 4 倍　C. 9 倍　D. 1/4 倍",
               "a": "<p><b>答案：B</b></p><p>基元反应可按计量数写速率方程：υ = k[NO]²[O2]。p(NO) 加倍而 p(O2) 不变，速率变为 2² = 4 倍。</p><p>易错：把速率方程写成 υ = k[NO][O2] 得 2 倍；或误按总计量数 3 次方得 8 倍（选项中没有，但思路同样错）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清方向：基元反应一定是简单级数，但简单级数不一定是基元反应。",
+              "只有基元反应才能按计量数直接写速率方程，2NO+O2 要写成 υ=k[NO]²[O2]。",
+              "浓度只增加「活化分子数」，温度才提高「活化分子百分数」——这两个词考试专门设套。",
+              "最容易错的是由「速率方程与计量数吻合」反推「它是基元反应」，H2+I2 生成 HI 就是经典反例。"
+            ]
+          }
         }
       ],
       "updatedAt": "2026-10-31",
@@ -8335,7 +8626,15 @@
               "q": "\"人工智能元年\"指的是 1950 年图灵发表《计算机器与智能》的年份。（　）",
               "a": "<p><b>答案：</b>错误</p><p>\"人工智能元年\"指 1956 年——达特茅斯会议召开、AI 一词被提出、学科正式确立；1950 年只是图灵提出图灵测试的年份，当时还没有\"人工智能\"这个名称。</p><p>易错：把两个关键年份合并：1950 有论文和图灵测试，1956 才有 AI 这个名字。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "读到「首次提出 AI 这个词」或「人工智能元年」，先把三个锚点摆出来：1956、达特茅斯、麦卡锡。",
+              "选项里凡是把年份写成 1950 的，一律想到图灵——他 1950 年提的是图灵测试，不是命名。",
+              "记的时候成对记：图灵＝1950＋图灵测试，麦卡锡＝1956＋达特茅斯会议＋首次提出这个词。",
+              "最容易错的是把「提出人工智能这个词」记成图灵，或者把元年记成 1950。"
+            ]
+          }
         },
         {
           "id": "a1s2-01",
@@ -8547,7 +8846,15 @@
               "q": "人工智能第三次兴起得益于（　）、（　）、（　）三大要素同时具备，其中（　）是基础，（　）是核心。",
               "a": "<p><b>答案：</b>算法、算力、数据；数据；算法</p><p>讲义原文：数据是人工智能的基础，算力是计算机的处理能力（CPU、GPU、TPU 等），算法是人工智能的核心。填空时先写全三词，再按\"基础/核心\"的定位填后两空，避免顺序颠倒。</p><p>易错：把\"算力是基础\"填进去；讲义把\"基础\"给了数据，\"核心\"给了算法。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「三大核心要素」「不属于的是」，先在草稿上列三个词：算法、算力、数据。",
+              "选项里凡是硬件配件——存储磁盘、网络带宽、显示器——都不是要素；要素指的是能力层，不是零件。",
+              "记定位用一句话串起来：数据是基础、算力是支撑、算法是核心；问「缺一会怎样」就用这三位逐条反证。",
+              "最容易错的是把三者地位背反（说成算法是基础），或者多加一个「存储」凑成四大要素。"
+            ]
+          }
         },
         {
           "id": "a1s3-02",
@@ -8798,7 +9105,15 @@
               "q": "大语言模型（LLM）与世界模型相比，关于两者能力差异的描述正确的是（　）<br>A. LLM 擅长理解物理规律，而世界模型擅长语义理解与逻辑推理<br>B. LLM 是「行万里路」，世界模型是「读万卷书」<br>C. LLM 擅长语义理解与逻辑推理但不懂物理规律，世界模型理解物理世界并能预判动作后果<br>D. 两者都完全具备对重力、碰撞等物理因果关系的正确掌握能力",
               "a": "<p><b>答案：</b>C</p><p>LLM 像「读万卷书」，强在语义与推理，但对物理规律缺乏直觉（会误判推杯子会掉落）；世界模型像「行万里路」，在内部表征环境动态，能预判动作后果，用于机器人与自动驾驶。</p><p>易错：把两者的比喻与能力对调；LLM 的短板正是「不懂物理」。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干定义里只要出现「物理身体」「感知—行动闭环」「在交互中学习」，问的就是具身智能。",
+              "给四个概念各配一个不可替代的关键词：具身＝闭环，世界模型＝预测未来状态，AGI＝跨领域人类水平，量子 AI＝算力。",
+              "世界模型的三大能力单独背：生成性、多模态、互动性——不是「感知、推理、决策」这组通用词。",
+              "最容易错的是把具身智能等同于人形机器人（形状不重要，闭环才重要），以及把世界模型三能力记成通用词。"
+            ]
+          }
         },
         {
           "id": "a1s5-01",
@@ -8853,7 +9168,15 @@
               "q": "AI for Science 被称为科学研究的第（　）范式，与前四种范式不同，它不仅能运用已有经验、理论和数据，还能生成新的（　）。",
               "a": "<p><b>答案：</b>五；科学假设</p><p>四范式为实验、理论、计算、数据，AI for Science 被列为第五范式；讲义强调它\"生成全新的科学假设和逼真的自然现象，推导出未知的结论\"，这是它与前四范式的根本区别。</p><p>易错：填\"数据\"或\"模型\"；关键区别在\"生成假设\"，不是\"使用数据\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「四种范式」，先默写顺序：实验、理论、计算、数据，四步各配一个例子（伽利略、牛顿、数值模拟、大数据）。",
+              "第五范式不是「数据范式换个说法」，它多了两件事：生成新假设、推导未知结论。",
+              "判断 AI for Science 的标准是「AI 参与提出假设」，而不只是「用 AI 处理数据」。",
+              "最容易错的是把顺序记成实验—理论—数据—计算，把计算和数据换了位。"
+            ]
+          }
         },
         {
           "id": "a1s5-02",
@@ -9075,7 +9398,15 @@
               "q": "从键盘输入矩形的长和宽（可能带小数），计算并输出面积，保留两位小数。请写出完整程序。",
               "a": "<p><b>答案：</b>length = float(input(\"请输入长：\"))<br>width = float(input(\"请输入宽：\"))<br>area = length * width<br>print(f\"面积={area:.2f}\")</p><p>第一步 I：input() 返回字符串，必须用 float() 转换后才能参与乘法；第二步 P：area = length * width；第三步 O：f-string 中 {area:.2f} 表示保留两位小数。</p><p>易错：直接 length * width 而没转 float，会得到字符串重复（如 \"3\"*\"4\" 直接报错）；或写成 input()*input() 导致类型错误。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "读到「不属于 IPO 的一部分」这种否定问法，先在草稿上把三个字母摊开：I 输入、P 处理、O 输出。",
+              "四个选项里找那个「不是环节」的词——Program 是「程序」这个大概念本身，不是流程里的一环。",
+              "写代码时反过来用：先列 Input / Process / Output 三行，再逐行填语句，结构就不会漏。",
+              "最容易错的是把 Process（处理）和 Program（程序）当成一回事，两个词只差两个字母。"
+            ]
+          }
         },
         {
           "id": "a2s1-02",
@@ -9256,7 +9587,15 @@
               "q": "chr(65) 的结果是（　），ord(\"a\") 的结果是（　），eval(\"2+3*4\") 的结果是（　）。",
               "a": "<p><b>答案：</b>\"A\"；97；14</p><p>chr(整数) 返回对应 Unicode 字符，65 对应大写 A；ord(字符) 返回编码，小写 a 是 97；eval 会把字符串当表达式求值，先算 3*4=12，再加 2 得 14。</p><p>易错：把 chr 与 ord 用反；或把 eval(\"2+3*4\") 当成字符串拼接得 \"2+3*4\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到 int(...) 的括号里是带引号的字符串，先判断它能不能直接转：只能转整数字面量。",
+              "int(\"3.6\") 会报 ValueError，因为 int() 不截断小数；要变成 3 必须先 float(\"3.6\") 再 int()。",
+              "chr 和 ord 的方向别记反：chr(65) 是数字变字符 \"A\"，ord(\"A\") 是字符变数字 65。",
+              "最容易错的是以为 int(\"3.6\") 得 3——它不截断，直接报错。"
+            ]
+          }
         },
         {
           "id": "a2s2-03",
@@ -9330,7 +9669,15 @@
               "q": "以下程序从输入的十八位身份证号码中提取出生年月日输出，请补全 2 处空白。<br>ID = input('请输入十八位身份证号码：')<br>if (1)____ == 18:<br>　　print('你的身份证号码是' + ID)<br>　　year = ID[6:10]<br>　　moon = ID[10:12]<br>　　day = (2)____<br>　　print('出生年月：' + year + '年' + moon + '月' + day + '日')<br>else:<br>　　print('错误的身份证号码')",
               "a": "<p><b>答案：</b>(1) len(ID)　(2) ID[12:14]</p><p>判断长度用 len(ID) == 18；切片左闭右开：ID[6:10] 是第 7–10 位（年）、ID[10:12] 是第 11–12 位（月），日紧接在后，取 ID[12:14]。</p><p>易错：(1) 写成 ID.len 或 len == 18（漏参数）；(2) 写成 ID[12:13]（少一位）或 ID[11:13]（把月挤了进来）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先把字符串的下标标出来：正向从 0 起（P0 y1 t2 h3 o4 n5），反向从 -1 起（n-1 o-2 …）。",
+              "切片 s[a:b] 是「含 a 不含 b」，取的是第 a 到第 b-1 个；s[1:4] 就是下标 1、2、3 拼起来。",
+              "只有负步长才逆序，s[::-1] 直接背下来；正步长时起点在终点右边，结果是空串而不是报错。",
+              "最容易错的是把切片当闭区间多取一个字母，或者以为 s[-1] 是第一个字符。"
+            ]
+          }
         },
         {
           "id": "a2s2-04",
@@ -9391,7 +9738,15 @@
               "q": "下面代码的输出结果是（　）<br>print('{name}, {gender}, {age}'.format(age=40, gender='男', name='Tom'))<br>A. Tom, 男, 40<br>B. 40, 男, Tom<br>C. 男, Tom, 40<br>D. Tom, 40, 男",
               "a": "<p><b>答案：A</b></p><p>str.format 用关键字参数时按「占位符名字」取值，与传参先后无关：{name}→Tom、{gender}→男、{age}→40，输出 Tom, 男, 40。</p><p>易错：按传参顺序 age、gender、name 硬填，误选 B；关键字参数不会改变模板里的顺序。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到花括号和冒号，第一步先确认字符串前面有没有 f——没有 f 就不是 f-string。",
+              "{3.14159:.2f} 里 .2 是「小数点后 2 位」，f 是定点小数，所以截出 3.14。",
+              "对齐记三个符号：> 右、< 左、^ 居中，后面跟宽度；千分位是逗号，百分比是 .1%。",
+              "最容易错的是漏写 f 前缀，花括号被原样打印成字符。"
+            ]
+          }
         },
         {
           "id": "a2s3-01",
@@ -9466,7 +9821,15 @@
               "q": "下面代码的输出结果是（　）<br>x = 10<br>y = 3<br>print(x % y, x ** y)<br>A. 3 1000<br>B. 1 30<br>C. 3 30<br>D. 1 1000",
               "a": "<p><b>答案：D</b></p><p>% 取余：10 % 3 = 1；** 是幂：10 ** 3 = 1000；两个值用逗号输出，默认隔一个空格。</p><p>易错：把 % 当除法（得 3）；把 ** 当乘法（得 30）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先扫一遍式子里有没有 / ，有就说明结果一定是 float，答案末尾要带 .0。",
+              "优先级按一条链背：** 最高 → 单目负号 → * / // % → + - ，同级从左往右。",
+              "4 + 8 / 2 先算 8/2 得 4.0，再加 4 得 8.0；顺序错就会算成 6.0。",
+              "最容易错的是把 / 当整除（4/2 是 2.0），以及负数的 // 是向下取整（-5//2 = -3）。"
+            ]
+          }
         },
         {
           "id": "a2s3-02",
@@ -9607,7 +9970,15 @@
               "q": "求解一元二次方程的实根，请补全程序中的 4 处空白。<br>import math<br>a = float(input('请输入 a:'))<br>b = float(input('请输入 b:'))<br>c = float(input('请输入 c:'))<br>delta = (1)____　# 填空 1：计算判别式<br>if delta > 0:<br>　　x1 = (2)____　# 填空 2<br>　　x2 = (3)____　# 填空 3<br>elif (4)____:　# 填空 4：两个相等实根的情况<br>　　x = -b / (2 * a)<br>else:<br>　　print('无实根')",
               "a": "<p><b>答案：</b>(1) b**2-4*a*c　(2) (-b + math.sqrt(delta)) / (2 * a)　(3) (-b - math.sqrt(delta)) / (2 * a)　(4) delta == 0</p><p>判别式是 b²-4ac；delta>0 时两根为 (-b ± √delta)/(2a)，开方用 math.sqrt 且参数必须非负；delta==0 时两根相等走 elif。</p><p>易错：(2)(3) 漏括号写成 -b + math.sqrt(delta) / (2 * a)（只除了后一项）；(4) 用 = 赋值而不是 == 比较；忘记 import math。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "代码题先数缩进层级：冒号后面缩进 4 格的那几行，才属于这个分支。",
+              "多分支从上往下逐个判断，命中一个立刻跳出，所以顺序决定结果——85 先撞上 >=80 这条。",
+              "写的时候先 if 再 elif、最后 else 兜底；elif 不能写成 else if。",
+              "最容易错的是缩进不一致把语句挂到别的分支，以及漏冒号。"
+            ]
+          }
         },
         {
           "id": "a2s4-02",
@@ -9687,7 +10058,15 @@
               "q": "有如下 Python 程序段，输出结果正确的是（　）<br>for number in range(1, 5):<br>　　print(number)<br>A. 输出结果是 0 至 4<br>B. 输出结果是 1 至 5<br>C. range() 函数的第二个参数不包含在内<br>D. 以上都不是",
               "a": "<p><b>答案：C</b></p><p>range(1,5) 生成 1、2、3、4，第二个参数 5 取不到（左闭右开），实际输出 1 至 4。A（0 至 4）与 B（1 至 5）都不对，只有 C 准确解释了这一现象。</p><p>易错：因为没有「1 至 4」这个选项就慌，误选 D；注意 C 是对输出的正确描述。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先把 range 括号里的数抄下来，标出「起点、终点、步长」三个位置。",
+              "range(1, 5) 左闭右开：从 1 开始，到 5 之前停，取 1、2、3、4，一共 4 次。",
+              "循环题一律先在循环外写 s = 0，再写 for，最后 print；累加器写在循环里每次都会被清零。",
+              "最容易错的是把 range(1,5) 当成 1..5 算成 15，以及把 break 和 continue 记反。"
+            ]
+          }
         },
         {
           "id": "a2s5-01",
@@ -9750,7 +10129,15 @@
               "q": "已知 a = [1, 2, 3, 4, 5]，则 a[1:4] 的结果是（　），a[::-1] 的结果是（　），a[-2] 的值是（　）。",
               "a": "<p><b>答案：</b>[2, 3, 4]；[5, 4, 3, 2, 1]；4</p><p>切片 [1:4] 取下标 1、2、3，即 2、3、4，左闭右开不含下标 4；[::-1] 步长 -1 逆序；a[-2] 是倒数第二个元素 4。</p><p>易错：把 [1:4] 算成 [2,3,4,5]（多取了右端）；把 a[-2] 当成倒数第一。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干问「有序 / 可变」这类属性题，先把四种组合类型的属性在心里排成一张小表。",
+              "四句口诀：list 有序可变、tuple 有序不可变、set 无序不重复、dict 按键访问。",
+              "取最后一个元素写 a[-1]；非要写正下标就是 len(a)-1，写成 a[3] 就悄悄越界了。",
+              "最容易错的是把 tuple 当可变、把 set 当有序，或者用 a[len(a)] 取末元素。"
+            ]
+          }
         },
         {
           "id": "a2s5-02",
@@ -10096,7 +10483,15 @@
               "q": "关于函数默认参数，以下代码输出什么？（　）<br>def greet(name, message='Hello'):<br>　　print(f'{message}, {name}')<br>greet('Alice')<br>A. Hello, Alice<br>B. Alice, Hello<br>C. 报错<br>D. 无输出",
               "a": "<p><b>答案：A</b></p><p>message 有默认值 'Hello'，只传 name 时用默认值；模板 {message}, {name} 依次填 Hello 与 Alice。</p><p>易错：以为缺参数一定报错；或把模板里两个占位符的顺序记反（选 B）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「定义函数用什么关键字」，四个选项里只认 def——class 定义类、import 导入、func 根本不是关键字。",
+              "第二层常考 return 与 print 的区别：print 只是显示，return 才把值交回调用处。",
+              "写函数固定三段：def 名(参数) → 缩进函数体 → return；没有 return 时函数返回 None。",
+              "最容易错的是只 print 不 return，然后在 print(f(...)) 里得到 None。"
+            ]
+          }
         },
         {
           "id": "a2s7-02",
@@ -10167,7 +10562,15 @@
               "q": "综合应用题：自定义函数，求 3**0+3**1+3**2+…+3**n 的和，并调用该函数输出 3**0+3**1+3**2+…+3**10 的和。（写出完整代码）",
               "a": "<p><b>答案：</b>def s(n):<br>　　sum_1 = 0<br>　　for i in range(n+1):<br>　　　　sum_1 += 3**i<br>　　return sum_1<br><br>print(s(10))　# 输出 88573</p><p>三个要点：①循环范围写 range(n+1)，要含 i=n 这一项；②累加变量在循环外先置 0；③结果用 return 交回、由 print 输出。手工核对：3^0+…+3^10 = (3^11-1)/2 = (177147-1)/2 = 88573。</p><p>易错：range(n) 少算最后一项；把累加变量写在循环里每次清零；忘记 return 导致返回 None。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "编程题先看输入：说「用户输入」，第一行就必须是 n = int(input(...))。",
+              "阶乘只有两种写法：循环累乘（r 从 1 起）或递归（n 不大于 1 时返回 1）。",
+              "累乘初值必须是 1——写 0 的话乘什么都得 0；递归必须写终止条件，否则 RecursionError。",
+              "最容易错的是忘转 int、初值写 0、递归漏终止条件，这三条任一条都会零分。"
+            ]
+          }
         },
         {
           "id": "a2s8-01",
@@ -10228,7 +10631,15 @@
               "q": "Python 语言的官方网站是（　）<br>A. www.python.com<br>B. docs.python.org<br>C. www.python.org<br>D. pypi.org",
               "a": "<p><b>答案：C</b></p><p>官网是 www.python.org（下载安装包也在这里）；docs.python.org 是官方文档站，pypi.org 是第三方库仓库，www.python.com 不是官方站点。</p><p>易错：把文档站或 PyPI 当官网；或记成 .com 域名。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先认导入形式：import 模块 → 后面必须带模块名调用；from 模块 import 名 → 后面直接用名。",
+              "题干给定 from sklearn.linear_model import LinearRegression，那创建对象就写 LinearRegression()，不能再挂前缀。",
+              "pip install 只用于第三方库；标准库（math、random）不用装。",
+              "最容易错的是 from 导入后还写全路径，或者 import numpy as np 之后仍写 numpy。"
+            ]
+          }
         },
         {
           "id": "a2s8-02",
@@ -10292,7 +10703,15 @@
               "q": "已知 x = [1, 2, 3]、y = [2, 4, 6]，用 Matplotlib 画出散点图并加上横纵轴标签，最后显示图形。",
               "a": "<p><b>答案：</b>import matplotlib.pyplot as plt<br>x = [1, 2, 3]<br>y = [2, 4, 6]<br>plt.scatter(x, y)<br>plt.xlabel(\"x\")<br>plt.ylabel(\"y\")<br>plt.show()</p><p>第一步：导入 pyplot 并起别名 plt；第二步：准备两组等长数据；第三步：scatter 画散点；第四步：xlabel/ylabel 设标签；第五步：show 显示。若要保存图片用 plt.savefig(\"a.png\")。</p><p>易错：x、y 长度不一致导致报错；或只写 plt.scatter 不写 show，运行后无窗口。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "问「Matplotlib 的绘图接口 / 库是什么」，只认 pyplot，其余先排除。",
+              "顺手排掉三个干扰项：pylab 是旧式混合命名空间、numpy 是数值库、pandas 是表格库。",
+              "画图流程固定四步：准备数据 → plot 或 scatter → xlabel 与 ylabel → show。",
+              "最容易错的是选 pylab，或者以为图会自动弹出（忘了 plt.show()）。"
+            ]
+          }
         },
         {
           "id": "a2s8-03",
@@ -10348,7 +10767,15 @@
               "q": "pandas 中二维表格结构叫（　），一维带标签数组叫（　）；查看前 5 行用（　）方法。",
               "a": "<p><b>答案：</b>DataFrame；Series；head()</p><p>DataFrame 是二维的、有行索引和列名；Series 是一维的、只有一组索引；head() 默认返回前 5 行，head(10) 返回前 10 行。</p><p>易错：把 DataFrame 写成\"DataFram\"或\"dataframe\"（大小写敏感）；把 head 与 tail 记反。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "判断 Series 的题，先抓两个词：一维、带标签。",
+              "维度靠「几个轴」判：Series 一个轴，DataFrame 两个轴（行和列）。",
+              "再排两个常见误解：Series 可以自定义索引，也可以存字符串等任意类型。",
+              "最容易错的是把它当二维数组，或者以为只能存数值。"
+            ]
+          }
         },
         {
           "id": "a2s8-04",
@@ -10520,7 +10947,15 @@
               "q": "为了提高模型分数，可以用测试集反复调整超参数，直到测试准确率最高。（　）",
               "a": "<p><b>答案：</b>错误</p><p>用测试集调参属于数据泄露：测试集本应模拟\"从未见过的数据\"，反复用它选模型会让评估结果乐观失真。调参应在验证集上做，测试集只在最终评估时用一次。</p><p>易错：把\"分数高\"当成\"模型好\"；忽略了评估的独立性。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「一般划分为（ ）、验证集和测试集」，空格里只可能是训练集。",
+              "三集分工用一句话记：训练学参数、验证调超参、测试做终考。",
+              "强调测试集只用一次——拿它反复调参就是数据泄露，最终分数会虚高。",
+              "最容易错的是漏掉验证集，或者把验证集与测试集的作用记反。"
+            ]
+          }
         },
         {
           "id": "a3s1-03",
@@ -10585,7 +11020,15 @@
               "q": "用 sklearn 对一组\"学习时长—成绩\"数据做线性回归：训练模型并对学习时长 6 小时预测成绩，输出预测值。",
               "a": "<p><b>答案：</b>import numpy as np<br>from sklearn.linear_model import LinearRegression<br><br>x = np.array([1, 2, 3, 4, 5]).reshape(-1, 1)<br>y = np.array([50, 58, 66, 74, 82])<br>model = LinearRegression()<br>model.fit(x, y)<br>print(model.predict(np.array([[6]])))</p><p>第一步：特征必须二维，用 reshape(-1,1) 把 (5,) 变成 (5,1)；第二步：创建 LinearRegression 并 fit；第三步：预测时同样传二维数组 [[6]]；输出约 90（该数据每增加 1 小时成绩 +8）。</p><p>易错：预测时传 [[6]] 写成 6 会报\"期望二维数组\"；或忘记 reshape 直接 fit 一维 x。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到 sklearn 先问一句：这一步是在「建、训、预、评」里的哪一步。",
+              "题目说「用已经训练好的模型做预测」，关键词是预测，直接对应 predict()。",
+              "四步固定：建模型 → fit(X, y) 训练 → predict(X) 预测 → score(X, y) 评估。",
+              "最容易错的是把 fit 当预测（fit 是喂数据训练），以及一维特征不 reshape 就丢给 fit。"
+            ]
+          }
         },
         {
           "id": "a3s2-01",
@@ -10818,7 +11261,15 @@
               "q": "监督学习的典型任务是（　）和（　）；无监督学习的典型任务是（　）和（　）。",
               "a": "<p><b>答案：</b>分类；回归；聚类；降维</p><p>分类输出离散类别（如垃圾邮件判定），回归输出连续数值（如房价预测），二者都需要标签；聚类把无标签样本分成若干簇，降维把高维数据压缩到低维（如 PCA），二者都不需要标签。</p><p>易错：把聚类填进监督学习；或漏掉降维只写聚类。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这题先答根本区别：数据有没有标签，而不是「数据多不多」。",
+              "监督学习两件事：分类、回归；无监督学习两件事：聚类、降维。",
+              "举例自查：房价预测是监督回归、垃圾邮件是监督分类、用户分群是无监督聚类。",
+              "最容易错的是把聚类说成监督，或者把降维漏掉（只记得聚类）。"
+            ]
+          }
         },
         {
           "id": "a3s3-02",
@@ -10882,7 +11333,15 @@
               "q": "K-Means 中 K 表示（　），实际中常用（　）法则选择 K；sklearn 中同时完成训练与预测的方法是（　）。",
               "a": "<p><b>答案：</b>聚类数（簇的个数）；肘部；fit_predict</p><p>K 是人为指定的簇数；肘部法则通过画\"K—簇内误差\"曲线找拐点；KMeans(n_clusters=3).fit_predict(X) 返回每个样本的簇标签，训练与预测一步完成。</p><p>易错：把 K 说成\"迭代次数\"；把 fit_predict 写成 fit（fit 不返回标签）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到 K-Means，先确认它属于无监督聚类——不需要标签。",
+              "流程四步按「初始化—分配—更新—迭代」走，更新质心用的是簇内均值，不是中位数。",
+              "K 值不能自动得到，要预先给定或用肘部法则；而且对初始中心与异常点都敏感。",
+              "最容易错的是把 K-Means 当监督学习，或说 K 能自动确定。"
+            ]
+          }
         },
         {
           "id": "a3s3-03",
@@ -11321,7 +11780,15 @@
               "q": "请列举 NLP 的三项核心基础任务，并各用一句话说明其目标。",
               "a": "<p><b>答案：</b>①文本分类：把文本归入预设类别（如情感极性、新闻主题）；②命名实体识别：找出文本中的人名、地名、机构名等实体并标注类型；③关系抽取：识别实体对之间的语义关系，输出\"实体—关系—实体\"三元组。</p><p>补充：文本聚类的目标是把无标签文本按相似度自动分组；信息检索的目标是从大规模文本中快速返回与查询相关的内容，并平衡召回率与精确率。答题时\"任务名＋一句话目标\"即可，不要展开技术细节。</p><p>易错：把任务与应用混答（如把机器翻译当基础任务）；或只写任务名不写目标。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这类题先分清两组词：五大基础任务 vs 应用场景。",
+              "五任务口诀：分类、关系、实体、聚类、检索；翻译、问答、摘要、对话都归应用场景。",
+              "两个易混点配特征记：输出三元组是关系抽取，标实体边界和类型是 NER。",
+              "最容易错的是把机器翻译选成核心基础任务——它是应用，不是基础任务。"
+            ]
+          }
         },
         {
           "id": "a4s2-02",
@@ -11384,7 +11851,15 @@
               "q": "情感分析按粒度可分为（　）分类、情感（　）分析和情感（　）识别三个层次。",
               "a": "<p><b>答案：</b>极性；强度；维度</p><p>极性回答\"正/负/中性\"，强度回答\"有多强烈\"，维度回答\"是喜悦、愤怒还是悲伤\"；三层由粗到细，考试中常问\"最基础的是哪一层\"，答案是极性分类。</p><p>易错：把\"维度\"写成\"对象\"；对象抽取是另一个子任务，不属于这三层粒度。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先答它问的是「主观态度」——正负、强弱、什么情绪。",
+              "粒度三层从小到大：极性分类（最基础）→ 强度分析 → 情感维度识别。",
+              "难点记四条：上下文依赖、文化与领域差异、讽刺反语、情感模糊。",
+              "最容易错的是说成「只能分正负」，或者与主题识别混起来（那个看的是客观内容）。"
+            ]
+          }
         },
         {
           "id": "a4s2-03",
@@ -11440,7 +11915,15 @@
               "q": "主题识别的三个核心目标是（　）、主题分类和（　）。",
               "a": "<p><b>答案：</b>主题提取；主题建模</p><p>主题提取挖出关键词/短语，主题分类把文本归入预设类别，主题建模从文本集合中发现隐藏的主题结构（如 LDA）；三者分别对应\"词—类—集合\"三个层次。</p><p>易错：把\"主题建模\"写成\"情感建模\"；或漏掉\"主题提取\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先问一句：这段文本在讨论什么——问内容就是主题识别，问态度才是情感分析。",
+              "三件事：主题提取、主题分类、主题建模，其中建模是发现文本集合里隐藏的结构。",
+              "应用面很宽：新闻分类、评论分析、用户反馈都能算，遇到「以上都是」多半就选它。",
+              "最容易错的是把主题建模说成打情感标签。"
+            ]
+          }
         },
         {
           "id": "a4s2-04",
@@ -11935,7 +12418,15 @@
               "q": "Python 创建的类中，初始化方法的名称是哪一个？（　）<br>A. init<br>B. __init<br>C. __init__<br>D. init__",
               "a": "<p><b>答案：C</b></p><p>初始化方法是 __init__，前后各两条下划线；实例化时自动调用，第一个参数固定为 self。</p><p>易错：少写一条下划线（__init 或 init__）；写成普通方法 init 后，实例化时不会被自动调用。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清主谓：类是抽象描述，对象是具体实例——说反就错。",
+              "实例化写法是 对象名 = 类名(实参)，括号里只写实参，不写 self。",
+              "__init__ 由实例化自动调用，作用是初始化实例属性；self 由解释器自动绑定当前实例。",
+              "最容易错的是手写 Pet(self, ...)，或者以为要手动调一次 __init__。"
+            ]
+          }
         },
         {
           "id": "a2s9-02",
@@ -12071,7 +12562,15 @@
               "q": "机器学习的四大类型是监督学习、（　）、（　）和强化学习；其中利用少量标注数据与大量未标注数据共同训练的是（　）。",
               "a": "<p><b>答案：</b>无监督学习；半监督学习；半监督学习</p><p>四大类型按\"标签多少 + 反馈形式\"划分：监督（全有标签）、无监督（无标签）、半监督（少量标签）、强化（无答案只有奖励）。半监督的典型场景是标注成本高（如医学影像），用少量标注数据引导大量未标注数据学习。</p><p>易错：把半监督填成\"弱监督\"（相关但不同概念）；或把四大类型写成\"分类、回归、聚类、降维\"（那是任务类型，不是学习类型）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清两套「三要素」：AI 三大要素是算法 / 算力 / 数据，机器学习三要素是数据 / 模型 / 目标。",
+              "三要素的定位：数据是基础、模型是映射、目标是评估与优化的数学准则。",
+              "四类型按标签与反馈分：全有标签（监督）、全无（无监督）、少量（半监督）、无答案只有奖励（强化）。",
+              "最容易错的是把「目标」当成「标签」，或者把强化学习说成需要标注答案。"
+            ]
+          }
         },
         {
           "id": "a3s1-05",
@@ -12187,7 +12686,15 @@
               "q": "中国特色社会主义进入新时代，意味着近代以来久经磨难的中华民族迎来了从站起来、富起来到强起来的伟大飞跃。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是三个\"意味着\"中的第一条，原文为\"迎来了从站起来、富起来到强起来的伟大飞跃，迎来了实现中华民族伟大复兴的光明前景\"。</p><p>易错：把\"站起来、富起来到强起来\"的顺序打乱（如\"强起来、富起来到站起来\"）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「新时代」三个字，先在心里定位它的身份：它是历史方位判断，不是时间标签，也不是「小康」「现代化实现」的同义词。",
+              "三道常考点各用一把钥匙：内涵答「我国发展新的历史方位」；三个意味着按「中华民族—科学社会主义—发展中国家」三级递进背；主要矛盾记「美好生活需要 vs 不平衡不充分」。",
+              "三级递进是有内在逻辑的：先讲中华民族自己的命运转折，再讲社会主义在世界上的生命力，最后讲中国道路对人类的普遍意义——由己及人、由特殊到一般。",
+              "最容易错的是主要矛盾：旧表述「物质文化需要同落后的社会生产」是十九大之前的说法，只要选项出现「物质文化需要」或「落后的社会生产」，一律先判错。"
+            ]
+          }
         },
         {
           "id": "e0s1-02",
@@ -12242,7 +12749,15 @@
               "q": "大学生应把社会实践作为首要任务。（　）",
               "a": "<p><b>答案：</b>错误</p><p>教材指出大学生应把学习作为首要任务，同时在社会实践中增长才干。学习是首要任务，实践是重要途径，二者不能互换。</p><p>易错：把\"重要途径\"（实践）当成\"首要任务\"（学习）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这题考的是固定搭配，先认题眼是「时代新人」还是「四有」——两组词长得像，但归属完全不同。",
+              "时代新人＝有理想、有本领、有担当；「四有」＝有理想、有道德、有文化、有纪律。答案里出现「有道德」「有文化」「有纪律」的，基本都是「四有」在冒充。",
+              "为什么是这三项：理想解决「往哪走」，本领解决「走不走得动」，担当解决「敢不敢扛」——方向、能力、意志，正好是一个人被时代选中的三个条件。",
+              "还有两个固定答案要记死：大学生「立大志、明大德、成大才、担大任」；大学生首要任务是「学习」，不是社会实践、不是兼职锻炼。"
+            ]
+          }
         },
         {
           "id": "e0s1-03",
@@ -12296,7 +12811,15 @@
               "q": "思想道德为法律提供制度保障，法律为思想道德提供思想指引。（　）",
               "a": "<p><b>答案：</b>错误</p><p>方向说反了：思想道德为法律提供思想指引和价值基础，法律为思想道德提供制度保障和强制力支撑。</p><p>易错：只记住\"二者相互促进\"，没记各自的方向。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干一定在问方向：是道德给法律什么，还是法律给道德什么。先别急着选，把「谁给谁」标出来。",
+              "一句口诀管住全部方向题：道德给法律指方向（思想指引、价值基础、正当性），法律给道德上保险（制度保障、强制力支撑）。",
+              "因为道德靠内心信念和舆论，它天然处理「应该不应该」，所以能提供价值判断；法律靠国家强制力，它天然处理「必须不必须」，所以能提供制度兜底。功能不同，才互补而不是替代。",
+              "陷阱是偷换方向：「思想道德为法律提供制度保障」这句话是错的——能提供制度保障的只有法律。看到「制度保障」「强制力」就找法律，看到「思想指引」「价值基础」「正当性」就找道德。"
+            ]
+          }
         },
         {
           "id": "e0s1-04",
@@ -12405,7 +12928,15 @@
               "q": "人生观决定世界观，世界观是人生观的一部分。（　）",
               "a": "<p><b>答案：</b>错误</p><p>关系说反了：世界观决定人生观，人生观是世界观的重要组成部分。</p><p>易错：把\"部分与整体\"\"决定与被决定\"两组关系同时弄反。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "三个概念同框时，先分清各自的对象：世界观看「世界」，人生观看「人生」，价值观看「值不值、怎么评判」。",
+              "关系题只有一句话要记牢：世界观决定人生观，人生观反过来影响世界观；人生观是世界观的重要组成部分。",
+              "道理在于，人总是先用一套对世界的总体看法去处理具体问题，人生只是其中一个具体领域——所以大前提管小结论，反过来小结论只能「影响」不能「决定」。",
+              "两个高频错项：一是「人生观决定世界观」（方向反了）；二是「有唯物主义世界观，人生观就一定正确」——世界观正确只是必要条件，不是充分条件，「一定」这个词出现就该警觉。"
+            ]
+          }
         },
         {
           "id": "e1s1-02",
@@ -12463,7 +12994,15 @@
               "q": "人生目的主要回答\"人应当怎样对待生活\"这一问题。（　）",
               "a": "<p><b>答案：</b>错误</p><p>人生目的回答的是\"人为什么活着\"；\"人应当怎样对待生活\"是人生态度回答的问题；\"什么样的人生才有意义\"是人生价值回答的问题。</p><p>易错：把人生目的与人生态度的回答对象互换。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「核心」两个字。人生观内部有三个部件：目的、态度、价值，只有一个是核心。",
+              "核心是人生目的，它能「决定」另外两个：决定人生道路、决定人生态度、决定人生价值标准。三个「决定」是它的核心地位证明。",
+              "为什么目的居首：目的回答「为什么活」，方向定了，态度才有对象、价值才有尺子；反过来态度再积极，方向错了也只是错得更快。",
+              "两个极易混的替身：一是把「人生态度」当核心；二是把「为人民服务」当核心——后者是社会主义道德的核心，不是人生观的核心。考「道德核心」还是「人生观核心」，读题时要看清主语。"
+            ]
+          }
         },
         {
           "id": "e1s1-03",
@@ -12521,7 +13060,15 @@
               "q": "顺境对人的发展只有利、逆境对人的发展只有弊。（　）",
               "a": "<p><b>答案：</b>错误</p><p>顺境与逆境对人的发展都是既有利也有弊：顺境易使人懈怠，逆境能磨练意志。关键在于以积极进取的态度对待不同境遇，而不是简单判断好坏。</p><p>易错：把顺逆观绝对化，教材明确\"顺境和逆境都有两重性\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "定义题先抓词性：人生态度是「稳定的心理倾向和精神状态」，不是行为、不是能力、不是目标。",
+              "四字要求记成一组：认真、务实、乐观、进取。四选一考法常故意漏一项或用近义词替换。",
+              "为什么强调「稳定」：一次情绪波动不算人生态度，反复出现、成为倾向的才算；所以它影响的是人生目的的持守和人生价值的实现，是长期作用。",
+              "顺逆观上不要绝对化：顺境逆境都有两重性，顺境易懈怠、逆境可磨练。凡出现「顺境一定有利」「逆境一定有害」「逃避困难」的，都是错的。"
+            ]
+          }
         },
         {
           "id": "e1s1-04",
@@ -12577,7 +13124,15 @@
               "q": "人的社会性决定了人生的社会价值是人生价值的最基本内容。（　）",
               "a": "<p><b>答案：</b>正确</p><p>人总是处于一定社会关系中，社会价值体现个人对社会的责任与贡献，因而成为人生价值最基本的内容；自我价值只有在社会价值实现过程中才能得到真正实现。</p><p>易错：把\"最基本内容\"记成自我价值；人的社会性决定了社会价值优先。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先判方向：题干说的是「对自身」还是「对社会他人」。对自身＝自我价值，对社会他人＝社会价值。",
+              "三层要连着记：社会价值是人生价值的最基本内容（因为人的社会性）；衡量标准最重要的是贡献；两者内在统一、不可割裂。",
+              "为什么社会价值是最基本内容：人的本质在其现实性上是社会关系的总和，一个人的人生意义只能在社会关系中被确认，离开他人就没有「意义」可言——这不是道德要求，是存在方式。",
+              "两个坑：把自我价值说成「向社会索取」（自我价值是对自身生存发展的意义，不等于索取）；把衡量标准记成「社会地位」「财富」「名声」。看到这三样当标准，直接排除。"
+            ]
+          }
         },
         {
           "id": "e1s2-01",
@@ -12634,7 +13189,15 @@
               "q": "抵制各种错误人生观影响的有力武器，是培养和树立服务人民、奉献社会的人生目的。（　）",
               "a": "<p><b>答案：</b>正确</p><p>教材原文表述即如此：树立服务人民、奉献社会的人生目的，才能自觉抵制拜金主义、享乐主义、极端个人主义等错误人生观。</p><p>易错：把\"武器\"记成\"法律制裁\"或\"舆论监督\"，教材强调的是人生目的的确立。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「最先进的人生追求」这一定语，它对应一个固定答案：服务人民、奉献社会。",
+              "这个答案还兼一个功能：它是抵制拜金主义、享乐主义、极端个人主义的有力武器——同一句话，两个考法。",
+              "为什么它最先进：它把个人利益放进人民利益里实现，而不是靠否定个人利益来成立。所以教材同时说「个人利益与社会利益根本一致」，别把「奉献」读成「必须吃亏」。",
+              "三个高频错项：「主观为自己、客观为他人」（看似折中，实为极端个人主义的变装）；「人不为己、天诛地灭」；以及把「服务人民、奉献社会」与道德核心「为人民服务」张冠李戴。"
+            ]
+          }
         },
         {
           "id": "e1s2-02",
@@ -12690,7 +13253,15 @@
               "q": "积极进取的人生态度能够使人总是处在顺境当中。（　）",
               "a": "<p><b>答案：</b>错误</p><p>积极进取的人生态度能调整人生道路方向、促进人生目的达到、推动人生价值实现，但不能消除逆境、让人\"总是处在顺境\"。境遇是客观的，态度是主观的。</p><p>易错：把\"态度能改变应对方式\"误当成\"态度能改变境遇\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到顺境逆境、厄运奇迹这类题，先立住一句话：顺境逆境都有两重性，没有绝对的好与坏。",
+              "两重性各记一面：顺境给条件但易使人安于现状、懈怠；逆境给压力但能磨练意志、激发潜能。",
+              "所以应对方式也不同：对顺境要居安思危、自制自励；对逆境要正视、积极应对，不怨天尤人、不自暴自弃。境遇改不了，能改的是应对方式——这正是「态度」的意义所在。",
+              "两个绝对化陷阱：「逆境一定有害」「顺境一定有利」；还有把积极态度的作用夸大成「让人永远处在顺境中」——态度的作用只有三条：调整方向、促进目的、推动价值实现。"
+            ]
+          }
         },
         {
           "id": "e1s2-03",
@@ -12744,7 +13315,15 @@
               "q": "评价人生价值，应当以社会价值的实现作为唯一评价方法。（　）",
               "a": "<p><b>答案：</b>错误</p><p>评价人生价值要坚持多个统一：能力有大小与贡献须尽力相统一、物质贡献与精神贡献相统一、完善自身与贡献社会相统一、动机与效果相统一。\"唯一评价方法\"的说法犯了片面化错误。</p><p>易错：把\"社会价值最重要\"扩大成\"唯一\"，忽略了精神贡献与尽力程度。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清题目问的是「评价」还是「实现」：评价问怎么看，实现问怎么做。两套答案不能混用。",
+              "评价记「四统一」：能力有大小与贡献须尽力相统一、物质贡献与精神贡献相统一、完善自身与贡献社会相统一、动机与效果相统一。实现记一条：根本途径是积极的创造性的实践活动（社会实践）。",
+              "为什么评价要「统一」而不是「单看」：单看能力会放过懒人，单看物质会贬低教师医生，单看效果会冤枉好心，单看动机会放过空谈——每一对都是互补的纠偏。",
+              "根本尺度是另一条，别和「根本途径」搞混：根本尺度＝是否符合社会发展客观规律、是否促进历史进步；根本途径＝社会实践。另外，「唯一评价方法」「只看物质贡献」都是错的。"
+            ]
+          }
         },
         {
           "id": "e1s3-01",
@@ -12800,7 +13379,15 @@
               "q": "苦与乐既对立又统一，在一定条件下可以相互转化。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材苦乐观的核心表述：艰苦奋斗可以转化为成功的快乐，贪图享乐也可能带来痛苦。真正持久的快乐往往由奋斗的艰苦转化而来。</p><p>易错：把苦与乐看成绝对对立、不能转化。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干列出得失、生死、顺逆、苦乐、荣辱中的某几个，先数清是「五观」里的哪几观，再看它给的表述是否绝对化。",
+              "五观有一个共同答案：都是辩证的、可转化的。得失能转化、苦乐能转化、顺逆有两重性、生死是自然现象但生命高度可追求。",
+              "抓「转化」这个共同点最省力：教材讲每一观都在破「非此即彼」——失去不等于只有痛苦，苦不等于永远苦，逆境不等于绝路。",
+              "题目问「错误的是」，答案往往就是那句绝对化表述，比如「失去只会带来痛苦」「只有厄运才能创造奇迹」。看到「只会」「只有」「一定」「唯一」，就先把它当嫌疑人。"
+            ]
+          }
         },
         {
           "id": "e1s3-02",
@@ -12857,7 +13444,15 @@
               "q": "我们要坚决反对享乐主义，因此也不赞成人们在辛勤劳动之后适度享受生活。（　）",
               "a": "<p><b>答案：</b>错误</p><p>教材明确：反对享乐主义，但并不反对人们在辛勤劳动之后适度享受生活。享乐主义错在把享乐当作人生目的、逃避劳动，而不是否定正当的生活享受。</p><p>易错：把\"反对享乐主义\"扩大成\"反对一切享受\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先认三张脸：拜金主义（金钱主宰一切）、享乐主义（享乐即目的、逃避劳动）、极端个人主义（自我中心、凌驾于集体他人之上）。",
+              "题干给一句描述，就去对特征词：出现「金钱至上」「主宰一切」是拜金；出现「感官刺激」「享乐」「逃避劳动」是享乐；出现「以自我为中心」「个人利益高于一切」是极端个人主义。",
+              "三者的共同病根只有一句：割裂个人与社会的关系、否定人生的社会价值、把手段当目的。问「共同点」时答这一句。",
+              "最隐蔽的坑：把「辛勤劳动之后的适度享受」也算享乐主义。教材明确不反对适度享受，反对的是「把享乐当人生目的」。选项里出现「任何享受都应反对」，是错的。"
+            ]
+          }
         },
         {
           "id": "e1s3-03",
@@ -12953,7 +13548,15 @@
               "q": "信念是一种单纯的知识和想法。（　）",
               "a": "<p><b>答案：</b>错误</p><p>信念不只是知识，而是在一定认识基础上形成的坚信不疑并身体力行的心理态度和精神状态，包含认知、情感和意志，并外化为行动。</p><p>易错：把信念等同于\"知道某个道理\"，忽略了坚定性与践行性。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清题目问的是理想还是信念：理想指向「未来目标的向往」，信念指向「坚信不疑并身体力行」。一个向外看目标，一个向内看态度。",
+              "特征各三：理想是超越性、实践性、时代性；信念是执着性、多样性、亲和性。两组各三个字，别串门。",
+              "两者是配套的：理想是信念的对象和依据（没有目标，信什么），信念是理想实现的精神动力（没有笃定，靠什么撑到实现）。所以合称理想信念，一体两面。",
+              "三个坑：把理想说成「空想幻想」（理想的关键是「有实现可能性」）；把信念说成「单纯的知识和想法」（必须含「身体力行」）；把个人理想/社会理想当成「按性质划分」——按性质分是科学理想与非科学理想，按主体分才是个人与社会。"
+            ]
+          }
         },
         {
           "id": "e2s1-02",
@@ -12996,7 +13599,15 @@
               "q": "理想信念动摇是最危险的动摇，理想信念滑坡是最危险的滑坡。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材的原文判断，强调理想信念在精神世界中的根基性地位：一旦动摇滑坡，其他方面的坚守都会随之瓦解。</p><p>易错：把\"最危险\"记成\"较危险\"，弱化了程度。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这题几乎都是固定表述，题眼一出现就能定位：「精神上的」后面跟的那个字就是「钙」。",
+              "三大作用连成一串背：昭示奋斗目标（给方向）、提供前进动力（给力气）、提高精神境界（给品格）。方向、力气、品格，从外到内。",
+              "为什么用「钙」这个比喻：钙撑骨架，理想信念撑人格。所以反面表述是「缺钙」得「软骨病」，动摇是最危险的动摇、滑坡是最危险的滑坡。",
+              "两个坑：把「钙」理解成物质营养或知识储备（教材讲的是精神支柱，不是缺知识）；把理想信念说成「纯粹的个人选择、与国家民族无关」。"
+            ]
+          }
         },
         {
           "id": "e2s1-03",
@@ -13049,7 +13660,15 @@
               "q": "理想与现实是相互对立的，因此追求理想必须抛弃现实。（　）",
               "a": "<p><b>答案：</b>错误</p><p>理想与现实是对立统一的，不能把二者割裂。脱离现实的理想是空想，正确的做法是立足现实、通过实践把理想转化为现实。</p><p>易错：把\"对立\"绝对化，忽略\"统一\"的一面。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "看到「理想与现实」，第一步先定性：对立统一。只要选项里出现「完全对立、无法统一」「理想就是现实」，先排掉。",
+              "具体关系背两句话：理想源于现实又高于现实；理想中包含现实的因素，现实中孕育着理想。一个说来源，一个说发展方向。",
+              "为什么必须「统一」：完全脱离现实谈理想变空想，完全否定理想谈现实失方向——两头都塌，所以才是辩证关系。",
+              "落点是途径题：实现理想靠艰苦奋斗的实践，不是「等待时机」「靠机遇」。另外「需要主观与客观条件」这句也是标准答案的一部分。"
+            ]
+          }
         },
         {
           "id": "e2s2-01",
@@ -13094,7 +13713,15 @@
               "q": "共产主义是远大理想，其实现是一个长期的历史过程。（　）",
               "a": "<p><b>答案：</b>正确</p><p>共产主义远大理想需要一代又一代人接续奋斗才能实现，不能因为它是长期过程就认为\"渺茫\"，也不能认为可以一蹴而就。</p><p>易错：把\"长期过程\"理解成\"不可能实现\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干出现「马克思主义是」这类下定义的空，答案通常就是那四个「理论」的排比。",
+              "四个理论按顺序记：科学的、人民的、实践的、不断发展的开放的。四者对应四个质疑的回应——科学回应「不科学」，人民回应「为谁服务」，实践回应「有没有用」，开放回应「过没过时」。",
+              "共产主义要带两个限定：它是远大理想，是历史发展的必然趋势，但需要一代又一代人接续奋斗。既不能说要「马上实现」，也不能说它是「乌托邦」。",
+              "警戒两类错项：「马克思主义过时论」；把信仰说成「宗教式迷信」——马克思主义是科学的信仰，建立在规律认识上，这和宗教信仰有本质区别。"
+            ]
+          }
         },
         {
           "id": "e2s2-02",
@@ -13151,7 +13778,15 @@
               "q": "中国特色社会主义是科学社会主义理论逻辑和中国社会发展历史逻辑的辩证统一。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材对中国特色社会主义的定性表述：既坚持科学社会主义基本原则，又立足中国国情和历史文化，二者辩证统一。</p><p>易错：把\"中国特色\"理解成\"偏离科学社会主义\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "凡是问「中国特色社会主义由什么构成」「几个自信」，答案一定带「文化」——这是最容易漏的一项。",
+              "四构成与四自信一一对应：道路、理论、制度、文化，对应道路自信、理论自信、制度自信、文化自信。会漏「文化」的，往往是记了旧版「三个自信」。",
+              "定性那句话也要记：中国特色社会主义是科学社会主义理论逻辑和中国社会发展历史逻辑的辩证统一。前半句管「主义没变」，后半句管「国情不同」。",
+              "陷阱是改名：「民主社会主义」「资本社会主义」「国家资本主义」全是错误定性，看到就拿掉。"
+            ]
+          }
         },
         {
           "id": "e2s2-03",
@@ -13247,7 +13882,15 @@
               "q": "个人理想只有同国家民族的前途命运相结合，才能最终实现。（　）",
               "a": "<p><b>答案：</b>正确</p><p>个人理想的实现离不开社会提供的条件和舞台，把个人理想融入国家民族事业，才能获得更广阔的空间和更持久的动力。</p><p>易错：把\"个人奋斗\"与\"社会条件\"对立。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先给两个概念划范围：个人理想的主体是「个体」，社会理想的主体是「社会集体乃至全体成员」。主体不同，不是高低之分。",
+              "三者关系记三个词：相互依存、相互渗透、相互制约。方向只有一条：个人理想以社会理想为指引，社会理想是个人理想的凝练和升华。",
+              "为什么是「凝练和升华」而不是「简单相加」：社会理想不是把每个人的愿望加起来取平均，而是从中提炼出共同的方向——所以选项里「简单相加」是错的。",
+              "两个坑：认为二者「互不相干」或社会理想能脱离个人理想凭空存在；把「个人理想」直接等同于「个人主义」——个人理想是中性概念，个人主义才是错误人生观。"
+            ]
+          }
         },
         {
           "id": "e2s3-02",
@@ -13388,7 +14031,15 @@
               "q": "中国人民在长期奋斗中培育、继承、发展起来的伟大民族精神，包括伟大创造精神、伟大奋斗精神、伟大团结精神、伟大梦想精神。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材对民族精神内涵的\"四个伟大\"概括，四者相互联系，共同构成中华民族的精神品格。</p><p>易错：漏掉\"伟大梦想精神\"或换成\"伟大斗争精神\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "中国精神永远是「两件套」：民族精神和时代精神。题目给一半，你补另一半，先看它给的是哪一个。",
+              "两个核心死死对应：民族精神的核心是爱国主义，时代精神的核心是改革创新。这组最容易被互换，是出题人最爱设的坑。",
+              "民族精神内部还有「四个伟大」：伟大创造精神、伟大奋斗精神、伟大团结精神、伟大梦想精神。四个词按「创造—奋斗—团结—梦想」的顺序走：做事、使劲、合力、有梦。",
+              "时间属性也要能说清：民族精神是历史的、稳定的，时代精神是当下的、发展的，二者相互交融才构成中国精神。"
+            ]
+          }
         },
         {
           "id": "e3s1-03",
@@ -13431,7 +14082,15 @@
               "q": "一个没有精神力量的民族难以自立自强，一项没有文化支撑的事业难以持续长久。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材原文，用两个\"难以\"强调精神力量与文化支撑对民族自立和事业持续的根本意义。</p><p>易错：把\"难以\"读成\"不能\"，绝对化理解。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这题的位置判断是固定的：中国精神是「兴国之魂、强国之魄」。不要和「立国之本」「执政之基」「力量之源」混——那三个各有归属。",
+              "作用记三条：凝聚民族共识、激发奋斗意志、提供价值支撑。共识、意志、价值，分别对应「一起想」「一起干」「为什么干」。",
+              "为什么实现中国梦必须弘扬中国精神：精神是动力不是手段。所以看到「直接决定经济发展」这类说法要判错——它提供的是精神动力，不是经济要素。",
+              "还有一个反向论证可以记：一个没有精神力量的民族难以自立自强，一项没有文化支撑的事业难以持续长久。"
+            ]
+          }
         },
         {
           "id": "e3s2-01",
@@ -13486,7 +14145,15 @@
               "q": "爱国就是爱祖国的大好河山，与国家制度和政党无关。（　）",
               "a": "<p><b>答案：</b>错误</p><p>爱国主义的基本要求包括爱祖国的大好河山、骨肉同胞、灿烂文化和自己的国家；新时代爱国主义本质是爱国和爱党、爱社会主义高度统一，不能割裂。</p><p>易错：只记自然与文化层面，漏掉国家与制度层面。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「本质」两个字：新时代爱国主义的本质就是爱国和爱党、爱社会主义高度统一。三个「爱」缺一不可，也不能并列成三件互不相干的事。",
+              "为什么必须统一：祖国的命运、党的命运、社会主义的命运密不可分——党的领导是爱国主义最坚强的保证，社会主义中国是爱国主义最坚实的依托。",
+              "基本要求是四点，按由物到人的顺序：爱祖国的大好河山、爱自己的骨肉同胞、爱祖国的灿烂文化、爱自己的国家。最容易漏最后一项「爱自己的国家」——前三项是爱土地、爱人、爱文化，第四项才是爱政治共同体。",
+              "两个错项特征：把爱国与爱党、爱社会主义割裂甚至对立；把爱国主义说成「狭隘民族主义」或「抵制一切外来文化」。"
+            ]
+          }
         },
         {
           "id": "e3s2-02",
@@ -13529,7 +14196,15 @@
               "q": "总体国家安全观只包括军事安全和政治安全。（　）",
               "a": "<p><b>答案：</b>错误</p><p>总体国家安全观涵盖政治、军事、国土、经济、文化、社会、科技、网络、生态、资源、核、海外利益等多个领域，是\"大安全\"格局，远不止军事和政治。</p><p>易错：把\"总体\"理解成\"传统安全领域的加总\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这一节两条主线：维护祖国统一、维护民族团结。看到题干落哪一个，就只答那一条。",
+              "统一这条的硬表述：坚持一个中国原则，维护国家主权和领土完整，坚决反对分裂国家的行为。",
+              "团结这条的关键词只有一个：铸牢中华民族共同体意识。比喻是「像石榴籽一样紧紧抱在一起」。注意「共同体意识」不是「民族同化」，同化是错项。",
+              "安全这条容易被忽略：要树立总体国家安全观——它是「总体」，不是只管军事安全。看到把国家安全窄化为军事、政治，就判不全面。"
+            ]
+          }
         },
         {
           "id": "e3s2-03",
@@ -13717,7 +14392,15 @@
               "q": "改革创新只是科技工作者的事，与普通大学生关系不大。（　）",
               "a": "<p><b>答案：</b>错误</p><p>改革创新是时代精神的核心，青年是社会上最富活力、最具创造性的群体，应走在创新创造前列。大学生可以从学习方法、专业实践、社会调查等身边事做起。</p><p>易错：把\"创新\"窄化为\"重大科技发明\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题干出现「第一动力」「时代精神的核心」「迫切要求」这类词，答案都指向同一个：创新/改革创新。",
+              "创新有两个定位句要记牢：引领发展的第一动力；建设现代化经济体系的战略支撑。一个是动力，一个是支撑，别互换。",
+              "青年的角色是固定答案：生力军，走在创新创造前列——因为青年是社会上最富活力、最具创造性的群体。",
+              "实践路径三步走：树立创新意识、培养创新思维、投身创新实践。意识、思维、实践，从想到做。还要注意创新不等于「标新立异」，它要科学态度和实践检验。"
+            ]
+          }
         },
         {
           "id": "e4s1-01",
@@ -13760,7 +14443,15 @@
               "q": "任何社会都存在多种价值观，因此不需要有居于主导地位的核心价值观。（　）",
               "a": "<p><b>答案：</b>错误</p><p>价值观多样是客观事实，但任何社会都有其核心价值观，它集中体现社会性质、评判是非曲直、承载精神追求。多样并存不等于没有主导。</p><p>易错：把\"多元\"与\"无主导\"等同。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "四个「观」容易混，用问句区分：问「世界总体怎样」是世界观，问「人为什么活」是人生观，问「值不值、怎么评判、怎么创造」是价值观，问「行为该不该」是道德观。",
+              "核心价值观的定位有两句：一定社会形态、社会性质的集中体现；一个社会评判是非曲直的价值标准。前一句管「是什么」，后一句管「干什么用」。",
+              "为什么必须有核心价值观：任何社会都存在多种价值观，但总有一种居于主导地位。多元是事实，主导是必要——这两句不矛盾。",
+              "坑：认为核心价值观「自发形成」（它需要培育和践行）；把「价值观多元」当成「不需要核心价值观」；把价值观定义成「对世界的总体看法」（那是世界观）。"
+            ]
+          }
         },
         {
           "id": "e4s1-02",
@@ -13815,7 +14506,15 @@
               "q": "社会主义核心价值观中，\"爱国、敬业、诚信、友善\"是公民个人层面的价值准则。（　）",
               "a": "<p><b>答案：</b>正确</p><p>24 字分三层：国家层面的价值目标、社会层面的价值取向、公民个人层面的价值准则。爱国、敬业、诚信、友善正属个人层面。</p><p>易错：把\"友善\"归到社会层面（它是对公民个人的要求）。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "24 字先按三层切开：国家 4 词、社会 4 词、个人 4 词，每层都是四字一顿的排比。先确定题目问的是哪一层。",
+              "三层内容：国家——富强、民主、文明、和谐；社会——自由、平等、公正、法治；个人——爱国、敬业、诚信、友善。",
+              "怎么记不串：国家层讲「国家要成什么样」（富、民主、文明、和谐）；社会层讲「社会该怎么运行」（自由平等公正法治，都是制度性价值）；个人层讲「人该怎么做」（爱国敬业诚信友善，都是行为规范）。从宏观到微观，一层比一层贴身。",
+              "两个坑：把「自由平等公正法治」当成国家层面；把 24 字与「五位一体」总体布局混淆——后者是经济建设、政治建设、文化建设、社会建设、生态文明建设，不是价值观。"
+            ]
+          }
         },
         {
           "id": "e4s1-03",
@@ -13946,7 +14645,15 @@
               "q": "社会主义核心价值观把人民对美好生活的向往作为奋斗目标。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这正是人民性的体现：国家层面的富强民主文明和谐、社会层面的自由平等公正法治、个人层面的爱国敬业诚信友善，最终都指向人民幸福与人的全面发展。</p><p>易错：把\"美好生活\"记成\"经济增长\"或\"GDP 指标\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「根本特性」四个字，答案是唯一的：人民性。核心价值观的这一条，别的词替不了。",
+              "人民性有两个落点句：把人民对美好生活的向往作为奋斗目标；把增进人民福祉、促进人的全面发展作为出发点和落脚点。",
+              "怎么证明它「根本」：国家、社会、个人三个层面的每一项，最终指向的都是人的发展——所以人民性不是附加口号，而是贯穿三层的主线。",
+              "两个坑：把「人民性」与「全民性」混为一谈（人民是具体的历史范畴，不等于所有人）；把人民至上说成「抽象口号、与具体制度脱节」。"
+            ]
+          }
         },
         {
           "id": "e4s2-03",
@@ -14140,7 +14847,15 @@
               "q": "道德是由经济基础决定的上层建筑，因此没有任何相对独立性。（　）",
               "a": "<p><b>答案：</b>错误</p><p>道德由经济基础决定，但具有相对独立性：它有自身的历史继承性，会反作用于经济基础，并与其他社会意识形态相互影响。</p><p>易错：把\"决定作用\"理解成\"机械依附\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这一节三组答案容易混：本质、起源、功能。读题先看它问哪一个，别急着答。",
+              "本质＝社会经济关系的反映，属于上层建筑；起源＝生产劳动和社会实践；功能＝认识、规范、调节（其中最突出的是调节）。",
+              "为什么功能里调节最突出：道德的全部用处最终都落在「调整人与人的关系」上——认识功能告诉你该怎样，规范功能给你标准，调节功能才真正让关系发生变化。前两个是准备，最后一个是落地。",
+              "两个错项固定出现：说道德是「天生的人性」或「神的启示」（起源答社会实践）；把功能记成「认识、审美、调节」（审美不是道德功能）。还有一条别漏：道德由经济基础决定，但具有相对独立性。"
+            ]
+          }
         },
         {
           "id": "e5s1-02",
@@ -14196,7 +14911,15 @@
               "q": "为人民服务只是对共产党员的要求，与普通群众无关。（　）",
               "a": "<p><b>答案：</b>错误</p><p>为人民服务是社会主义道德的核心，是对全体社会成员的普遍要求，只是对不同人群有不同层次的要求：党员应做到无私奉献、一心为公，普通公民至少应做到不损公肥私、不损人利己。</p><p>易错：把\"先进性要求\"当成\"唯一要求\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先在科内定位：社会主义道德的「核心」是为人民服务，「原则」是集体主义。题干问核心还是原则，两个答案绝不能换。",
+              "层次按高到低记三档：最高是无私奉献、一心为公；基本是先公后私、公私兼顾；底线是不损公肥私、不损人利己。",
+              "为什么强调「全体社会成员」：为人民服务不只是对共产党员的要求，而是对所有人的普遍要求。正因为它有这三个层次，才可能对所有人成立——高要求给先进者，底线给所有人。",
+              "两个坑：把为人民服务说成「只有党员才需要做到」；把它和「人人为我、我为人人」当成同一定位——后者是一个具体表述，不是核心定位。"
+            ]
+          }
         },
         {
           "id": "e5s1-03",
@@ -14253,7 +14976,15 @@
               "q": "集体主义强调集体利益高于个人利益，因此否定个人的正当利益。（　）",
               "a": "<p><b>答案：</b>错误</p><p>集体主义在强调集体利益高于个人利益的同时，尊重和保障个人的正当利益，二者在根本上是一致的。它反对的是把个人利益凌驾于集体利益之上的个人主义。</p><p>易错：把\"集体优先\"理解成\"取消个人利益\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先接上一节的位置：核心是为人民服务，原则是集体主义。原则管「怎么调节利益关系」，这是它与核心的分工。",
+              "三者关系三句话：国家利益、社会整体利益和个人利益根本上一致；集体利益高于个人利益；但尊重和保障个人的正当利益。第三句常被漏，它正是集体主义与「否定个人」的分界线。",
+              "冲突时的口径要背准：当个人利益与集体利益发生冲突，个人利益要服从集体利益——注意是「发生冲突时」，不是「任何情况下都无条件牺牲」。",
+              "两个坑：认为集体主义「否定个人利益」；把集体主义与「小团体主义」等同——小团体主义是放大了的个人主义，恰恰违反集体主义。层次记三档不是两档：无私奉献、先公后私、公私兼顾。"
+            ]
+          }
         },
         {
           "id": "e5s2-01",
@@ -14312,7 +15043,15 @@
               "q": "对待中华传统美德，应当坚持创造性转化和创新性发展。（　）",
               "a": "<p><b>答案：</b>正确</p><p>传统美德需要结合时代要求进行创造性转化和创新性发展，赋予其新的时代内涵和现代表达形式，而不是简单照搬或全盘否定。</p><p>易错：把\"传承\"理解成\"照搬\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这一节是列举题，答题靠关键词定位，不靠死背长句。六个关键词：整体利益、仁爱、谦敬礼让、诚信、精神境界、道德践履。",
+              "题目给一句描述，你对关键词：讲「对社会民族国家的责任奉献」是整体利益；讲「人际和谐」是仁爱；讲「克骄防矜」是谦敬礼让；讲「言行一致」是诚信；讲「道德理想是最高需要」是精神境界；讲「修养」是道德践履。",
+              "态度那句话是必考点：对待传统美德要创造性转化、创新性发展。八个字，两个动作——转化解决「不合时宜」，发展解决「不够用」。",
+              "两个坑：把传统美德等同于「全部传统文化」（还有糟粕，要区分精华与糟粕）；把「仁爱」理解成无原则的乡愿。"
+            ]
+          }
         },
         {
           "id": "e5s2-02",
@@ -14357,7 +15096,15 @@
               "q": "中国革命道德只存在于革命战争年代，在建设和改革时期已经不再适用。（　）",
               "a": "<p><b>答案：</b>错误</p><p>中国革命道德形成于革命、建设、改革的长期实践中，具有跨时代的生命力，今天仍是涵养社会主义核心价值观的重要资源。</p><p>易错：把\"革命\"窄化为\"战争年代\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先看时间跨度这个最容易错的点：中国革命道德不止于革命战争年代，它贯穿革命、建设、改革三个时期。选项里出现「仅限战争年代」直接判错。",
+              "定性一句话：马克思主义道德观与中国革命实践相结合的产物，主体是共产党人、人民军队、先进分子和人民群众。",
+              "五条内容里，核心是「全心全意为人民服务」，另外四条是：为社会主义和共产主义理想而奋斗、始终把革命利益放在首位、树立社会新风建立新型人际关系、修身自律保持节操。",
+              "最容易混的是它与传统美德的区别：传统美德是历史上形成的，革命道德是革命实践中形成的、以马克思主义为指导——两者是传承关系，不是同一个东西。"
+            ]
+          }
         },
         {
           "id": "e5s2-03",
@@ -14456,7 +15203,15 @@
               "q": "遵纪守法既是社会公德的重要内容，也是公民的基本义务。（　）",
               "a": "<p><b>答案：</b>正确</p><p>遵纪守法是社会公德五项内容之一，也是社会公德的最低要求；同时，遵守宪法和法律是公民的基本义务。</p><p>易错：把\"遵纪守法\"只归到法律范畴，忽略它也是道德要求。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "社会公德五项按场景记：文明礼貌（待人）、助人为乐（帮人）、爱护公物（对物）、保护环境（对自然）、遵纪守法（对规则）。五个对象一条线，不容易漏。",
+              "「保护环境」是最常被漏的一项，「遵纪守法」是最容易被搬去职业道德的一项——记住遵纪守法属于社会公德，而且是它的最低要求。",
+              "三个特性：基础性、全民性、相对稳定性。基础性因为它是最底线的公共行为准则，全民性因为约束所有人，相对稳定性因为它变化慢。",
+              "一个错项特征：说社会公德「只约束熟人之间」。公德管的恰恰是公共生活与陌生人交往。"
+            ]
+          }
         },
         {
           "id": "e5s3-02",
@@ -14512,7 +15267,15 @@
               "q": "奉献社会是职业道德的最高要求。（　）",
               "a": "<p><b>答案：</b>正确</p><p>职业道德五项内容中，爱岗敬业是最基本要求，奉献社会是最高要求；诚实守信、办事公道、服务群众居中。</p><p>易错：把\"奉献社会\"与\"爱岗敬业\"的位置记反。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "职业道德五项：爱岗敬业、诚实守信、办事公道、服务群众、奉献社会。对「职业」这个场景：对岗位、对承诺、对他人、对服务对象、对社会。",
+              "两个极端要求必须分清：最基本要求是爱岗敬业，最高要求是奉献社会。题目一问「最基本」就答爱岗敬业，问「最高」就答奉献社会——这一对最容易互换。",
+              "「诚实守信」是双身份：既是职业道德规范，也是社会主义核心价值观个人层面的要求。看到它在两个语境里出现都对。",
+              "两个坑：把「服务群众」与道德核心「为人民服务」混为一谈（一个是职业要求，一个是道德核心）；漏掉「办事公道」。"
+            ]
+          }
         },
         {
           "id": "e5s3-03",
@@ -14557,7 +15320,15 @@
               "q": "家庭美德只关系个人家庭幸福，对社会风气没有影响。（　）",
               "a": "<p><b>答案：</b>错误</p><p>家庭是社会的基本细胞，家庭美德不仅关系家庭和睦，还通过家风影响社会风气，是社会道德建设的重要基础。</p><p>易错：把家庭美德当成\"纯私事\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "家庭美德五项按家庭关系展开：对长辈幼辈（尊老爱幼）、对两性（男女平等）、对配偶（夫妻和睦）、对家计（勤俭持家）、对邻里（邻里团结）。",
+              "最容易错的是「邻里团结」：它属于家庭美德，不属于社会公德。因为邻里是家庭生活的外延，教材把它放在家庭这一组。",
+              "「勤俭持家」不是经济要求而是道德要求——它约束的是对待财物的态度，不是收入高低。这一点常被设成陷阱。",
+              "定位句：家庭是社会的基本细胞，家庭美德对个人品德养成和社会风气形成具有基础性作用。所以「家庭美德只是私事」是错的。"
+            ]
+          }
         },
         {
           "id": "e5s3-04",
@@ -14612,7 +15383,15 @@
               "q": "个人品德是社会道德在个人身上的体现，是道德建设的基础。（　）",
               "a": "<p><b>答案：</b>正确</p><p>个人品德通过道德意识与道德行为表现出来，是社会道德原则规范的内化；社会道德建设最终要落到每个人的品德养成上。</p><p>易错：把个人品德与社会道德割裂。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先记个人品德的定位：它是社会道德在个人身上的体现，是道德建设的基础。基础二字说明它在整个道德体系里的位置。",
+              "四种修养方法：学思并重、省察克治、慎独自律、知行合一。四个动作对应四步：学、省、守、行。",
+              "「慎独」是必考词，含义只有一个：在无人监督、独自活动时仍能严格要求自己、遵守道德规范。看到「独来独往、不合群」的解释就是错的。",
+              "「省察克治」与「学思并重」的分别：前者是反省检查并克制纠正自己的过失（向内纠错），后者是学习与思考结合（向外吸收）。"
+            ]
+          }
         },
         {
           "id": "e6s1-01",
@@ -14725,7 +15504,15 @@
               "q": "我国社会主义法律只反映统治阶级意志，不具有人民性。（　）",
               "a": "<p><b>答案：</b>错误</p><p>我国社会主义法律体现阶级性与人民性的统一：它反映工人阶级和广大人民的共同意志，人民性是社会主义法律的本质属性。</p><p>易错：套用一般法的定义，忽略社会主义法律的特殊性。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这一节全是「统一」句式，答题就是找配对：阶级性配什么、科学性配什么、国家意志性配什么。",
+              "三对统一记牢：阶级性与人民性（反映工人阶级和广大人民的共同意志）、科学性与先进性（反映客观规律、顺应时代要求）、国家意志性与社会规律性。",
+              "为什么能「统一」而不矛盾：我国法律的阶级性不是少数人的意志，工人阶级和广大人民的意志本身就是多数人的意志，所以阶级性与人民性在这里是一回事的两面；同理，国家意志不是任意意志，它必须建立在客观规律之上。",
+              "两个坑：认为社会主义法律「只体现统治阶级意志、不讲人民性」；把法律体系的核心记成「民法典」——核心只能是宪法。"
+            ]
+          }
         },
         {
           "id": "e6s1-03",
@@ -14838,7 +15625,15 @@
               "q": "坚持党对全面依法治国的领导，是全面依法治国的根本保证。（　）",
               "a": "<p><b>答案：</b>正确</p><p>党的领导是社会主义法治最根本的保证，是习近平法治思想\"十一个坚持\"的首要内容。党的领导和依法治国是一致的，不是对立的。</p><p>易错：把\"党的领导\"与\"依法治国\"对立起来。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先分清两个容易混的定位：宪法是「根本法」，习近平法治思想是全面依法治国的「根本遵循和行动指南」。题干问哪个，就对哪个答案。",
+              "核心要义是十一个坚持，背不下来的记骨架：党的领导（首要）、以人民为中心（立场）、中国特色社会主义法治道路（方向）、依宪治国依宪执政、法治体系、治理现代化、共同推进一体建设、九字方针（科学立法、严格执法、公正司法、全民守法）、国内法治与涉外法治、法治队伍、关键少数。",
+              "为什么「党的领导」排第一：它管的是「谁来领导全面推进依法治国」这个前提问题，其余十条都是在党的领导下展开的具体部署。",
+              "两个坑：把「根本遵循」答成宪法；漏掉「坚持党对全面依法治国的领导」。还有一个高频表述要背准：「法治国家、法治政府、法治社会一体建设」是三个主体一体，不是「法治政党」。"
+            ]
+          }
         },
         {
           "id": "e6s2-02",
@@ -14894,7 +15689,15 @@
               "q": "建设社会主义法治国家，可以照搬西方的\"三权分立\"模式。（　）",
               "a": "<p><b>答案：</b>错误</p><p>中国特色社会主义法治道路必须从中国实际出发，坚持党的领导、中国特色社会主义制度和法治理论，不能照搬西方模式。三权分立不符合我国国体和政体。</p><p>易错：把\"借鉴\"与\"照搬\"混淆。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「核心要义有三条」，这是固定数字，答三条不答两条。",
+              "三条是：坚持党的领导、坚持中国特色社会主义制度、贯彻中国特色社会主义法治理论。它们分别规定根本性质、根本方向、根本遵循——性质、方向、遵循，三个「根本」各归一条。",
+              "为什么必须坚持这三条：法治不是技术，它有性质归属。领导力量决定为谁服务，制度基础决定在什么框架内运行，理论决定用什么逻辑解释——换掉任何一条，这条路就不是中国的了。",
+              "两个错项：把三要义记成「立法、执法、司法」（那是环节，不是道路的核心）；认为可以照搬西方「三权分立」模式（教材明确要从中国实际出发、不照搬），或把党的领导与法治对立。"
+            ]
+          }
         },
         {
           "id": "e6s2-03",
@@ -14948,7 +15751,15 @@
               "q": "建设法治中国，要坚持依法治国、依法执政、依法行政共同推进。（　）",
               "a": "<p><b>答案：</b>正确</p><p>这是教材的规范表述：\"三个共同推进\"（依法治国、依法执政、依法行政）与\"三个一体建设\"（法治国家、法治政府、法治社会）相互配合。</p><p>易错：把\"依法执政\"换成\"依法监督\"等相近词。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "这一节有两组三个词，先分清问的是哪一组：「共同推进」还是「一体建设」。",
+              "共同推进是三个动作：依法治国、依法执政、依法行政。一体建设是三个主体：法治国家、法治政府、法治社会。",
+              "三个主体的角色必须一一对应：法治国家是目标，法治政府是主体，法治社会是基础。目标、主体、基础——这三个定位是本节必考。",
+              "两个坑：把「法治政府」说成目标（目标是法治国家）；把「一体建设」写成「法治国家、法治政党、法治社会」（没有「法治政党」这个提法）。时间点是 2035 年基本建成。"
+            ]
+          }
         },
         {
           "id": "e6s3-01",
@@ -15048,7 +15859,15 @@
               "q": "宪法是国家的根本法，具有最高的法律地位、法律权威和法律效力。（　）",
               "a": "<p><b>答案：</b>正确</p><p>宪法是治国安邦的总章程：一切法律、行政法规和地方性法规都不得同宪法相抵触；任何组织和个人都不得有超越宪法法律的特权。</p><p>易错：把宪法与普通法律并列，忽略\"最高效力\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "宪法三个定位连着说：国家的根本法、治国安邦的总章程、具有最高的法律地位、法律权威、法律效力。三个「最高」对应地位、权威、效力。",
+              "五条基本原则按顺序记：党的领导、人民主权、人权保障、法治、民主集中制。最后一条「民主集中制」最常被漏，它恰恰是我国宪法区别于西方宪法的标志性一条。",
+              "效力那一句是推论出来的：因为它是根本法、效力最高，所以一切法律、行政法规、地方性法规都不得同宪法相抵触；任何组织和个人都不得有超越宪法法律的特权。",
+              "两个坑：把宪法说成「普通法律之一」（它是一切法律的依据）；认为宪法「只约束国家机关、不约束个人」——「任何组织和个人」包括每个人。"
+            ]
+          }
         },
         {
           "id": "e6s3-03",
@@ -15149,7 +15968,15 @@
               "q": "法治思维要求制约权力、保障权利，二者指向同一对象。（　）",
               "a": "<p><b>答案：</b>错误</p><p>\"权力\"与\"权利\"不同：权力制约指向公权力，防止其滥用；权利保障指向公民的合法权利，防止其受侵害。法治思维同时要求二者，但对象相反。</p><p>易错：把\"权力\"与\"权利\"混为一谈，这是本章最高频的错点。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "题眼是「法治思维的基本内容」，答五条，不是三条也不是六条。",
+              "五条：法律至上、权力制约、公平正义、权利保障、正当程序。其中法律至上是首要内容——问「首要」就答它。",
+              "五个词各管一件事：法律至上管「法比权大」，权力制约管「把公权力关进笼子」，公平正义管「结果与过程都要公」，权利保障管「护住个人权益」，正当程序管「按步骤来」。前四条讲价值，最后一条讲方法。",
+              "最阴的一个坑：把「权力制约」写成「权利保障」——「权力」（power）要被制约，「权利」（right）要被保障。同音不同字，题干里换一个字，答案就该换一条。另外法治思维不等于法律知识，知识是基础，思维是运用。"
+            ]
+          }
         },
         {
           "id": "e6s4-02",
@@ -15205,7 +16032,15 @@
               "q": "公民行使自己的权利时，可以不受任何限制。（　）",
               "a": "<p><b>答案：</b>错误</p><p>行使权利必须在法律范围内，不得损害国家、社会、集体的利益和其他公民的合法权利。权利与义务相统一，自由与秩序相协调。</p><p>易错：把\"权利\"理解成\"为所欲为\"。</p>"
             }
-          ]
+          ],
+          "teach": {
+            "w": [
+              "先立住关系的定性：法律权利与法律义务相互依存、相互统一——没有无义务的权利，也没有无权利的义务。",
+              "三条推论依次用：行使权利有边界（不得损害国家、社会、集体的利益和其他公民的合法权利）；履行义务是享有权利的前提；权利被侵害时要依法维权。",
+              "为什么义务不能放弃：权利可以放弃，义务不能。因为义务对应的是他人和社会的正当要求，你单方面宣布不要，就等于把成本转给别人——这正是「义务必须履行」的道理。",
+              "维权途径是固定四项：协商、调解、仲裁、诉讼。看到「以暴制暴」「闹访」「堵门」这类方式一律判错，教材要求的是合法途径。"
+            ]
+          }
         },
         {
           "id": "e6s4-03",
@@ -15274,8 +16109,8 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.47.1";
-  var DATA_VERSION = "2026-11-02";
+  var APP_VERSION = "3.49.0";
+  var DATA_VERSION = "2026-11-04";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
   var APP_NAME = "学习软件";
@@ -15765,6 +16600,7 @@
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" ||
       t.isContentEditable)) return;
     if (document.body.classList.contains("mode-quiz") ||
+      document.body.classList.contains("mode-learn") ||
       document.body.classList.contains("drawerOpen")) return;
     if (isEsc) {
       if (!readingOn()) return;
@@ -16194,9 +17030,9 @@
 
     var body = el("div", "body");
 
-    /* [qzkp] 卡片第一行就是「练这个考点」：只出这一考点的题，点了直接开始刷题 */
-    var qzbar = buildKpPractice(k);
-    if (qzbar) body.appendChild(qzbar);
+    /* [qzkp] 卡片第一行：从零学（有 teach.w 才出现）+ 练这个考点，两个入口并存 */
+    var entryBar = buildEntryBar(k);
+    if (entryBar) body.appendChild(entryBar);
 
     /* 信号只作「题干特征」提示，不再参与筛选：从可点 chip 降级为纯标签，
        点击不再改 filters、也不再高亮同类卡片 */
@@ -16264,25 +17100,47 @@
     if (!box) return;
     var st = qzKpStat(SID, kid);
     if (!st || !st.total) return;
-    var n = box.querySelector(".qzbarBtn .n"), h = box.querySelector(".qzbarHint");
+    var n = box.querySelector("[data-qzp] .n"), h = box.querySelector(".qzbarHint");
     if (n) n.textContent = st.total + " 题";
     if (h) h.textContent = kpBarText(st);
   }
-  function buildKpPractice(k) {
+  /* [learn] 教学入口：只有写过 teach.w 的点才出现，避免满屏「点进去什么都没有」 */
+  function buildLearnBtn(k) {
+    var b = el("button", "qzbarBtn lzbtn");
+    b.type = "button";
+    b.appendChild(txt("span", "ico", "◐"));
+    b.appendChild(document.createTextNode("从零学"));
+    b.title = "讲解 → 完整示范 → 遮答案重做，约 " + (LN_BEATS * 2) + " 分钟；不判分、不改掌握度";
+    b.addEventListener("click", function () { lnOpen(k.id); });
+    return b;
+  }
+  /* 一个入口条同时承载两个按钮；都没有就整块不渲染 */
+  function buildEntryBar(k) {
     var st = qzKpStat(SID, k.id);
-    if (!st || !st.total) return null;
+    var hasT = lnHasTeach(SID, k.id);
+    if (!hasT && (!st || !st.total)) return null;
     var box = el("div", "qzbar");
     box.setAttribute("data-kp", k.id);
+    if (hasT) box.appendChild(buildLearnBtn(k));
+    if (st && st.total) buildKpPractice(k, box);
+    return box;
+  }
+  function buildKpPractice(k, box) {
+    var st = qzKpStat(SID, k.id);
+    if (!st || !st.total) return null;
+    var own = box || el("div", "qzbar");
+    own.setAttribute("data-kp", k.id);
     var b = el("button", "qzbarBtn");
     b.type = "button";
+    b.setAttribute("data-qzp", "1");
     b.appendChild(txt("span", "ico", "▶"));
     b.appendChild(document.createTextNode("练这个考点"));
     b.appendChild(txt("span", "n", st.total + " 题"));
     b.title = "只出「" + k.name + "」的 " + st.total + " 道题，直接开始";
     b.addEventListener("click", function () { qzPracticeKp(k.id); });
-    box.appendChild(b);
-    box.appendChild(txt("span", "qzbarHint", kpBarText(st)));
-    return box;
+    own.appendChild(b);
+    own.appendChild(txt("span", "qzbarHint", kpBarText(st)));
+    return own;
   }
 
   /* 新增字段：解题方法 / 知识网络 / 信号聚焦。字段缺失或为空时整块不渲染，旧数据照常显示。 */
@@ -16911,7 +17769,7 @@
   function cloneSnap(o) { return JSON.parse(JSON.stringify(o)); }
 
   function emptySnap() {
-    return { schema: 2, deviceId: deviceInfo().id, updatedAt: nowMs(), mastery: {}, favs: {}, prefs: {}, notes: {}, quiz: {}, quizReset: {}, calib: {} };
+    return { schema: 2, deviceId: deviceInfo().id, updatedAt: nowMs(), mastery: {}, favs: {}, prefs: {}, notes: {}, quiz: {}, quizReset: {}, calib: {}, teach: {} };
   }
 
   /* [sync] 快照可选字段 quiz（刷题记录）：缺省补 {}，不升 schema——
@@ -16926,6 +17784,13 @@
   function snapFillCalib(o) {
     if (!o || typeof o !== "object") return o;
     if (!o.calib || typeof o.calib !== "object" || Object.prototype.toString.call(o.calib) === "[object Array]") o.calib = {};
+    return o;
+  }
+  /* [learn] 可选字段 teach（教学进度，按科目/知识点分组）：结构 {sid:{kid:{p,t}}}。
+     与 quiz/calib 同一路子：缺省补 {}、不升 schema；旧档没有这个字段也必须判为合法。 */
+  function snapFillTeach(o) {
+    if (!o || typeof o !== "object") return o;
+    if (!o.teach || typeof o.teach !== "object" || Object.prototype.toString.call(o.teach) === "[object Array]") o.teach = {};
     return o;
   }
   function entryOf(map, sid, kid) { var m = map && map[sid]; return m && m[kid] ? m[kid] : null; }
@@ -16960,10 +17825,11 @@
       // 补齐可选字段后就落盘一次：导出的 JSON 结构完整，也避免每次启动重复补
       var needFill = !(o.notes && typeof o.notes === "object") ||
         !(o.quiz && typeof o.quiz === "object") || !o.deviceId ||
-        !(o.calib && typeof o.calib === "object");
+        !(o.calib && typeof o.calib === "object") || !(o.teach && typeof o.teach === "object");
       o = snapFillNotes(o);   // [note] 旧档没有 notes 就补 {}，不报错
       o = snapFillQuiz(o);    // [sync] 旧档没有 quiz 就补 {}，旧数据结构不变
       o = snapFillCalib(o);   // [calib] 旧档没有 calib 就补 {}
+      o = snapFillTeach(o);   // [learn] 旧档没有 teach 就补 {}
       if (!o.deviceId) o.deviceId = deviceInfo().id;
       if (needFill) lsSet(LS_SNAP, o);
       return o;
@@ -17206,10 +18072,49 @@
     return true;
   }
 
+  /* [learn] 教学进度合并：{sid:{kid:{p,t}}}。
+     p 只进不退（取 max），同 p 取更晚的 t；两个操作都幂等、可交换、可结合，
+     所以「一台看完第 1 拍、另一台看到第 3 拍」合并后停在 3，不会被旧档拉回去。 */
+  function mergeTeachMap(L, R) {
+    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b;
+    L = L || {}; R = R || {};
+    for (sid in L) if (has0(L, sid)) sids[sid] = 1;
+    for (sid in R) if (has0(R, sid)) sids[sid] = 1;
+    for (sid in sids) if (has0(sids, sid)) {
+      lm = L[sid] || {}; rm = R[sid] || {}; m = {};
+      for (kid in lm) if (has0(lm, kid)) m[kid] = { p: qzNum(lm[kid].p), t: normT(lm[kid].t) };
+      for (kid in rm) if (has0(rm, kid)) {
+        a = m[kid]; b = rm[kid];
+        if (!a) { m[kid] = { p: qzNum(b.p), t: normT(b.t) }; continue; }
+        if (qzNum(b.p) > a.p) { a.p = qzNum(b.p); a.t = normT(b.t); }
+        else if (qzNum(b.p) === a.p && normT(b.t) > a.t) { a.t = normT(b.t); }
+      }
+      out[sid] = m;
+    }
+    return out;
+  }
+  function sameTeach(A, B) {
+    A = A || {}; B = B || {};
+    var sid, kid, x, y;
+    for (sid in A) if (has0(A, sid)) {
+      x = A[sid] || {}; y = (B && B[sid]) || {};
+      for (kid in x) if (has0(x, kid)) {
+        if (!has0(y, kid)) return false;
+        if (qzNum(x[kid].p) !== qzNum(y[kid].p)) return false;
+        if (normT(x[kid].t) !== normT(y[kid].t)) return false;
+      }
+    }
+    for (sid in B) if (has0(B, sid)) {
+      y = B[sid] || {}; x = (A && A[sid]) || {};
+      for (kid in y) if (has0(y, kid)) if (!has0(x, kid)) return false;
+    }
+    return true;
+  }
+
   function mergeSnapshot(local, remote) {
     if (!local && !remote) return null;
-    if (!local) return snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(remote))));
-    if (!remote) return snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(local))));
+    if (!local) return snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(remote)))));
+    if (!remote) return snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(local)))));
     var lt = normT(local.updatedAt), rt = normT(remote.updatedAt);
     var newer = lt >= rt ? local : remote;
     var qr = mergeResetMap(local.quizReset, remote.quizReset);   // [sync] 先合并重置时刻，再据此过滤
@@ -17223,6 +18128,7 @@
       quiz: mergeQuizMap(dropReset(local.quiz, qr), dropReset(remote.quiz, qr)),   // [sync] 逐题合并
       quizReset: qr,
       calib: mergeCalibMap(local.calib, remote.calib),   // [calib] 校准历史按科目取并集
+      teach: mergeTeachMap(local.teach, remote.teach),   // [learn] 教学进度按点取 max
       prefs: {}
     };
     var p = newer.prefs || {};
@@ -17256,6 +18162,7 @@
     if (!sameResetMap(a.quizReset, b.quizReset)) return false;   // [sync]
     if (!sameQuiz(a.quiz, b.quiz)) return false;   // [sync] 刷题记录也参与一致性判定
     if (!sameCalib(a.calib, b.calib)) return false;   // [calib] 校准历史变化也要能触发回推
+    if (!sameTeach(a.teach, b.teach)) return false;   // [learn] 教学进度变化也要能触发回推
     return sameNotes(a.notes, b.notes);   // [note]
   }
 
@@ -18687,6 +19594,9 @@
     navIdx.list = null;
     renderAll();
     qzRefreshMarks();   // [sync] 他端带来的刷题记录要立刻反映到卡片徽标
+    /* [learn] 教学页停在收尾屏时，他端带来的教学进度/掌握度要立刻反映；
+       只在收尾屏重画——其它拍重画会清掉用户刚打进复述框/默写框的内容 */
+    if (LN.on && LN.state === "sum") lnRender();
     if (!favDrawer.hidden) renderFavDrawer();
     if (syncDrawer && !syncDrawer.hidden) renderSyncStat();
   }
@@ -21229,6 +22139,7 @@
     QZ.sid = SID;
     QZ.pool = qzPoolOf(SID);
     if (typeof kpGoHide === "function") kpGoHide();   // [qzkp] 进刷题页，悬浮入口收起
+    lnSuspend();                                      // [learn] 教学页挂起，退出刷题后回来
     document.body.className = document.body.className.replace(/\s*mode-quiz/g, "") + " mode-quiz";
     qzView.hidden = false;
     qzBtn.textContent = "卡片";
@@ -21254,6 +22165,8 @@
     if (typeof refreshInlineProg === "function") refreshInlineProg();
     /* [sync] 刷题期间攒下的改动在这里统一推一次（详见 qzSaveRec 的说明） */
     if (QZ.dirty) { QZ.dirty = false; syncMarkDirty(); }
+    /* [learn] 这一组是从教学页开出来的：回到收尾页看掌握度变化，而不是直接掉回卡片 */
+    if (LN.suspended) { LN.suspended = false; lnResume(); }
   }
 
   /* ---------- 设置页 ---------- */
@@ -22864,6 +23777,615 @@
     if (e.key === "Escape" && dataDrawer && !dataDrawer.hidden) dataShut();
   });
 
+  /* ============================================================
+     [learn] 从零学 · 教学层（v3.48.0）
+     ------------------------------------------------------------
+     课（lesson）＝ 同一阶段内连续 3 个知识点，顺序直接取 path.json，
+     不另做拓扑排序：前置图在化学里有环（c1s4-01 ↔ c1s4-02），
+     而且纯按依赖切块会把不同章节拼进同一课。
+     每点三拍：讲解（读 + 一句复述）→ 示范（逐步揭示）→ 渐隐（同一题遮三档）。
+     素材来源：content / trap / action / examples / teach.w；
+     teach.w 缺失自动回落成「动作 + 完整解析」，不需要每个点都先补内容。
+     判分口径：一拍都不判分、不写 snap.quiz；进度只写 snap.teach（可选字段）。
+     ============================================================ */
+  var LN_SIZE = 3;      /* 一课 3 个点，约 18–20 分钟 */
+  var LN_BEATS = 3;     /* 每点三拍 */
+  var LN_WLAB = ["读题先看什么", "想到哪个方法", "每一步为什么", "最容易错在哪"];
+  var LN = {
+    on: false, sid: null, kids: [], pos: 0, beat: 0,
+    state: "goal", reveal: 0, fade: 0, suspended: false
+  };
+  var learnView = byId("learnView");
+  var lnIdxEl = byId("lnIdx");
+  var lnTitleEl = byId("lnTitle");
+  var lnBarEl = byId("lnBar");
+  var lnBodyEl = byId("lnBody");
+  var lnActsEl = byId("lnActs");
+  var lnQuitBtn = byId("lnQuit");
+
+  function lnKpOf(sid, kid) { return qzKpOf(qzSubject(sid), kid); }
+  function lnHasTeach(sid, kid) {
+    var k = lnKpOf(sid, kid), t = k && k.teach;
+    return !!(t && t.w && t.w.length);
+  }
+  function lnWOf(kid) {
+    var k = lnKpOf(LN.sid || SID, kid), t = k && k.teach, out = [], i;
+    if (!t || !t.w) return out;
+    if (typeof t.w === "string") { out.push(t.w); return out; }
+    for (i = 0; i < t.w.length && i < 4; i++) if (t.w[i]) out.push(String(t.w[i]));
+    return out;
+  }
+  /* 误概念不手写：trap 本来就是 ①②③④ 分条写的，直接拆成清单 */
+  function lnMisOf(kid) {
+    var k = lnKpOf(LN.sid || SID, kid), t = String((k && k.trap) || ""), out = [], i, parts;
+    parts = t.split(/[①②③④⑤⑥⑦⑧⑨]/);
+    for (i = 0; i < parts.length; i++) {
+      var s = parts[i].replace(/^[；;、,，\s]+/, "").replace(/\s+$/, "");
+      if (s) out.push(s);
+    }
+    if (out.length < 2) {
+      out = [];
+      parts = t.split(/[；;]/);
+      for (i = 0; i < parts.length; i++) {
+        var s2 = parts[i].replace(/^\s+|\s+$/g, "");
+        if (s2) out.push(s2);
+      }
+    }
+    return out.slice(0, 4);
+  }
+
+  /* ---------- 课的编排：只按 path.json 的顺序，不跨阶段 ---------- */
+  function lnSubjectPath(sid) {
+    for (var i = 0; i < PATH.subjects.length; i++) if (PATH.subjects[i].id === sid) return PATH.subjects[i];
+    return null;
+  }
+  function lnStageOf(sid, kid) {
+    var p = lnSubjectPath(sid), i, j;
+    if (!p) return null;
+    for (i = 0; i < p.stages.length; i++) {
+      for (j = 0; j < p.stages[i].pts.length; j++) {
+        if (p.stages[i].pts[j].k.indexOf(kid) >= 0) return { i: i, j: j, st: p.stages[i] };
+      }
+    }
+    return null;
+  }
+  function lnQueue(sid, kid) {
+    var info = lnStageOf(sid, kid), out = [], i, j, m, pt, hit;
+    if (!info) return kid ? [kid] : [];
+    hit = false;
+    for (i = info.i; i < info.i + 1 && out.length < LN_SIZE; i++) {
+      for (j = 0; j < info.st.pts.length && out.length < LN_SIZE; j++) {
+        pt = info.st.pts[j];
+        if (!hit) { if (pt.k.indexOf(kid) < 0) continue; hit = true; }
+        for (m = 0; m < pt.k.length && out.length < LN_SIZE; m++) out.push(pt.k[m]);
+      }
+    }
+    if (!out.length) out.push(kid);
+    return out;
+  }
+  /* 起点：path 顺序里第一个「还没答过题」的点；全刷过就从头再来一遍 */
+  function lnEntryKid(sid) {
+    var p = lnSubjectPath(sid), i, j, m, kd, mt;
+    if (!p) return "";
+    for (i = 0; i < p.stages.length; i++) {
+      for (j = 0; j < p.stages[i].pts.length; j++) {
+        for (m = 0; m < p.stages[i].pts[j].k.length; m++) {
+          kd = p.stages[i].pts[j].k[m];
+          mt = QZ_READY ? qzMasteryOf(sid, kd) : null;
+          if (!mt || mt.done <= 0) return kd;
+        }
+      }
+    }
+    return p.stages.length && p.stages[0].pts.length ? p.stages[0].pts[0].k[0] : "";
+  }
+
+  /* ---------- 教学进度：可选字段 snap.teach[sid][kid] = {p,t} ---------- */
+  function lnData() {
+    var s = snap();
+    if (!s.teach || typeof s.teach !== "object" ||
+      Object.prototype.toString.call(s.teach) === "[object Array]") s.teach = {};
+    return s.teach;
+  }
+  function lnProgOf(sid, kid) {
+    var m = lnData()[sid];
+    return (m && m[kid]) ? qzNum(m[kid].p) : 0;
+  }
+  function lnSaveProg(kid, p) {
+    var sid = LN.sid || SID, d = lnData(), m = d[sid], old, t = nowMs();
+    if (!m) { m = {}; d[sid] = m; }
+    old = m[kid];
+    if (old && qzNum(old.p) >= p) return;      /* 只进不退：回看不会把进度改小 */
+    m[kid] = { p: p, t: t };
+    commitSnap(t);
+    syncMarkDirty();
+  }
+
+  /* ---------- 视图切换 ---------- */
+  function lnShow(which) {
+    LN.state = which;
+    lnRender();
+  }
+  function lnOpen(kid) {
+    if (!kid) { qzToast("这一科还没有学习路径"); return; }
+    var kids = lnQueue(SID, kid);
+    if (!kids.length) { qzToast("这一科还没有学习路径"); return; }
+    LN.suspended = false;             /* 先清挂起标志，避免 qzExit 顺手把教学页又拉起来 */
+    if (QZ.on) qzExit();
+    LN.on = true;
+    LN.sid = SID;
+    LN.kids = kids;
+    LN.pos = 0; LN.beat = 0; LN.state = "goal";
+    LN.reveal = 0; LN.fade = 0; LN.suspended = false;
+    document.body.className = document.body.className.replace(/\s*mode-(quiz|learn)/g, "") + " mode-learn";
+    if (qzView) qzView.hidden = true;
+    learnView.hidden = false;
+    closeMore(); closeNav(true); closeFav(true); closeOverview();
+    if (pathPanel && !pathPanel.hidden) pathShut(true);
+    lnRender();
+  }
+  function lnHide() {
+    LN.on = false;
+    document.body.className = document.body.className.replace(/\s*mode-learn/g, "");
+    if (learnView) learnView.hidden = true;
+  }
+  function lnClose() {
+    lnHide();
+    LN.suspended = false;
+    qzRefreshMarks();
+    if (typeof refreshInlineProg === "function") refreshInlineProg();
+    if (pathPanel && !pathPanel.hidden) pathPaint();
+  }
+  /* 进刷题时把教学页收起。是否「稍后回来」由发起方决定：
+     收尾页的「练这一课」会先置 suspended，退出刷题后自动回到收尾页；
+     顶栏「刷题」进来则不置，退出后照常回卡片——不把用户硬拽回教学页。 */
+  function lnSuspend() {
+    if (!LN.on) return;
+    LN.on = false;
+    learnView.hidden = true;
+    document.body.className = document.body.className.replace(/\s*mode-learn/g, "");
+  }
+  function lnResume() {
+    if (!LN.kids.length) return;
+    LN.on = true;
+    LN.state = "sum";
+    document.body.className = document.body.className.replace(/\s*mode-quiz/g, "") + " mode-learn";
+    if (qzView) qzView.hidden = true;
+    learnView.hidden = false;
+    lnRender();
+  }
+
+  /* ---------- 步进 ---------- */
+  function lnStepTotal() { return LN.kids.length * LN_BEATS + 2; }
+  function lnStepNo() {
+    if (LN.state === "goal") return 1;
+    if (LN.state === "sum") return lnStepTotal();
+    return 2 + LN.pos * LN_BEATS + LN.beat;
+  }
+  function lnNext() {
+    if (LN.state === "goal") {
+      LN.state = "kp"; LN.pos = 0; LN.beat = 0; LN.reveal = 0; LN.fade = 0;
+      lnRender(); return;
+    }
+    if (LN.state !== "kp") return;
+    var kid = LN.kids[LN.pos];
+    lnSaveProg(kid, LN.beat + 1);
+    if (LN.beat < LN_BEATS - 1) {
+      LN.beat++; if (LN.beat === 1) LN.reveal = 0; if (LN.beat === 2) LN.fade = 0;
+      lnRender(); return;
+    }
+    if (LN.pos < LN.kids.length - 1) {
+      LN.pos++; LN.beat = 0; LN.reveal = 0; LN.fade = 0;
+      lnRender(); return;
+    }
+    lnShow("sum");
+  }
+  function lnPrev() {
+    if (LN.state === "sum") {
+      LN.state = "kp"; LN.pos = LN.kids.length - 1; LN.beat = LN_BEATS - 1; LN.fade = 2;
+      lnRender(); return;
+    }
+    if (LN.state === "goal") return;
+    if (LN.beat > 0) {
+      LN.beat--;
+      if (LN.beat === 1) LN.reveal = 99;   /* 回看示范：全部展开 */
+      if (LN.beat === 2) LN.fade = 2;
+      lnRender(); return;
+    }
+    if (LN.pos > 0) {
+      LN.pos--; LN.beat = LN_BEATS - 1; LN.fade = 2; LN.reveal = 99;
+      lnRender(); return;
+    }
+    lnShow("goal");
+  }
+
+  /* ---------- 渲染骨架 ---------- */
+  function lnActs(spec) {
+    var h = "", i, s;
+    for (i = 0; i < spec.length; i++) {
+      s = spec[i];
+      if (s === "") { h += '<span class="sp"></span>'; continue; }
+      h += '<button class="btn small' + (s.p ? " primary" : "") + '" id="' + s.id + '" type="button"' +
+        (s.dis ? " disabled" : "") + '>' + s.t + '</button>';
+    }
+    lnActsEl.innerHTML = h;
+  }
+  function lnBind(id, fn) {
+    var b = byId(id);
+    if (b) b.addEventListener("click", fn);
+    return b;
+  }
+  function lnRender() {
+    if (!LN.on || !LN.kids.length) return;
+    var kid = LN.kids[LN.pos], k = lnKpOf(LN.sid, kid);
+    var total = lnStepTotal(), at = lnStepNo();
+    lnIdxEl.textContent = at + " / " + total;
+    lnTitleEl.textContent = LN.state === "goal" ? "本课目标"
+      : (LN.state === "sum" ? "本课收尾" : (k ? k.name : kid));
+    lnBarEl.style.width = Math.round(at / total * 100) + "%";
+    if (lnBarEl.parentNode) lnBarEl.parentNode.setAttribute("aria-valuenow", String(at));
+    if (LN.state === "goal") lnRenderGoal();
+    else if (LN.state === "sum") lnRenderSum();
+    else if (LN.beat === 0) lnBeatRead();
+    else if (LN.beat === 1) lnBeatWorked();
+    else lnBeatFade();
+  }
+
+  /* ---------- 第 0 屏：本课目标（复用 path.json 的段目标与崩点） ---------- */
+  function lnRenderGoal() {
+    var info = lnStageOf(LN.sid, LN.kids[0]), st = info ? info.st : null;
+    var h = '<div class="lcard">', i, k;
+    h += '<div class="lsec"><h4>这一课学完，你应该能</h4><p>' +
+      pathEsc(st && st.goal ? st.goal : "把这一课的 " + LN.kids.length + " 个点，从「看过」推到「写得出」。") +
+      '</p>';
+    if (st && st.risk) {
+      h += '<h4 class="warn" style="margin-top:12px">常见崩点（走完这一课回头再看一遍）</h4><p>' +
+        pathEsc(st.risk) + '</p>';
+    }
+    h += '</div>';
+    h += '<div class="lsec"><h4>' + LN.kids.length + ' 个点 · 约 ' + (LN.kids.length * 6) + ' 分钟 · 不判分</h4><ul class="llist">';
+    for (i = 0; i < LN.kids.length; i++) {
+      k = lnKpOf(LN.sid, LN.kids[i]);
+      h += '<li><span class="ln2">' + (i + 1) + '</span><span class="lg">' +
+        pathEsc(k ? k.name : LN.kids[i]) + '</span><span class="lp">' +
+        (lnHasTeach(LN.sid, LN.kids[i]) ? "有示范" : "按动作走") + '</span></li>';
+    }
+    h += '</ul></div></div>';
+    lnBodyEl.innerHTML = h;
+    lnActs([{ id: "lnGo", t: "开始 · 第 1 个点", p: 1 }, "", { id: "lnQuit2", t: "退出" }]);
+    lnBind("lnGo", lnNext);
+    lnBind("lnQuit2", lnClose);
+  }
+
+  /* ---------- 第 1 拍：讲解 + 一句复述（复用 content / action / trap） ---------- */
+  function lnBeatRead() {
+    var kid = LN.kids[LN.pos], k = lnKpOf(LN.sid, kid), h = "", mis, i;
+    if (!k) {
+      lnBodyEl.innerHTML = '<div class="lcard"><div class="lsec"><p>找不到这个知识点，跳过。</p></div></div>';
+      lnActs([{ id: "lnPrev", t: "上一步" }, "", { id: "lnNext", t: "下一步", p: 1 }]);
+      lnBind("lnPrev", lnPrev); lnBind("lnNext", lnNext);
+      return;
+    }
+    h += '<div class="lcard">';
+    h += '<div class="lsec"><h4>内容 · 先读完这一段</h4><p>' + safeHtml(k.content || "") + '</p></div>';
+    h += '<div class="lrecall"><p>合上上面这段，用一句话说清它在讲什么。写不出来就写「不知道」——' +
+      '重点是先自己产出，再对照，而不是先看答案。</p>' +
+      '<textarea id="lnRecall" rows="3" autocomplete="off" spellcheck="false" placeholder="一句话…"></textarea>' +
+      '<div class="lrecallacts"><button class="btn small primary" id="lnRevealBtn" type="button">对一下答案</button></div>' +
+      '</div>';
+    h += '<div id="lnAfter" hidden>';
+    if (k.action) h += '<div class="lsec"><h4 class="act">最低拿分动作 · 参考答案</h4><p>' + safeHtml(k.action) + '</p></div>';
+    if (k.trap) h += '<div class="lsec"><h4 class="warn">易错点 · 刚才有没有踩</h4><p>' + safeHtml(k.trap) + '</p></div>';
+    mis = lnMisOf(kid);
+    if (mis.length) {
+      h += '<div class="lsec"><h4>常见误解清单</h4><ul class="llist">';
+      for (i = 0; i < mis.length; i++) {
+        h += '<li><span class="ln2">' + (i + 1) + '</span><span class="lg">' + pathEsc(mis[i]) + '</span></li>';
+      }
+      h += '</ul></div>';
+    }
+    h += '</div></div>';
+    lnBodyEl.innerHTML = h;
+    renderMath(lnBodyEl);
+    lnActs([{ id: "lnPrev", t: "上一步" }, "", { id: "lnNext", t: "下一步 · 看示范", p: 1, dis: true },
+      { id: "lnQuit2", t: "退出" }]);
+    lnBind("lnPrev", lnPrev);
+    lnBind("lnNext", lnNext);
+    lnBind("lnQuit2", lnClose);
+    lnBind("lnRevealBtn", function () {
+      var box = byId("lnAfter");
+      if (box) box.hidden = false;
+      var nb = byId("lnNext");
+      if (nb) nb.disabled = false;
+      var rb = byId("lnRevealBtn");
+      if (rb) { rb.disabled = true; rb.textContent = "已对过答案"; }
+      var ta = byId("lnRecall");
+      if (ta) ta.readOnly = true;
+      renderMath(box || lnBodyEl);
+    });
+  }
+
+  /* ---------- 第 2 拍：示范（逐步揭示，一次只多给一层） ---------- */
+  function lnBeatWorked() {
+    var kid = LN.kids[LN.pos], k = lnKpOf(LN.sid, kid);
+    var ex = (k && k.examples && k.examples[0]) ? k.examples[0] : null;
+    var blocks = [], ws = lnWOf(kid), i, h = "";
+    if (!ex) {
+      lnBodyEl.innerHTML = '<div class="lcard"><div class="lsec"><p>这个点没有例题，直接进渐隐。</p></div></div>';
+      lnActs([{ id: "lnPrev", t: "上一步" }, "", { id: "lnNext", t: "下一步", p: 1 }]);
+      lnBind("lnPrev", lnPrev); lnBind("lnNext", lnNext);
+      return;
+    }
+    for (i = 0; i < ws.length; i++) {
+      blocks.push({ lab: LN_WLAB[i] || ("第 " + (i + 1) + " 步"), html: safeHtml(ws[i]), last: false });
+    }
+    blocks.push({ lab: "完整解析", html: safeHtml(ex.a || ""), last: true });
+    var show = Math.min(LN.reveal, blocks.length);
+    h += '<div class="lcard">';
+    h += '<div class="lsec"><h4>示范 · 这道题从读题到答案</h4><div class="lstem">' +
+      codeAwareHtml(ex.q || "") + '</div></div>';
+    for (i = 0; i < show; i++) {
+      h += '<div class="lblk' + (blocks[i].last ? " last" : "") + (i === show - 1 ? " in" : "") +
+        '"><b>' + pathEsc(blocks[i].lab) + '</b>' + blocks[i].html + '</div>';
+    }
+    if (!ws.length) {
+      h += '<div class="lsec"><h4>这个点还没有写好的思考链</h4><p>' +
+        '先按「动作 + 完整解析」走。补上 teach.w 之后，这里会多出四段思路：读题看什么、想到哪个方法、' +
+        '每一步为什么、最容易错在哪。</p></div>';
+    }
+    h += '</div>';
+    lnBodyEl.innerHTML = h;
+    renderMath(lnBodyEl);
+    if (show < blocks.length) {
+      lnActs([{ id: "lnPrev", t: "上一步" }, "",
+        { id: "lnReveal", t: "揭开 · " + blocks[show].lab, p: 1 }, { id: "lnQuit2", t: "退出" }]);
+      lnBind("lnPrev", lnPrev);
+      lnBind("lnQuit2", lnClose);
+      lnBind("lnReveal", function () { LN.reveal = show + 1; lnRender(); });
+    } else {
+      lnActs([{ id: "lnPrev", t: "上一步" }, "",
+        { id: "lnNext", t: "下一步 · 遮答案重做", p: 1 }, { id: "lnQuit2", t: "退出" }]);
+      lnBind("lnPrev", lnPrev);
+      lnBind("lnNext", lnNext);
+      lnBind("lnQuit2", lnClose);
+    }
+  }
+
+  /* ---------- 第 3 拍：渐隐（同一道题，遮三档） ---------- */
+  /* 第 2 档给的「半提示」不取解析首句：那一段往往把答案和整条推理一起带出来，等于没遮。
+     改取 action 的第一条动作——它只说「先做什么」，不泄露结果。 */
+  function lnHintOf(kid) {
+    var k = lnKpOf(LN.sid, kid), a = String((k && k.action) || "");
+    var parts = a.split(/[①②③④⑤⑥⑦⑧⑨]/), i, s;
+    for (i = 0; i < parts.length; i++) {
+      s = parts[i].replace(/^[；;、,，\s]+/, "").replace(/\s+$/, "");
+      if (s) return s;
+    }
+    s = a.replace(/[；;][\s\S]*$/, "").replace(/\s+$/, "");
+    return s || "回到上面那段内容里，找出这一步的关键词";
+  }
+  function lnBeatFade() {
+    var kid = LN.kids[LN.pos], k = lnKpOf(LN.sid, kid);
+    var exs = (k && k.examples) || [], ex = exs.length > 1 ? exs[1] : (exs[0] || null);
+    var lv = LN.fade, h = "";
+    if (!ex) {
+      lnBodyEl.innerHTML = '<div class="lcard"><div class="lsec"><p>这个点没有例题，这一拍跳过。</p></div></div>';
+      lnActs([{ id: "lnPrev", t: "上一步" }, "", { id: "lnNext", t: "这一步过了", p: 1 }]);
+      lnBind("lnPrev", lnPrev); lnBind("lnNext", lnNext);
+      return;
+    }
+    h += '<div class="lcard">';
+    h += '<div class="lfadebar"><span class="fdtag">遮挡 ' + (lv + 1) + '/3 · ' +
+      (lv === 0 ? "答案全给，先读懂" : lv === 1 ? "只给一条动作提示" : "全遮住，自己做") +
+      '</span><span class="lmask"><i class="' + (lv >= 0 ? "on" : "") + '"></i><i class="' +
+      (lv >= 1 ? "on" : "") + '"></i><i class="' + (lv >= 2 ? "on" : "") + '"></i></span></div>';
+    h += '<div class="lsec"><h4>同一道题 · ' + pathEsc(ex.type || "例题") + '</h4><div class="lstem">' +
+      codeAwareHtml(ex.q || "") + '</div></div>';
+    if (lv === 0) {
+      h += '<div class="lansbox">' + safeHtml(ex.a || "") + '</div>';
+    } else if (lv === 1) {
+      h += '<div class="lansbox"><b>只给一条动作提示：</b>' + safeHtml(lnHintOf(kid)) + '</div>';
+    } else if (ex.type === "编程") {
+      h += '<div class="lsec"><h4>默写这段代码 · 写完逐行对</h4>' +
+        '<textarea class="lcode" id="lnCode" spellcheck="false" autocomplete="off" ' +
+        'placeholder="在这里写代码；缩进用 4 个空格或 Tab 都行，行尾空格不计较"></textarea>' +
+        '<div class="lacts" style="margin-top:10px"><button class="btn small" id="lnCodeCheck" type="button">' +
+        '对一下我的代码</button></div><div id="lnDiffOut"></div>' +
+        '<p style="margin:10px 0 0;font-size:12px;color:var(--ink2);line-height:1.7">' +
+        '这一步不判分、不进题库：它只回答一个问题——离开提示，你写不写得出来。</p></div>';
+    } else {
+      h += '<div class="lsec"><h4>现在只剩题干</h4><p>在心里或纸上把答案完整推一遍，推完点「看解析」自查，' +
+        '再点「这一步过了」。这档不给任何提示。</p></div>';
+    }
+    h += '</div>';
+    lnBodyEl.innerHTML = h;
+    renderMath(lnBodyEl);
+    if (lv < 2) {
+      lnActs([{ id: "lnPrev", t: "上一步" }, "",
+        { id: "lnFadeNext", t: lv === 0 ? "遮一档 · 只给提示" : "全遮住 · 自己做", p: 1 },
+        { id: "lnQuit2", t: "退出" }]);
+      lnBind("lnFadeNext", function () { LN.fade = lv + 1; lnRender(); });
+    } else {
+      lnActs([{ id: "lnPrev", t: "上一步" }, { id: "lnPeek", t: "看解析" }, "",
+        { id: "lnNext", t: "这一步过了", p: 1 }, { id: "lnQuit2", t: "退出" }]);
+      lnBind("lnPeek", function () {
+        var out = byId("lnDiffOut");
+        if (out) out.innerHTML = '<div class="lansbox">' + safeHtml(ex.a || "") + '</div>';
+        renderMath(lnBodyEl);
+      });
+    }
+    lnBind("lnPrev", lnPrev);
+    lnBind("lnNext", lnNext);
+    lnBind("lnQuit2", lnClose);
+    lnBind("lnCodeCheck", function () { lnCodeDiff(ex); });
+  }
+
+  /* ---------- 编程题默写：行级 LCS，只指出差异，不打分 ---------- */
+  function lnCodeOf(ex) {
+    var a = String((ex && ex.a) || ""), m = a.match(/答案：<\/b>([\s\S]*?)<\/p>/);
+    var s = m ? m[1] : a;
+    s = s.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+    s = s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+    return lnNormLines(s);
+  }
+  function lnNormLines(txt) {
+    var s = String(txt == null ? "" : txt).replace(/\r\n?/g, "\n")
+      .replace(/\u3000/g, "    ").replace(/\t/g, "    ");
+    var raw = s.split("\n"), out = [], i;
+    for (i = 0; i < raw.length; i++) out.push(raw[i].replace(/\s+$/, ""));
+    while (out.length && !out[0]) out.shift();
+    while (out.length && !out[out.length - 1]) out.pop();
+    return out;
+  }
+  function lnDiff(u, t) {
+    var n = u.length, m = t.length, i, j, dp = [], rows = [], a = 0, b = 0;
+    for (i = 0; i <= n; i++) { dp.push([]); for (j = 0; j <= m; j++) dp[i].push(0); }
+    for (i = n - 1; i >= 0; i--) {
+      for (j = m - 1; j >= 0; j--) {
+        dp[i][j] = u[i] === t[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    while (a < n && b < m) {
+      if (u[a] === t[b]) { rows.push({ k: "same", u: u[a], t: t[b] }); a++; b++; }
+      else if (dp[a + 1][b] >= dp[a][b + 1]) { rows.push({ k: "del", u: u[a], t: "" }); a++; }
+      else { rows.push({ k: "ins", u: "", t: t[b] }); b++; }
+    }
+    while (a < n) { rows.push({ k: "del", u: u[a], t: "" }); a++; }
+    while (b < m) { rows.push({ k: "ins", u: "", t: t[b] }); b++; }
+    return rows;
+  }
+  function lnCodeDiff(ex) {
+    var ta = byId("lnCode"), out = byId("lnDiffOut");
+    if (!ta || !out) return;
+    var u = lnNormLines(ta.value), t = lnCodeOf(ex), rows = lnDiff(u, t);
+    var same = 0, bad = 0, i, r, h = "";
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].k === "same") same++;
+      if (rows[i].k !== "same") bad++;
+    }
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      h += '<div class="r ' + (r.k === "same" ? "s" : (r.k === "ins" ? "i" : "d")) + '">' +
+        '<span class="m">' + (r.k === "same" ? " " : (r.k === "ins" ? "+" : "-")) + '</span>' +
+        '<span class="t">' + pathEsc(r.k === "same" ? r.u : (r.k === "ins" ? r.t : r.u)) + '</span></div>';
+    }
+    out.innerHTML = '<div class="ldiff">' + h + '</div><p class="ldverdict">' +
+      (bad === 0 ? '<b>逐行一致</b>：这段代码你可以脱离提示写出来，这一拍算过。'
+        : '共 ' + rows.length + ' 行，一致 <b>' + same + '</b> 行，差异 <b>' + bad + '</b> 行。' +
+        '绿色带 + 的是答案里有、你缺的行；红色带 - 的是你多写或写法不同的行。' +
+        '缩进算差异——Python 靠它分层。') + '</p>';
+  }
+
+  /* ---------- 收尾：只看教学进度与练习入口，不重复判分 ---------- */
+  function lnRenderSum() {
+    var h = '<div class="lcard">', i, k, pr, mt, pool = 0, part, j;
+    h += '<div class="lsec"><h4>这一课走完了</h4><p>' +
+      '三拍全程没有判分，也没改掌握度——判分留给下一屏的练习。这里只核对两件事：每点的教学进度，' +
+      '和练习之后掌握度的变化。</p></div>';
+    h += '<div class="lsec"><h4>教学进度 · 讲 / 示 / 隐</h4><ul class="llist">';
+    for (i = 0; i < LN.kids.length; i++) {
+      k = lnKpOf(LN.sid, LN.kids[i]);
+      pr = lnProgOf(LN.sid, LN.kids[i]);
+      mt = QZ_READY ? qzMasteryOf(LN.sid, LN.kids[i]) : null;
+      h += '<li><span class="ln2">' + (i + 1) + '</span><span class="lg">' +
+        pathEsc(k ? k.name : LN.kids[i]) + '</span><span class="lp">教学 ' + pr + '/' + LN_BEATS +
+        " · 掌握" + (mt ? pathEsc(mt.tier.label) : "—") + '</span></li>';
+    }
+    h += '</ul></div>';
+    if (QZ_READY) {
+      for (i = 0; i < LN.kids.length; i++) {
+        part = qzPoolOfKp(LN.sid, LN.kids[i]);
+        for (j = 0; j < part.length; j++) pool++;
+      }
+      h += '<div class="lsec"><h4>下一步</h4><p>' +
+        (pool ? '这一课在题库里有 ' + pool + ' 道题。点「练这一课」直接开跑，判分、记录、掌握度全走现有口径；' +
+          '刷完会自动回到这一屏，看哪几个点跨了档。'
+          : '这一课暂无题库，先回学习台。') + '</p></div>';
+    }
+    h += '</div>';
+    lnBodyEl.innerHTML = h;
+    lnActs([{ id: "lnPrev", t: "上一步" },
+      { id: "lnPractice", t: pool ? ("练这一课 · " + pool + " 题") : "练这一课", p: 1, dis: !pool },
+      { id: "lnMap", t: "回学习台" }, "", { id: "lnQuit2", t: "退出" }]);
+    lnBind("lnPrev", lnPrev);
+    lnBind("lnQuit2", lnClose);
+    lnBind("lnPractice", lnPractice);
+    lnBind("lnMap", function () { lnClose(); pathOpen(); });
+  }
+  function lnPractice() {
+    if (!QZ_READY) return;
+    var pool = [], i, j, part;
+    for (i = 0; i < LN.kids.length; i++) {
+      part = qzPoolOfKp(LN.sid, LN.kids[i]);
+      for (j = 0; j < part.length; j++) pool.push(part[j]);
+    }
+    if (!pool.length) { qzToast("这一课暂无可用题目"); return; }
+    LN.suspended = true;             /* 只有这条路径会在退出刷题后自动回到收尾页 */
+    qzEnter();                       /* qzEnter 内部会调 lnSuspend 收起教学页 */
+    qzStartRun(pool, "本课练习", "");
+  }
+
+  /* ---------- 入口：⋯ 菜单 / 卡片 / 学习台阶段浮层 ---------- */
+  function lnOpenEntry() {
+    var kid = lnEntryKid(SID);
+    if (!kid) { qzToast("这一科还没有学习路径"); return; }
+    lnOpen(kid);
+  }
+  function pathLearn(i) {
+    var p = PATH.subjects[PATH_I], st = p && p.stages ? p.stages[i] : null;
+    if (!st || !st.pts.length) return;
+    var sid = p.id, kid = st.pts[0].k[0];
+    pathShut(true);
+    if (sid !== SID && subjectById(sid)) {
+      SID = sid;
+      lsSet(LS_ACTIVE, SID);
+      resetFilters();
+      renderAll();
+    }
+    lnOpen(kid);
+  }
+  var learnMenuBtn = byId("learnBtn");
+  if (learnMenuBtn) learnMenuBtn.addEventListener("click", function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    closeMore();
+    lnOpenEntry();
+  });
+  if (lnQuitBtn) lnQuitBtn.addEventListener("click", lnClose);
+
+  /* 键盘：Enter / → 下一步，← 上一步，Esc 退出；输入框里不接管 */
+  document.addEventListener("keydown", function (e) {
+    if (!LN.on) return;
+    /* 抽屉/浮层开着时先把键让给它们：否则按 Esc 关抽屉会连课一起退掉 */
+    if (document.body.classList.contains("drawerOpen")) return;
+    var t = e.target || {}, tag = t.tagName ? String(t.tagName).toUpperCase() : "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
+    var k = e.key || "";
+    if (k === "Escape" || k === "Esc") { e.preventDefault(); lnClose(); return; }
+    if (tag === "BUTTON" && (k === "Enter" || k === " " || k === "Spacebar")) return;
+    if (k === "Enter" || k === "ArrowRight") {
+      var nb = byId("lnNext") || byId("lnGo") || byId("lnFadeNext") || byId("lnReveal");
+      if (nb && !nb.disabled) { e.preventDefault(); nb.click(); }
+      return;
+    }
+    if (k === "ArrowLeft") {
+      var pb = byId("lnPrev");
+      if (pb) { e.preventDefault(); pb.click(); }
+    }
+  });
+
+  /* 调试出口：仅供自动化测试读取教学状态，不参与业务逻辑 */
+  window.__reviewLearn = {
+    open: lnOpen, close: lnClose, next: lnNext, prev: lnPrev, entry: lnEntryKid, queue: lnQueue,
+    prog: function (kid) { return lnProgOf(LN.sid || SID, kid); },
+    state: function () {
+      return {
+        on: LN.on, sid: LN.sid, kids: LN.kids.slice(), pos: LN.pos, beat: LN.beat,
+        state: LN.state, reveal: LN.reveal, fade: LN.fade, suspended: LN.suspended
+      };
+    },
+    diff: lnDiff, code: lnCodeOf, mis: lnMisOf, has: lnHasTeach
+  };
+
   /* ---------- 绑定 ---------- */
   if (QZ_READY) {
     qzBtn.addEventListener("click", function () {
@@ -23186,6 +24708,7 @@
           '<span class="mdot" aria-hidden="true"></span>' +
           '<i class="mn">' + (i + 1) + '.' + (j + 1) + '</i>' +
           '<span class="pn2">' + pathEsc(pt.n) + '</span>' +
+          '<i class="mt" hidden></i>' +
           '<span class="pl ' + pathEsc(pt.lv) + '">' + pathEsc(pt.lv) + '</span></button>';
         if (det) h += '<div class="mdet">' + det + '</div>';
         h += '</div>';
@@ -23405,6 +24928,15 @@
       chips[c].setAttribute("data-dim", dimOf(cls));
       var dot = chips[c].querySelector(".mdot");
       if (dot) dot.textContent = PATH_ST_ICON[cls] || "";
+      /* [learn] 教学进度角标：只读 snap.teach，独立于 data-st 三态，
+         不加新状态、不进图例、不参与筛选——保住 v3.45「一处判定、四处渲染」的不变式 */
+      var mtEl = chips[c].querySelector(".mt");
+      if (mtEl) {
+        var pr = 0, kds = pt.k, q;
+        for (q = 0; q < kds.length; q++) pr = Math.max(pr, lnProgOf(sid, kds[q]));
+        if (pr > 0) { mtEl.textContent = pr + "/" + LN_BEATS; mtEl.hidden = false; }
+        else { mtEl.textContent = ""; mtEl.hidden = true; }
+      }
     }
 
     /* 三级文字逐个上色：即使组内混合，也能看出哪个知识点还没掌握 */
@@ -23520,6 +25052,11 @@
       }
     }
     h += '</div>';
+    /* [learn] 从这一段的第一个点开始学：顺序取 path.json，不另排。
+       只报「一课几个点」，不报整段时长——课是按 3 个点切的，报段内总时长会高估 3 倍 */
+    h += '<div class="mrow"><span>▶ 从零学</span>' +
+      '<button class="plearn" type="button" data-learn="' + i + '">从本段第 1 个点开始 · 每课 ' +
+      LN_SIZE + ' 个点 / 约 ' + (LN_SIZE * 6) + ' 分钟</button></div>';
     pop.innerHTML = h;
     pop.style.setProperty("--pc", bc.s);
     pop.hidden = false;
@@ -23631,6 +25168,14 @@
     if (!t || t === pathTrack) return;
 
     if (pathHas(t, "mclose")) { pathPopShut(); return; }
+
+    /* [learn] 阶段浮层里的「从零学」：关掉学习台，直接进这一段的第一个点 */
+    var lb = pathHas(t, "plearn");
+    if (lb) {
+      var li = parseInt(lb.getAttribute("data-learn"), 10);
+      if (!isNaN(li)) pathLearn(li);
+      return;
+    }
 
     var dp = pathHas(t, "pdep");
     if (dp) {
