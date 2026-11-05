@@ -3,9 +3,33 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.52.0
+  APP_VERSION: 3.53.0
   DATA_VERSION: 2026-11-05
-  本次变更: （3.52.0）把 2026-11-05 同学回忆的期中卷面接进程序（数据新增 13 道参考例题，逻辑与样式未动）——
+  本次变更: （3.53.0）全程序体检：逐段审阅 + 用真实浏览器把疑点跑成证据，修掉 10 处隐患、精简 2 处冗余；数据与交互一律未动——
+             ①同步抽屉的 change 监听叠在持久容器上：每次打开抽屉都再绑一次，实测开关 5 次后改一项设置触发 7 次
+               保存与刷新，且随打开次数线性增长；改为只绑一次（bindSyncBodyOnce），表单字段仍每次重建、值现读 DOM；
+             ②刷题记录计数没做数值化：导入或手改过的快照里 n/w 若是字符串，"3"+1 会变成 "31"，错误率与累计错次
+               随即失真并随同步扩散到其它设备；写入前统一过 qzNum；
+             ③提示条两套定时器互相踩：qzToast 与 toastSync 共用 #toast 却各存一个 timer，连续提示时前一条的 timer
+               会把后一条提前关掉（实测第二条只显示 75ms）；合并成 showToast，全站只留一份定时器，
+               启动时的「迁移提示 + 首次提示」也并成一条（原来两段裸 setTimeout 会互相覆盖文案）；
+             ④本地存储写满后静默丢数据：commitSnap 把 QuotaExceededError 吞掉，作答在内存里一切正常、刷新即回退；
+               现在 lsSet 返回成败，首次连续失败弹一次提示，恢复写入后自动复位（不逐题刷屏）；
+             ⑤例题总开关初始文案与实际状态相反：199 道解析默认全收起，按钮却写「全部收起」，第一次点击像「收起」；
+               改为「全部展开」，点击后的文案仍按 anyOpen 现算；
+             ⑥下载函数点完立刻摘掉 <a>：Firefox 在元素离开文档后才处理 download，会静默失败；改成 600ms 后清理，
+               与 exportSnapFile 保持同一种做法；
+             ⑦空选项数组被当成选择题：会渲染 0 个按钮，题在、答案点不了，只能靠「跳过」走出去；
+               qzModeOf 与 qzWrongKind 改为看 o.length，空数组回落到填空 / 自评；
+             ⑧切科后预估档残留：在 A 科选的「>80%」会带进 B 科，收尾时在用户没选的情况下写一条 B 科校准记录；
+               进刷题时按科目重置（只在科目真的变了时清）；
+             ⑨代码默写 diff 没有输入上限：行级 LCS 是 O(n×m)，粘贴上万行会卡住页面；两边各限 400 行并如实注明；
+             ⑩更新下载的默认文件名还在用旧名 review.html（文件 11-02 已改名 study.html）：地址没有扩展名时
+               会把新版本存成 review.html，改成 study.html；
+             另两处顺手精简：概览面板隐藏时不再重建（省 4 科 × 数十个点的掌握度计算，openOverview 本来就会先渲染）、
+               删掉 3.30.0 起就没再使用的 SYNC_TOAST_TIMER；
+             未动：题目、题库 536 题、分级、teach/brief、判分口径、三态、快照 schema 2 与合并算法。
+  上次变更: （3.52.0）把 2026-11-05 同学回忆的期中卷面接进程序（数据新增 13 道参考例题，逻辑与样式未动）——
              ①来源：腾讯频道「长安大学校园频道」帖子 https://pd.qq.com/s/bvcwo3smn 的 41 条评论（同学回忆 11-05 上午/下午 AB 卷）；
                明天考的是另一位老师的卷子，故一律只作参考例题、不参与 A/B/C 分级、不写进 refs，标签统一为「26期中」；
              ②新增 13 道：填空 5（AI 全称 Artificial Intelligence、pip install 命令、线性回归/逻辑回归/K-Means 各属回归·分类·聚类、
@@ -605,7 +629,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.52.0">
+<meta name="app-version" content="3.53.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -16780,7 +16804,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.52.0";
+  var APP_VERSION = "3.53.0";
   var DATA_VERSION = "2026-11-05";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -16952,7 +16976,10 @@
     try { var r = window.localStorage.getItem(k); return r === null ? dft : JSON.parse(r); }
     catch (e) { return dft; }
   }
-  function lsSet(k, v) { try { window.localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function lsSet(k, v) {
+    try { window.localStorage.setItem(k, JSON.stringify(v)); return true; }
+    catch (e) { return false; }
+  }
   function lsRaw(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
   function lsPut(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
   function lsDel(k) { try { window.localStorage.removeItem(k); } catch (e) {} }
@@ -17911,7 +17938,9 @@
     var head = el("div", "exhead");
     head.appendChild(txt("span", "exlabel", "例题"));
     head.appendChild(txt("span", "excount", qzExCountText(SID, k.id, k.examples.length)));
-    var toggleAll = txt("button", "extoggle", "全部收起");
+    /* [v3.53.0] 初始文案要跟实际状态一致：解析默认全收起，按钮写「全部收起」会让第一次点击
+       「展开」却像点了收起。点击后的文案仍按 anyOpen 现算。 */
+    var toggleAll = txt("button", "extoggle", "全部展开");
     toggleAll.type = "button";
     toggleAll.setAttribute("data-ex-toggle", k.id);
     toggleAll.addEventListener("click", function () {
@@ -18301,7 +18330,9 @@
     renderGroups();
     renderProgress();
     renderStats();
-    renderOverview();
+    /* [v3.53.0] 概览面板没打开时不必重建：它默认隐藏，openOverview() 打开前会先渲染一次。
+       原来每次 renderAll 都替 4 个科目各算一遍掌握度（每科几十个点），纯属白做。 */
+    if (!ovPanel.hidden) renderOverview();
     renderFavBadge();
     applyRecallBtn();   // [recall] 切科目后按钮状态跟着变（按科目独立）
     if (!favDrawer.hidden) renderFavDrawer();
@@ -18692,9 +18723,17 @@
   }
   // [sync] 懒加载：任何 isDone/favList 调用前都会拿到已初始化的快照
   function snap() { if (SNAP === null) SNAP = loadSnap(); return SNAP; }
+  /* [v3.53.0] 落盘失败必须看得见：快照逼近 5MB 配额后 setItem 会抛 QuotaExceededError，
+     原来的 commitSnap 把异常吞掉——作答在内存里一切正常，刷新即回退，用户完全无从察觉。
+     这里只在「连续失败」的第一次提示一次，恢复写入后自动复位，不会每答一题弹一次。 */
+  var SNAP_SAVE_FAILED = false;
   function commitSnap(t) {
     SNAP.updatedAt = t || nowMs();
-    lsSet(LS_SNAP, SNAP);
+    if (lsSet(LS_SNAP, SNAP)) { SNAP_SAVE_FAILED = false; return; }
+    if (!SNAP_SAVE_FAILED) {
+      SNAP_SAVE_FAILED = true;
+      toastSync("本地存储已满：这次改动没能写进本机，请先「导出 JSON」备份，再清理旧笔记", 6400);
+    }
   }
 
   /* [sync] ---------------- 合并算法：纯函数 ---------------- */
@@ -19763,23 +19802,27 @@
   var syncBodyEl = byId("syncBody");
   var syncHintEl = byId("syncHint");
   var syncStatEl = null;
-  var SYNC_TOAST_TIMER = null;
   var SYNC_WAS_READY = false;
 
   // [sync] 复用页面已有的 #toast，不另外造提示条，也不用 alert
-  function toastSync(msg, ms) {
+  /* [v3.53.0] 全站只有一条提示条，定时器也必须只有一份：
+     原来 toastSync 与 qzToast 各存一个 timer，交替调用时前一条的 timer 会把后一条提前关掉
+     （实测「练这个考点」连点时第二条只显示 75ms，看起来像没反应）。统一到 showToast。 */
+  var TOAST_TIMER = null;
+  function showToast(msg, ms) {
     var t = byId("toast");
     if (!t) return;
     t.textContent = msg;
     t.classList.remove("out");
     t.classList.add("show");
-    if (SYNC_TOAST_TIMER) clearTimeout(SYNC_TOAST_TIMER);
-    SYNC_TOAST_TIMER = setTimeout(function () {
+    if (TOAST_TIMER) clearTimeout(TOAST_TIMER);
+    TOAST_TIMER = setTimeout(function () {
       t.classList.remove("show");
       t.classList.add("out");
-      SYNC_TOAST_TIMER = null;
+      TOAST_TIMER = null;
     }, ms || 2800);
   }
+  function toastSync(msg, ms) { showToast(msg, ms || 2800); }
 
   // [sync] 状态圆点：灰=未配置 黄=同步中 绿=已同步 红=失败 蓝=有本地改动待推送
   function setSyncState(kind, text) {
@@ -19855,6 +19898,29 @@
       c[path[0]][path[1]] = node.value;
     }
     return c;
+  }
+
+  /* [v3.53.0] change 只在 #syncBody 上绑一次：这个容器是持久的，每次打开抽屉
+     renderSyncDrawer() 都会重建里面的表单，但容器本身不换。原来的写法每次都往同一个节点上
+     再加一个 change 监听，开关 5 次后改一项设置就会触发 7 次保存与刷新（实测），
+     且随打开次数线性增长——既是重复请求，也是缓慢的监听器泄漏。
+     表单字段本身每次重建，值仍是现读 DOM，所以「只绑一次」不影响配置正确性。 */
+  var SYNC_BODY_BOUND = false;
+  function bindSyncBodyOnce() {
+    if (SYNC_BODY_BOUND) return;
+    SYNC_BODY_BOUND = true;
+    syncBodyEl.addEventListener("change", onSyncFormChange);
+  }
+  function onSyncFormChange() {
+    saveSyncCfg(collectSyncForm());
+    var nowReady = !!syncAdapter();
+    refreshSyncDot();
+    renderSyncStat();
+    // [sync] 首次配置完成后自动「先拉 → 合并 → 再推」
+    if (nowReady && !SYNC_WAS_READY) {
+      SYNC_WAS_READY = true;
+      syncNow("full");
+    }
   }
 
   function renderSyncStat() {
@@ -20023,17 +20089,7 @@
     // [update] 「应用更新」区块与同步配置合并渲染（抽屉每次打开都重建，值从 review.update.* 读取）
     syncBodyEl.appendChild(renderUpdateSection());
 
-    syncBodyEl.addEventListener("change", function () {
-      saveSyncCfg(collectSyncForm());
-      var nowReady = !!syncAdapter();
-      refreshSyncDot();
-      renderSyncStat();
-      // [sync] 首次配置完成后自动「先拉 → 合并 → 再推」
-      if (nowReady && !SYNC_WAS_READY) {
-        SYNC_WAS_READY = true;
-        syncNow("full");
-      }
-    });
+    bindSyncBodyOnce();
 
     SYNC_WAS_READY = !!syncAdapter();
     renderSyncStat();
@@ -20283,7 +20339,9 @@
     var path = String(u || "").split("#")[0].split("?")[0];
     var parts = path.split("/"), last = parts[parts.length - 1] || "";
     try { last = decodeURIComponent(last); } catch (e) {}
-    if (!last || last.indexOf(".") === -1) last = "review.html";
+    /* [v3.53.0] 默认文件名跟着改名走：文件 2026-11-02 已由 review.html 改为 study.html，
+       这里还留着旧名，更新地址没有扩展名时会把新版本存成 review.html。 */
+    if (!last || last.indexOf(".") === -1) last = "study.html";
     return last.replace(/[\\/:*?"<>|\s]+/g, "_");
   }
 
@@ -21772,8 +21830,10 @@
       .replace(/\s+/g, "");
     return t.slice(0, 20);
   }
+  /* [v3.53.0] 选项数组为空时不能当选择题：那样会渲染出 0 个按钮，题面在、答案点不了，
+     只能靠「跳过」走出去。空数组回落到填空 / 自评，与「没有选项」的数据同义。 */
   function qzModeOf(item) {
-    if (item.o) return "opt";
+    if (item.o && item.o.length) return "opt";
     if (item.e !== undefined) return "fill";
     return "self";
   }
@@ -21794,10 +21854,12 @@
     var q = qzData();
     if (!q[sid]) q[sid] = {};
     var old = q[sid][key], t = nowMs();
+    /* [v3.53.0] old.n / old.w 必须过 qzNum：导入或手改过的快照里这两个字段可能是字符串，
+       直接相加会变成 "3" + 1 = "31"，错误率与累计错次随即失真，并随同步扩散到其它设备。 */
     var rec = {
       r: right ? 1 : 0,
-      n: (old && old.n ? old.n : 0) + 1,
-      w: (old && old.w ? old.w : 0) + (right ? 0 : 1),
+      n: qzNum(old && old.n) + 1,
+      w: qzNum(old && old.w) + (right ? 0 : 1),
       t: t
     };
     if (old && typeof old.wa === "string") {      // 历史错答：原样带过来
@@ -22949,7 +23011,7 @@
     var wm = r && r.wm, wa = (r && typeof r.wa === "string") ? r.wa : "";
     if (wm === "self" || wm === "fill" || wm === "opt") return (wm === "opt" && !wa) ? "self" : wm;
     if (!wa) return "self";
-    return (it && it.o) ? "opt" : "fill";
+    return (it && it.o && it.o.length) ? "opt" : "fill";
   }
   function qzWrongLabel(r, it) {
     var kind = qzWrongKind(r, it), fixed = r && r.r === 1;
@@ -23097,6 +23159,9 @@
 
   function qzEnter() {
     QZ.on = true;
+    /* [v3.53.0] 预估档属于「这一组」，不跟着科目走：切科后仍留着上一科的预估，
+       收尾时会在用户没选的情况下往新科目写一条校准记录。 */
+    if (QZ.sid !== SID) QZ.est = -1;
     QZ.sid = SID;
     QZ.pool = qzPoolOf(SID);
     if (typeof kpGoHide === "function") kpGoHide();   // [qzkp] 进刷题页，悬浮入口收起
@@ -24208,17 +24273,11 @@
   function qzHideToast() {
     var t = byId("toast");
     if (!t) return;
+    if (TOAST_TIMER) { clearTimeout(TOAST_TIMER); TOAST_TIMER = null; }
     t.classList.remove("show", "out");
   }
 
-  function qzToast(msg) {
-    var t = byId("toast");
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.remove("out");
-    t.classList.add("show");
-    setTimeout(function () { t.classList.remove("show"); t.classList.add("out"); }, 2400);
-  }
+  function qzToast(msg) { showToast(msg, 2400); }
 
   /* ================= [user] 自建科目：本地资料层 ================= */
   /* 设计取舍：内置四科来自内嵌数据（build 管线生成、check.mjs 校验），
@@ -24421,8 +24480,12 @@
       a.download = fname;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      /* [v3.53.0] 不能点完立刻摘掉：Firefox 要等元素仍在文档中时才处理 download，
+         立即 removeChild 会让下载静默失败。这里与 exportSnapFile 用同一种延迟清理。 */
+      setTimeout(function () {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      }, 600);
       return true;
     } catch (e) { return false; }
   }
@@ -25219,7 +25282,13 @@
   function lnCodeDiff(ex) {
     var ta = byId("lnCode"), out = byId("lnDiffOut");
     if (!ta || !out) return;
-    var u = lnNormLines(ta.value), t = lnCodeOf(ex), rows = lnDiff(u, t);
+    var u = lnNormLines(ta.value), t = lnCodeOf(ex);
+    /* [v3.53.0] 行级 LCS 是 O(n×m)：把上万行粘进来会让页面卡住好几秒。
+       答案本身通常不到 50 行，这里给两边各 400 行的上限，超出只比前 400 行并如实说明。 */
+    var LIMIT = 400, cut = false;
+    if (u.length > LIMIT) { u = u.slice(0, LIMIT); cut = true; }
+    if (t.length > LIMIT) { t = t.slice(0, LIMIT); cut = true; }
+    var rows = lnDiff(u, t);
     var same = 0, bad = 0, i, r, h = "";
     for (i = 0; i < rows.length; i++) {
       if (rows[i].k === "same") same++;
@@ -25235,7 +25304,8 @@
       (bad === 0 ? '<b>逐行一致</b>：这段代码你可以脱离提示写出来，这一拍算过。'
         : '共 ' + rows.length + ' 行，一致 <b>' + same + '</b> 行，差异 <b>' + bad + '</b> 行。' +
         '绿色带 + 的是答案里有、你缺的行；红色带 - 的是你多写或写法不同的行。' +
-        '缩进算差异——Python 靠它分层。') + '</p>';
+        '缩进算差异——Python 靠它分层。') +
+      (cut ? ' 行数超过 ' + LIMIT + ' 行，只比对了前 ' + LIMIT + ' 行。' : '') + '</p>';
   }
 
   /* ---------- 收尾：只看教学进度与练习入口，不重复判分 ---------- */
@@ -25445,26 +25515,18 @@
     renderAll();
     renderDailyQuote();
 
-    if (movedV3) {
-      var tst = byId("toast");
-      if (tst) {
-        tst.textContent = "已把 " + movedV3 + " 条旧的「已掌握」勾选迁移到新知识点";
-        setTimeout(function () { tst.classList.add("show"); }, 250);
-        setTimeout(function () { tst.classList.remove("show"); tst.classList.add("out"); }, 3600);
-      }
-    }
-
-    if (!lsGet(LS_HINT, false)) {
-      var toast = byId("toast");
+    /* [v3.53.0] 启动提示改走 showToast：以前两段各拿裸 setTimeout 抢同一个 #toast，
+       同时触发时后一段会把前一段的文案覆盖掉，各自的定时器还会互相提前关闭。
+       现在合并成一条：有迁移就先报迁移，否则报首次提示，共用同一个定时器。 */
+    var bootHint = byId("toast") ? byId("toast").textContent : "";
+    var firstHint = !lsGet(LS_HINT, false);
+    if (firstHint) lsSet(LS_HINT, true);
+    if (movedV3 || firstHint) {
       setTimeout(function () {
         if (document.body.className.indexOf("mode-quiz") >= 0) return;
-        toast.classList.add("show");
+        if (movedV3) showToast("已把 " + movedV3 + " 条旧的「已掌握」勾选迁移到新知识点", 3400);
+        else showToast(bootHint, 3000);
       }, 250);
-      setTimeout(function () {
-        toast.classList.remove("show");
-        toast.classList.add("out");
-      }, 3200);
-      lsSet(LS_HINT, true);
     }
   } catch (err) {
     formatBad();
