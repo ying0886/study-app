@@ -3,9 +3,20 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.48.0
-  DATA_VERSION: 2026-11-04
-  本次变更: （3.49.0）教学层内容推广到三科 A 级点（高数本期跳过），并把内容源拆成按科目分文件——
+  APP_VERSION: 3.50.0
+  DATA_VERSION: 2026-11-05
+  本次变更: （3.50.0）给「太干货了，看不懂」补一道入口坡：新增白话层（一句话定位 + 生活比喻）与术语条——
+             ①起因：a2s8-04（B 级、无 teach）一张卡里 180 字并列十个术语，读者从半山腰起步；
+               B/C 级点没有 teach 条目，「从零学」不渲染，只剩这段浓缩文字可读；
+             ②一句话层：新增 _build/brief/*.json（按科目分文件）→ k.brief（≤46 字）/ k.analogy（≤70 字），
+               由 build.mjs 合并注入，渲染在卡片所有入口之前；不写 subjects.json，重跑 gen-v3 不会冲掉；
+             ③术语条：k.terms（3–5 个）在正文首次出现处加虚下划线，点开就地展开一句人话；
+               切分前先跳过 \(...\) 公式段，避免把 \frac 之类的命令从中间劈开；
+             ④反馈：卡片底部「这段没看懂」→ snap.plain{sid:{kid:{n,t}}}，五处补齐、合并取 n 的 max，
+               不进掌握度/三态/进度；刷题设置页新增「我最卡的点」清单，按次数排序 = 下一批补讲义的工单；
+             ⑤范围：本次只铺 a2s8-04 与 a2s8-02 两个样板点（205 个点走回落，卡片与 3.49 完全一致），
+               验证通过后再按 snap.plain 的次数铺量；题库、判分、快照 schema 2、三态一律未动。
+  上次变更: （3.49.0）教学层内容推广到三科 A 级点（高数本期跳过），并把内容源拆成按科目分文件——
              ①规模：teach 条目 8 → 85，覆盖计算机 26/26、化学 17/17、思政 42/42 的 A 级点；
                高数 16 个 A 级点按你的要求先不做，仍走「动作 + 完整解析」回落，随时可补；
              ②拆分：_build/teach.json → _build/teach/{ai,chem,law1..4}.json；同一考点被两份文件重复定义时
@@ -564,7 +575,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.49.0">
+<meta name="app-version" content="3.50.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2529,6 +2540,33 @@
   @media print{
     .learn{display:none !important}
   }
+  /* ---------- [brief] 一句话层与术语条（v3.50.0） ---------- */
+  /* 卡片顶部先给「这是什么」：正文是一段 200 字的浓缩，没有这一句，读者第一章就卡住 */
+  .kbrief{margin:10px 0 4px;padding:10px 12px 9px;background:var(--accentBg);
+    border-left:3px solid var(--accent);border-radius:0 6px 6px 0}
+  .kbrief>p{margin:0;font-size:14.5px;line-height:1.7;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+  .kbrief>p.ana{margin-top:6px;font-size:12.5px;line-height:1.65;font-weight:400;color:var(--ink2)}
+  .kbrief>p.ana>b{font-weight:600}
+  /* 术语：虚下划线表示「可以点」，点开就地长出解释，不弹浮层、不打断阅读 */
+  .trm{border-bottom:1px dashed var(--accent);cursor:pointer;color:inherit}
+  .trm:hover{background:var(--accentBg)}
+  .trm:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:2px}
+  .trm[aria-expanded="true"]{background:var(--accentBg);border-bottom-style:solid}
+  .trmdef{display:block;margin:5px 0 3px;padding:6px 10px;font-size:12.5px;line-height:1.65;
+    background:var(--chip);border-left:2px solid var(--line2);border-radius:0 4px 4px 0;color:var(--ink2)}
+  .trmdef[hidden]{display:none}
+  .trmdef>b{font-weight:600;color:var(--ink2);letter-spacing:.02em}
+  /* 「这段没看懂」：只做记录，不动掌握度——所以外观要克制，不能跟主按钮抢眼 */
+  .kpfoot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0 6px;
+    border-top:1px solid var(--line);margin-top:4px}
+  .plainfb{font:inherit;font-size:12.5px;line-height:1.4;padding:7px 12px;
+    border:1px solid var(--line2);border-radius:6px;background:transparent;color:var(--ink2);cursor:pointer}
+  .plainfb:hover{border-color:var(--ink2);color:var(--ink)}
+  .plainfb[disabled]{opacity:.8;cursor:default;border-style:dashed;color:var(--ink2)}
+  .kpfoot .fbhint{font-size:11.5px;line-height:1.6;color:var(--ink2)}
+  @media print{ .kbrief{background:#fff !important;border-left-color:#888}
+    .plainfb{display:none !important} }
+
 </style>
 </head>
 <body>
@@ -2644,6 +2682,8 @@
       <div class="qweak" id="qGuess"></div>
       <!-- [weak] 薄弱知识点：由刷题记录按知识点聚合，点一行直接练这一组 -->
       <div class="qweak" id="qWeak"></div>
+      <!-- [brief] 我最卡的点：卡片上点过「这段没看懂」的考点，按次数倒序，用来定下一批补讲义的顺序 -->
+      <div class="qweak" id="qPlain"></div>
       <p class="qnote">选择/判断点选项即判分，填空输入后回车核对；计算、简答、编程题作答后看解析自评。<br>
         键盘：A–D 或 1–4 选答，空格跳过，回车下一步，G 标记蒙对，H 标记「想了很久」，Esc 退出。<br>
         「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。</p>
@@ -10711,6 +10751,13 @@
               "画图流程固定四步：准备数据 → plot 或 scatter → xlabel 与 ylabel → show。",
               "最容易错的是选 pylab，或者以为图会自动弹出（忘了 plt.show()）。"
             ]
+          },
+          "brief": "Matplotlib 只干一件事：把数据画成图；日常只用 pyplot 这一套接口。",
+          "analogy": "像打印机：数据进去、图出来，pyplot 就是那个唯一的出纸口。",
+          "terms": {
+            "pyplot": "Matplotlib 的绘图接口，习惯写成 plt：plt.plot() 画图、plt.show() 显示",
+            "rcParams": "全局配置字典，中文字体与负号显示都改这里",
+            "pylab": "旧式混合命名空间，别用；考试里常作错误选项"
           }
         },
         {
@@ -10829,7 +10876,16 @@
               "q": "把一维数组 x 变成\"一列\"以适配 sklearn 的 fit，应写 x.reshape(（　）, （　）)；其中 -1 表示（　）。",
               "a": "<p><b>答案：</b>-1；1；该维度由 NumPy 自动推断</p><p>reshape(-1, 1) 表示\"列数为 1、行数自动算\"，把形状 (n,) 变成 (n,1)；sklearn 的 fit 要求 X 是二维（样本数×特征数），一维数组会报错。</p><p>易错：写成 reshape(1,-1) 变成一行，样本数就错了；或以为 reshape 会修改原数组（它返回新视图/新数组）。</p>"
             }
-          ]
+          ],
+          "brief": "NumPy 就是一张能整块一起算数的表格：把「一个个算」变成「整张表一起算」。",
+          "analogy": "Python 列表像散装购物袋，只装不加工；ndarray 像整板巧克力，掰一块、整板一起动。",
+          "terms": {
+            "ndarray": "NumPy 的容器类型：同类型元素的多维数组，整块参与运算",
+            "向量化": "不写 for 循环，a+1 直接对每个元素各加 1",
+            "广播": "形状不同的数组按规则自动对齐后再运算，不是报错",
+            "reshape": "改形状、不改内容；reshape(-1, 1) 里的 -1 表示「这一维你自己算」",
+            "sklearn": "机器学习库，喂进去的 X 必须是二维：行是样本、列是特征"
+          }
         },
         {
           "id": "a3s1-01",
@@ -16109,8 +16165,8 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.49.0";
-  var DATA_VERSION = "2026-11-04";
+  var APP_VERSION = "3.50.0";
+  var DATA_VERSION = "2026-11-05";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
   var APP_NAME = "学习软件";
@@ -17030,6 +17086,10 @@
 
     var body = el("div", "body");
 
+    /* [brief] 一句话层放在所有入口之前：先读懂「这是什么」，再决定点哪个按钮。
+       没有 brief 的点不渲染这一块，卡片与 v3.49 完全一致。 */
+    if (k.brief) body.appendChild(buildBrief(k));
+
     /* [qzkp] 卡片第一行：从零学（有 teach.w 才出现）+ 练这个考点，两个入口并存 */
     var entryBar = buildEntryBar(k);
     if (entryBar) body.appendChild(entryBar);
@@ -17048,7 +17108,11 @@
     if (sigRow.childNodes.length) body.appendChild(sigRow);
 
     var rcl = recallOn(SID);
-    if (k.content) body.appendChild(rcl ? recallGate(field("内容", k.content), "内容") : field("内容", k.content));
+    if (k.content) {
+      /* [brief] 有术语表就走术语版（首次出现可点开）；没有就还是原来那条 field() */
+      var cfield = kpTermField("内容", k.content, k.terms);
+      body.appendChild(rcl ? recallGate(cfield, "内容") : cfield);
+    }
     if (k.trap) body.appendChild(rcl ? recallGate(field("易错点", k.trap, "warn"), "易错点") : field("易错点", k.trap, "warn"));
     if (k.action) body.appendChild(rcl ? recallGate(field("最低拿分动作", k.action, "action"), "动作") : field("最低拿分动作", k.action, "action"));
     if (k.methods && k.methods.length) body.appendChild(buildMethods(k));
@@ -17079,6 +17143,8 @@
     body.appendChild(noteBoxKp);
     if (hasNote(SID, noteKeyKp(k.id))) { d.classList.add("hasnote"); noteBoxKp.hidden = false; }
     if (k.examples && k.examples.length) body.appendChild(buildExamples(k));
+    /* [brief] 读到这儿还没通，就留个记号——只影响「下一批先补哪个点」，不碰掌握度 */
+    body.appendChild(buildPlainFb(k));
     d.addEventListener("toggle", function () {
       if (d.open && d.getAttribute("data-math") !== "1") {
         renderMath(d);
@@ -17302,6 +17368,135 @@
     p.innerHTML = safeHtml(text);
     f.appendChild(p);
     return f;
+  }
+
+  /* ===== [brief] 一句话层与术语条（v3.50.0）=====
+     问题：content 是「学过之后」的浓缩（中位 209 字），一上来就是十个术语并列，
+     没有 brief 的卡片等于让人直接从半山腰起步。这里补两样东西：
+     ①卡片顶部一句人话定位（k.brief）+ 一句生活比喻（k.analogy）；
+     ②正文里术语的首次出现加虚下划线，点开就地给一句解释（k.terms）。
+     数据来自 _build/brief/*.json，由 build.mjs 合并注入；没有 brief 的点完全按老样子渲染。 */
+  function buildBrief(k) {
+    var box = el("div", "kbrief");
+    box.appendChild(txt("p", "", k.brief));
+    if (k.analogy) {
+      var a = el("p", "ana");
+      a.appendChild(txt("b", "", "打个比方："));
+      a.appendChild(document.createTextNode(k.analogy));
+      box.appendChild(a);
+    }
+    return box;
+  }
+
+  /* 公式段整段跳过：术语 key 若正好落在 \(...\) 里面被切开，KaTeX 会直接渲染失败。
+     返回该位置起的公式片段长度，0 表示这里不是公式开头。 */
+  function kpMathSpan(src, i) {
+    if (src.charAt(i) !== "\\") return 0;
+    var c = src.charAt(i + 1), j;
+    if (c === "(") { j = src.indexOf("\\)", i + 2); if (j > 0) return j + 2 - i; }
+    if (c === "[") { j = src.indexOf("\\]", i + 2); if (j > 0) return j + 2 - i; }
+    return 0;
+  }
+  function kpWordChar(ch) { return ch ? /[A-Za-z0-9_]/.test(ch) : false; }
+
+  /* 术语只标「首次出现」：同一个词满屏下划线，反而更难看懂。
+     拉丁字母术语加词边界判断——size 不能命中 resize 里的那一段。 */
+  function kpTermHtml(text, terms) {
+    var src = String(text == null ? "" : text), keys = [], t, i;
+    if (terms) for (t in terms) if (has0(terms, t) && t) keys.push(t);
+    if (!keys.length) return safeHtml(src);
+    keys.sort(function (a, b) { return b.length - a.length; });   // 长的先试，免得 reshape 被 shape 抢走
+
+    var used = {}, out = "", last = 0, n = src.length;
+    i = 0;
+    while (i < n) {
+      var span = kpMathSpan(src, i);
+      if (span) { i += span; continue; }
+      var hit = "", j, key;
+      for (j = 0; j < keys.length; j++) {
+        key = keys[j];
+        if (used[key]) continue;
+        if (src.substr(i, key.length) !== key) continue;
+        if (kpWordChar(key.charAt(0)) && i > 0 && kpWordChar(src.charAt(i - 1))) continue;
+        if (kpWordChar(key.charAt(key.length - 1)) && kpWordChar(src.charAt(i + key.length))) continue;
+        hit = key;
+        break;
+      }
+      if (!hit) { i++; continue; }
+      used[hit] = 1;
+      /* 解释块是 display:block，会把句子切断。术语后面紧跟「（…）」时，把这段括号一起让过去，
+         解释排在括号之后——否则会出现「核心是 ndarray / [释义] / （同类型元素的多维数组）」。 */
+      var end = i + hit.length, cut = end, close;
+      if (src.charAt(end) === "（") {
+        close = src.indexOf("）", end);
+        if (close > 0 && close - end <= 30) {
+          cut = close + 1;
+          if (src.charAt(cut) === "。") cut++;   // 句号也跟着走，别让它孤零零掉到解释后面
+        }
+      }
+      out += safeHtml(src.slice(last, i));
+      out += '<span class="trm" role="button" tabindex="0" aria-expanded="false" data-t="' +
+        escText(hit) + '">' + escText(hit) + '</span>';
+      out += safeHtml(src.slice(end, cut));
+      out += '<span class="trmdef" hidden><b>释义</b> ' + safeHtml(terms[hit]) + '</span>';
+      i = cut;
+      last = cut;
+    }
+    return out + safeHtml(src.slice(last));
+  }
+
+  function kpBindTerm(sp) {
+    /* 用 nextSibling 找定义块，不靠 id：同一张卡里可能有多个同名术语（虽然只标首次） */
+    var defOf = function () {
+      var d = sp.nextSibling;
+      while (d && !(d.nodeType === 1 && /(^|\s)trmdef(\s|$)/.test(d.className))) d = d.nextSibling;
+      return d;
+    };
+    var toggle = function (ev) {
+      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      var d = defOf();
+      if (!d) return;
+      d.hidden = !d.hidden;
+      sp.setAttribute("aria-expanded", d.hidden ? "false" : "true");
+    };
+    sp.addEventListener("click", toggle);
+    sp.addEventListener("keydown", function (ev) {
+      var k = ev.key || "";
+      if (k === "Enter" || k === " " || k === "Spacebar") toggle(ev);
+    });
+  }
+
+  /* 正文栏：有 terms 就走术语版，没有就走原来那条零风险的 field() */
+  function kpTermField(label, text, terms) {
+    if (!terms) return field(label, text);
+    var f = el("div", "field");
+    f.appendChild(txt("span", "k", label));
+    var p = el("p");
+    p.innerHTML = kpTermHtml(text, terms);
+    var ts = p.querySelectorAll(".trm"), i;
+    for (i = 0; i < ts.length; i++) kpBindTerm(ts[i]);
+    f.appendChild(p);
+    return f;
+  }
+
+  /* 「这段没看懂」：只记次数与时刻，不动掌握度、不进三态、不改进度——
+     它回答的是「内容写得好不好」，不是「我会不会」。 */
+  function buildPlainFb(k) {
+    var row = el("div", "kpfoot");
+    var b = el("button", "plainfb");
+    b.type = "button";
+    var n = plainCount(SID, k.id);
+    b.textContent = n ? "还是没看懂（已记 " + n + " 次）" : "这段没看懂，记一下";
+    b.title = "只做记录：攒够次数我会先给这个考点补白话讲解；不影响掌握度、进度与三态";
+    b.addEventListener("click", function () {
+      var c = plainMark(SID, k.id);
+      b.textContent = "已记下（第 " + c + " 次）· 会优先补这一课";
+      b.disabled = true;
+      qzRenderPlain();
+    });
+    row.appendChild(b);
+    row.appendChild(txt("span", "fbhint", "看不懂就点一下，不会扣分"));
+    return row;
   }
 
   /* ---------------- 渲染 ---------------- */
@@ -17769,7 +17964,7 @@
   function cloneSnap(o) { return JSON.parse(JSON.stringify(o)); }
 
   function emptySnap() {
-    return { schema: 2, deviceId: deviceInfo().id, updatedAt: nowMs(), mastery: {}, favs: {}, prefs: {}, notes: {}, quiz: {}, quizReset: {}, calib: {}, teach: {} };
+    return { schema: 2, deviceId: deviceInfo().id, updatedAt: nowMs(), mastery: {}, favs: {}, prefs: {}, notes: {}, quiz: {}, quizReset: {}, calib: {}, teach: {}, plain: {} };
   }
 
   /* [sync] 快照可选字段 quiz（刷题记录）：缺省补 {}，不升 schema——
@@ -17792,6 +17987,27 @@
     if (!o || typeof o !== "object") return o;
     if (!o.teach || typeof o.teach !== "object" || Object.prototype.toString.call(o.teach) === "[object Array]") o.teach = {};
     return o;
+  }
+  /* [brief] 可选字段 plain（「没看懂」计数，按科目/知识点分组）：结构 {sid:{kid:{n,t}}}。
+     与 teach 同一路子：缺省补 {}、不升 schema、旧档没有这个字段也必须判为合法。
+     刻意不写进 quiz/mastery：它衡量的是「内容讲得清不清楚」，不是「这个点会不会」。 */
+  function snapFillPlain(o) {
+    if (!o || typeof o !== "object") return o;
+    if (!o.plain || typeof o.plain !== "object" || Object.prototype.toString.call(o.plain) === "[object Array]") o.plain = {};
+    return o;
+  }
+  function plainEntry(sid, kid) { return entryOf(snap().plain, sid, kid); }
+  function plainCount(sid, kid) { var e = plainEntry(sid, kid); return e ? qzNum(e.n) : 0; }
+  function plainMark(sid, kid) {
+    var s = snap(), t = nowMs();
+    if (!s.plain[sid]) s.plain[sid] = {};
+    var e = s.plain[sid][kid] || { n: 0, t: 0 };
+    e.n = qzNum(e.n) + 1;
+    e.t = t;
+    s.plain[sid][kid] = e;
+    commitSnap(t);
+    syncMarkDirty();
+    return e.n;
   }
   function entryOf(map, sid, kid) { var m = map && map[sid]; return m && m[kid] ? m[kid] : null; }
 
@@ -17825,11 +18041,13 @@
       // 补齐可选字段后就落盘一次：导出的 JSON 结构完整，也避免每次启动重复补
       var needFill = !(o.notes && typeof o.notes === "object") ||
         !(o.quiz && typeof o.quiz === "object") || !o.deviceId ||
-        !(o.calib && typeof o.calib === "object") || !(o.teach && typeof o.teach === "object");
+        !(o.calib && typeof o.calib === "object") || !(o.teach && typeof o.teach === "object") ||
+        !(o.plain && typeof o.plain === "object");
       o = snapFillNotes(o);   // [note] 旧档没有 notes 就补 {}，不报错
       o = snapFillQuiz(o);    // [sync] 旧档没有 quiz 就补 {}，旧数据结构不变
       o = snapFillCalib(o);   // [calib] 旧档没有 calib 就补 {}
       o = snapFillTeach(o);   // [learn] 旧档没有 teach 就补 {}
+      o = snapFillPlain(o);   // [brief] 旧档没有 plain 就补 {}
       if (!o.deviceId) o.deviceId = deviceInfo().id;
       if (needFill) lsSet(LS_SNAP, o);
       return o;
@@ -18111,10 +18329,49 @@
     return true;
   }
 
+  /* [brief] 「没看懂」计数合并：{sid:{kid:{n,t}}}。
+     n 取 max 而不是相加——同一台设备点两次后同步到另一台，回来时不该变成 4 次；
+     同 n 取更晚的 t。与 mergeTeachMap 一样幂等、可交换。 */
+  function mergePlainMap(L, R) {
+    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b;
+    L = L || {}; R = R || {};
+    for (sid in L) if (has0(L, sid)) sids[sid] = 1;
+    for (sid in R) if (has0(R, sid)) sids[sid] = 1;
+    for (sid in sids) if (has0(sids, sid)) {
+      lm = L[sid] || {}; rm = R[sid] || {}; m = {};
+      for (kid in lm) if (has0(lm, kid)) m[kid] = { n: qzNum(lm[kid].n), t: normT(lm[kid].t) };
+      for (kid in rm) if (has0(rm, kid)) {
+        a = m[kid]; b = rm[kid];
+        if (!a) { m[kid] = { n: qzNum(b.n), t: normT(b.t) }; continue; }
+        if (qzNum(b.n) > a.n) { a.n = qzNum(b.n); a.t = normT(b.t); }
+        else if (qzNum(b.n) === a.n && normT(b.t) > a.t) { a.t = normT(b.t); }
+      }
+      out[sid] = m;
+    }
+    return out;
+  }
+  function samePlain(A, B) {
+    A = A || {}; B = B || {};
+    var sid, kid, x, y;
+    for (sid in A) if (has0(A, sid)) {
+      x = A[sid] || {}; y = (B && B[sid]) || {};
+      for (kid in x) if (has0(x, kid)) {
+        if (!has0(y, kid)) return false;
+        if (qzNum(x[kid].n) !== qzNum(y[kid].n)) return false;
+        if (normT(x[kid].t) !== normT(y[kid].t)) return false;
+      }
+    }
+    for (sid in B) if (has0(B, sid)) {
+      y = B[sid] || {}; x = (A && A[sid]) || {};
+      for (kid in y) if (has0(y, kid)) if (!has0(x, kid)) return false;
+    }
+    return true;
+  }
+
   function mergeSnapshot(local, remote) {
     if (!local && !remote) return null;
-    if (!local) return snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(remote)))));
-    if (!remote) return snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(local)))));
+    if (!local) return snapFillPlain(snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(remote))))));
+    if (!remote) return snapFillPlain(snapFillTeach(snapFillCalib(snapFillQuiz(snapFillNotes(cloneSnap(local))))));
     var lt = normT(local.updatedAt), rt = normT(remote.updatedAt);
     var newer = lt >= rt ? local : remote;
     var qr = mergeResetMap(local.quizReset, remote.quizReset);   // [sync] 先合并重置时刻，再据此过滤
@@ -18129,6 +18386,7 @@
       quizReset: qr,
       calib: mergeCalibMap(local.calib, remote.calib),   // [calib] 校准历史按科目取并集
       teach: mergeTeachMap(local.teach, remote.teach),   // [learn] 教学进度按点取 max
+      plain: mergePlainMap(local.plain, remote.plain),   // [brief] 「没看懂」计数按点取 max
       prefs: {}
     };
     var p = newer.prefs || {};
@@ -18163,6 +18421,7 @@
     if (!sameQuiz(a.quiz, b.quiz)) return false;   // [sync] 刷题记录也参与一致性判定
     if (!sameCalib(a.calib, b.calib)) return false;   // [calib] 校准历史变化也要能触发回推
     if (!sameTeach(a.teach, b.teach)) return false;   // [learn] 教学进度变化也要能触发回推
+    if (!samePlain(a.plain, b.plain)) return false;   // [brief] 「没看懂」计数变化也要能触发回推
     return sameNotes(a.notes, b.notes);   // [note]
   }
 
@@ -21678,6 +21937,74 @@
     }
   }
 
+  /* ---------- [brief]「我最卡的点」 ---------- */
+  /* 与「薄弱知识点」分开：那边是「做错了」，这边是「读不懂」。
+     同一个人同一张卡可以反复点，所以按次数排序就是「下一批先补哪几个点」的现成工单。 */
+  function qzPlainList(sid) {
+    var m = (snap().plain || {})[sid] || {}, sub = qzSubject(sid), out = [], kid, kp;
+    if (!sub) return out;
+    for (kid in m) if (has0(m, kid)) {
+      kp = qzKpOf(sub, kid);
+      if (!kp) continue;
+      out.push({
+        kid: kid, name: kp.name || kid, section: kp.section || "", level: kp.level || "",
+        n: qzNum(m[kid].n), t: normT(m[kid].t), hasBrief: !!kp.brief
+      });
+    }
+    out.sort(function (a, b) { return b.n - a.n || b.t - a.t; });
+    return out;
+  }
+  function qzPlainItem(p, rank) {
+    var li = el("li", "qwitem");
+    var b = el("button", "qwrow");
+    b.type = "button";
+    b.setAttribute("data-kid", p.kid);
+    b.title = p.name + "：点过 " + p.n + " 次「没看懂」" +
+      (p.t ? "（最近 " + qzWhen(p.t) + "）" : "") + "。点击跳到这张卡片";
+    b.appendChild(txt("span", "qwrank", String(rank + 1)));
+    var main = el("span", "qwmain");
+    main.appendChild(txt("span", "qwname", p.name));
+    main.appendChild(txt("span", "qwmeta",
+      (p.section ? p.section + " · " : "") + (p.level ? p.level + " 级 · " : "") +
+      (p.t ? "最近 " + qzWhen(p.t) : "—")));
+    b.appendChild(main);
+    var st = el("span", "qwstat");
+    st.appendChild(txt("span", "qwerr", "没看懂 " + p.n + " 次"));
+    st.appendChild(txt("span", "qwrate", p.hasBrief ? "已补白话" : "待补白话"));
+    b.appendChild(st);
+    b.addEventListener("click", function () { qzJumpCard(p.kid); });
+    li.appendChild(b);
+    return li;
+  }
+  function qzRenderPlain() {
+    var box = byId("qPlain");
+    if (!box) return;
+    if (!QZ_READY) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = "";
+    if (!QZ.sid) QZ.sid = SID;
+    var list = qzPlainList(QZ.sid), i, sum = 0;
+    for (i = 0; i < list.length; i++) sum += list[i].n;
+
+    var head = el("div", "qwhead");
+    head.appendChild(txt("h3", "", "我最卡的点"));
+    head.appendChild(txt("span", "qwsum", list.length
+      ? list.length + " 个考点 · 累计 " + sum + " 次" : "还没有记录"));
+    box.appendChild(head);
+
+    if (!list.length) {
+      box.appendChild(txt("p", "qwhint",
+        "读到不懂的地方，点卡片底部「这段没看懂」就会记在这里。攒够次数先给这些点补白话讲解——" +
+        "它记的是「内容写得清不清楚」，不是「我会不会」，所以不影响掌握度与进度。"));
+      return;
+    }
+    box.appendChild(txt("p", "qwhint",
+      "按点过的次数排序。标「已补白话」的已经有一句话定位与术语解释，其余排进下一批。点一行跳到这张卡片。"));
+    var ul = el("ul", "qwlist");
+    for (i = 0; i < list.length; i++) ul.appendChild(qzPlainItem(list[i], i));
+    box.appendChild(ul);
+  }
+
   /* ---------- 掌握程度面板 ---------- */
   /* 分组默认展开状态：危险/薄弱/待复核（rank ≤ 2）展开，其余折叠；
      用户点过的组记在 QZ_MAS_OPEN，重绘后保持。 */
@@ -22257,6 +22584,7 @@
     qzRenderMastery(); // [mastery] 掌握程度分组：每次进设置页都按最新记录重算
     qzRenderGuess();  // [guess] 蒙对清单：每次进设置页都按最新标记重算
     qzRenderWeak();   // [weak] 每次进设置页都按最新记录重算
+    qzRenderPlain();  // [brief] 「没看懂」清单：与薄弱知识点分开——那是做错，这是读不懂
   }
 
   function qzOption(value, label) {
@@ -24384,6 +24712,12 @@
       };
     },
     diff: lnDiff, code: lnCodeOf, mis: lnMisOf, has: lnHasTeach
+  };
+  /* [brief] 自测出口：术语切分、计数与清单。prog 类调试口都用当前 sid，切科目后要重新取 */
+  window.__reviewBrief = {
+    term: kpTermHtml, fb: buildPlainFb,
+    count: plainCount, mark: plainMark, list: qzPlainList, render: qzRenderPlain,
+    has: function (kid) { var k = findPoint(kid); return !!(k && k.brief); }
   };
 
   /* ---------- 绑定 ---------- */
