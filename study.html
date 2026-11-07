@@ -3,9 +3,21 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.55.0
+  APP_VERSION: 3.56.0
   DATA_VERSION: 2026-11-06
-  本次变更: （3.55.0）刷题引擎支持多选题：勾选 + 提交，全部选对才算对——
+  本次变更: （3.56.0）刷题顺序新增「随机刷没做过的」——
+             ①位置：「顺序」下拉里紧跟在「只刷没做过的」后面，与其余 8 项并列展示；
+             ②实现：复用既有两段逻辑——「只刷没做过的」负责过滤、「随机打乱」负责洗牌，没有为它单写第三套；
+               有记录就算做过（做对做错都跳过），与「只刷没做过的」口径完全一致；
+             ③统计：顶部那行在选中它（或「只刷没做过的」）时多报一句「这组还剩 N 题没做」——否则那行永远
+               写着「共 251 题」，看不出这组实际只会出 250 道；N 按当前章节/题型筛选实时重算，三个下拉一改
+               就跟着变（原先 change 只更新配置、不刷新统计，是这次一并补上的）；
+             ④进度：开刷后的「1 / N」分母就是这批未做的题数，进度条同步；做完退出再进，剩余数自动递减，
+               做过的题不会再出现；
+             ⑤边界：一道没剩下时不再笼统说「换个筛选试试」，改成「本科目已经没有没做过的题了——换个章节，
+               或到设置里重置进度」；
+             ⑥数据与判定未动：题库 665 题、A/B 分级、teach/brief、三态着色、判分口径、快照 schema 2 一律未改。
+  上次变更: （3.55.0）刷题引擎支持多选题：勾选 + 提交，全部选对才算对——
              ①起因：上一版把思政期中题库接进来时，86 道多选因为引擎只支持单选下标而搁置（当时明确写了"暂时没做"），
                本次补齐，85 道多选入库（题库里 16 与 15 的题干完全重复，只留一道）；
              ②数据结构：单选/判断仍是 {q,o,a}，多选新增 ma（答案下标数组），靠 ma 是否存在分派题型——
@@ -659,7 +671,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.55.0">
+<meta name="app-version" content="3.56.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2760,6 +2772,7 @@
           <option value="hesitate">只刷不踏实的题</option>
           <option value="guess">只刷蒙对的题</option>
           <option value="new">只刷没做过的</option>
+          <option value="newrand">随机刷没做过的</option>
         </select>
       </div>
       <div class="qrow qbuttons">
@@ -17622,7 +17635,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.55.0";
+  var APP_VERSION = "3.56.0";
   var DATA_VERSION = "2026-11-06";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -24100,9 +24113,24 @@
     }
     orderSel.value = QZ.cfg.order;
 
-    var done = 0, right = 0, wrong = 0;
+    qzRenderStat();   // [newrand] 顶部统计单独刷新，顺序一改就要重算剩余量
+
+    qzRenderCalib();  // [calib] 预估档与校准历史：按科目独立
+    qzRenderPred();   // [pred] 期末分数估算：按科目独立
+    qzRenderMastery(); // [mastery] 掌握程度分组：每次进设置页都按最新记录重算
+    qzRenderGuess();  // [guess] 蒙对清单：每次进设置页都按最新标记重算
+    qzRenderWeak();   // [weak] 每次进设置页都按最新记录重算
+    qzRenderPlain();  // [brief] 「没看懂」清单：与薄弱知识点分开——那是做错，这是读不懂
+  }
+
+  /* 设置页顶部那行统计。单独抽出来是因为「顺序」一改就得重算：
+     选了「只刷没做过的 / 随机刷没做过的」时还要多报一句还剩多少——
+     否则那行永远写着「共 251 题」，看不出这组实际只出 234 道。 */
+  function qzRenderStat() {
+    var pool = QZ.pool, i, r;
+    var sub = qzSubject(QZ.sid), done = 0, right = 0, wrong = 0;
     for (i = 0; i < pool.length; i++) {
-      var r = qzRecOf(QZ.sid, pool[i].key);
+      r = qzRecOf(QZ.sid, pool[i].key);
       if (!r) continue;
       done++;
       if (r.r === 1) right++; else wrong++;
@@ -24112,18 +24140,28 @@
     var hcount = qzHesCount(QZ.sid);     // [hesitate] 手动标记的「想了很久」题数
     var mlist = qzMasteryList(QZ.sid), mcnt = 0;   // [mastery] 已掌握考点数（全部答对且无蒙对）
     for (i = 0; i < mlist.length; i++) if (mlist[i].tier.key === "master") mcnt++;
-    byId("qStat").textContent = (sub ? sub.name : "") + " · 共 " + pool.length + " 题 · 已做 " +
+    var txt = (sub ? sub.name : "") + " · 共 " + pool.length + " 题 · 已做 " +
       done + (done ? "（正确率 " + rate + "%，错 " + wrong + "）" : "") +
       (gcount ? " · 蒙对 " + gcount + " 道" : "") +
       (hcount ? " · 不踏实 " + hcount + " 道" : "") +
       (mlist.length ? " · 已掌握 " + mcnt + "/" + mlist.length + " 个考点" : "");
+    /* [newrand] 这两个模式只出没做过的题，额外报一句剩余量 */
+    if (QZ.cfg.order === "new" || QZ.cfg.order === "newrand") {
+      txt += " · 这组还剩 " + qzRestCount() + " 题没做";
+    }
+    byId("qStat").textContent = txt;
+  }
 
-    qzRenderCalib();  // [calib] 预估档与校准历史：按科目独立
-    qzRenderPred();   // [pred] 期末分数估算：按科目独立
-    qzRenderMastery(); // [mastery] 掌握程度分组：每次进设置页都按最新记录重算
-    qzRenderGuess();  // [guess] 蒙对清单：每次进设置页都按最新标记重算
-    qzRenderWeak();   // [weak] 每次进设置页都按最新记录重算
-    qzRenderPlain();  // [brief] 「没看懂」清单：与薄弱知识点分开——那是做错，这是读不懂
+  /* 当前章节/题型筛选下还没做过的题数（只看筛选，不看顺序——否则会和顺序自己绕成环） */
+  function qzRestCount() {
+    var pool = QZ.pool, n = 0, i;
+    for (i = 0; i < pool.length; i++) {
+      if (QZ.cfg.sec !== "全部" && pool[i].kp.section !== QZ.cfg.sec) continue;
+      if (QZ.cfg.type !== "全部" && pool[i].ex.type !== QZ.cfg.type) continue;
+      if (qzRecOf(QZ.sid, pool[i].key)) continue;
+      n++;
+    }
+    return n;
   }
 
   function qzOption(value, label) {
@@ -24150,15 +24188,20 @@
 
   function qzBuildList() {
     var pool = QZ.pool, out = [], i, r;
+    /* [newrand]「随机刷没做过的」=「只刷没做过的」+「随机打乱」，
+       所以这两段判断都收编成变量，别为它单写第三套逻辑 */
+    var ord = QZ.cfg.order;
+    var onlyNew = (ord === "new" || ord === "newrand");
+    var shuffled = (ord === "rand" || ord === "newrand");
     for (i = 0; i < pool.length; i++) {
       var q = pool[i];
       if (QZ.cfg.sec !== "全部" && q.kp.section !== QZ.cfg.sec) continue;
       if (QZ.cfg.type !== "全部" && q.ex.type !== QZ.cfg.type) continue;
       r = qzRecOf(QZ.sid, q.key);
-      if (QZ.cfg.order === "wrong" && !(r && r.r === 0)) continue;
-      if (QZ.cfg.order === "new" && r) continue;
-      if (QZ.cfg.order === "guess" && !qzGuessOn(r)) continue;   // [guess] 只刷手动标记的蒙对题
-      if (QZ.cfg.order === "hesitate" && !qzHesOn(r)) continue;  // [hesitate] 只刷手动标了「想了很久」的题
+      if (ord === "wrong" && !(r && r.r === 0)) continue;
+      if (onlyNew && r) continue;                              // 有记录就算做过（对错都跳过）
+      if (ord === "guess" && !qzGuessOn(r)) continue;   // [guess] 只刷手动标记的蒙对题
+      if (ord === "hesitate" && !qzHesOn(r)) continue;  // [hesitate] 只刷手动标了「想了很久」的题
       out.push(q);
     }
     if (QZ.cfg.order === "spaced") {
@@ -24194,7 +24237,7 @@
         return ra - rb;
       });
     }
-    if (QZ.cfg.order === "rand") {
+    if (shuffled) {
       for (i = out.length - 1; i > 0; i--) {
         var k = Math.floor(Math.random() * (i + 1));
         var tmp = out[i]; out[i] = out[k]; out[k] = tmp;
@@ -24206,7 +24249,12 @@
   /* ---------- 答题 ---------- */
   function qzStartRun(list, title, kpId) {
     if (!list.length) {
-      qzToast("没有符合条件的题目，换个筛选试试");
+      /* [newrand] 没做过的题刷完了要给准话，别只说「换个筛选试试」 */
+      if (QZ.cfg.order === "new" || QZ.cfg.order === "newrand") {
+        qzToast("本科目已经没有没做过的题了——换个章节，或到设置里重置进度");
+      } else {
+        qzToast("没有符合条件的题目，换个筛选试试");
+      }
       return;
     }
     QZ.list = list;
@@ -26368,9 +26416,10 @@
       QZ.cfg.order = byId("qOrderSel").value;
       qzStartRun(qzBuildList(), "");
     });
-    byId("qSecSel").addEventListener("change", function () { QZ.cfg.sec = this.value; });
-    byId("qTypeSel").addEventListener("change", function () { QZ.cfg.type = this.value; });
-    byId("qOrderSel").addEventListener("change", function () { QZ.cfg.order = this.value; });
+    /* 三个筛选都会改变「还剩多少没做」，所以改完都要重算顶部统计 */
+    byId("qSecSel").addEventListener("change", function () { QZ.cfg.sec = this.value; qzRenderStat(); });
+    byId("qTypeSel").addEventListener("change", function () { QZ.cfg.type = this.value; qzRenderStat(); });
+    byId("qOrderSel").addEventListener("change", function () { QZ.cfg.order = this.value; qzRenderStat(); });
     byId("qReset").addEventListener("click", function () {
       if (!window.confirm("重置「" + (qzSubject(QZ.sid) || {}).name + "」的刷题进度、错题记录与「蒙对」标记？此操作不可撤销。")) return;
       var qzAll = qzData(), qzSnap = snap();
