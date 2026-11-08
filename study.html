@@ -3,9 +3,24 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.56.0
+  APP_VERSION: 3.57.0
   DATA_VERSION: 2026-11-06
-  本次变更: （3.56.0）刷题顺序新增「随机刷没做过的」——
+  本次变更: （3.57.0）「曾错过」升成一级筛选，并新增跨科目的「曾错过题目集」——
+             ①口径：累计答错次数 w > 0，或还留着历史上那次错答（wa ＋ wt），即「答错过一次就算」，
+               与卡片头部「错过 N 道」同一批记录；已改正的题目仍留在集合里，只标「已改正」；
+             ②筛选条：新增 chip「曾错过 N」（N＝本科目答错过的题数），比普通 chip 高一层级——琥珀描边 +
+               常驻圆点 + 计数徽标；选中时整颗实底反白并带一圈外发光，与「只看未掌握」的浅色选中态区分开；
+               它算进「筛选（n）」计数、跟着「清除筛选」一起复位，切科目按既有习惯一并复位；
+             ③过滤行为：勾上后只留「有曾错题」的知识点（已改正的也算），与级别/形态/来源/笔记/掌握度是「与」关系；
+               知识点集合在 renderGroups 里一次算好，不逐张卡片重扫题库；
+             ④题目集：chip 右侧新增「题目集 N 道 ›」（N＝全部科目合计），点开右侧抽屉，按科目分组列出每道题——
+               题号 / 题型 / 知识点 / 题干 / 「错 X 次 · 最近」/ 未改正或已改正 / 解析折叠；
+               每组默认先列 6 道可展开全部，组头「练这些」整组重练，行内「练这道」只练这一道、「看卡片」定位到该题；
+               跨科目的行会自动先切科目，走的是既有的切科目与 gotoCard 路径；
+             ⑤同步：不新增存储、不升 schema，抽屉每次打开（以及打开着时任何重绘）都从 snap.quiz 现算，
+               于是本机刷题、重置、他端同步下来的记录都会即时反映到集合与计数上；
+             ⑥未动：判分口径、掌握度六档、三态着色、进度、收藏、笔记、搜索、目录、打印、同步快照格式一律未改。
+  上次变更: （3.56.0）刷题顺序新增「随机刷没做过的」——
              ①位置：「顺序」下拉里紧跟在「只刷没做过的」后面，与其余 8 项并列展示；
              ②实现：复用既有两段逻辑——「只刷没做过的」负责过滤、「随机打乱」负责洗牌，没有为它单写第三套；
                有记录就算做过（做对做错都跳过），与「只刷没做过的」口径完全一致；
@@ -671,7 +686,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.56.0">
+<meta name="app-version" content="3.57.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -702,6 +717,9 @@
     --warnBg:#F7F1E4;
     --act:#2F5E7A;
     --actBg:#E9F0F5;
+    /* [ever] 「曾错过」选中态的实底与反白字：浅色用琥珀实底 + 纸白字 */
+    --everOn:#A9762F;
+    --everInk:#FFFDF8;
   }
   html[data-theme="dark"]{
     --bg:#1A1A1A;
@@ -723,6 +741,9 @@
     --warnBg:#2B2519;
     --act:#8FB4CC;
     --actBg:#1E2830;
+    /* [ever] 深色下琥珀偏亮，实底上改用深墨字，保证对比度 */
+    --everOn:#D2A45F;
+    --everInk:#211C14;
   }
   @media (prefers-color-scheme:dark){
     html:not([data-theme="light"]){
@@ -1256,6 +1277,87 @@
   .favdel{color:var(--ink2);margin-left:auto}
   .favdel:hover{color:var(--ink)}
   .favempty{padding:24px 2px;color:var(--ink2);font-size:13.5px;line-height:1.85}
+
+  /* ---------- [ever] 曾错过 ---------- */
+  /* 筛选条上的「曾错过」比普通 chip 高一层级：琥珀描边 + 常驻圆点 + 计数徽标；
+     选中时整颗实底反白并带一圈外发光，和「只看未掌握」这类浅色选中态区分开。 */
+  .chip-ever{
+    position:relative;padding-left:27px;
+    border-color:var(--warn);color:var(--ink);
+  }
+  .chip-ever::before{
+    content:"";position:absolute;left:12px;top:50%;width:6px;height:6px;margin-top:-3px;
+    border-radius:50%;background:var(--warn);transition:background .15s ease;
+  }
+  .chip-ever .evern{
+    margin-left:7px;min-width:18px;padding:0 5px;border-radius:9px;
+    background:var(--warnBg);color:var(--warn);
+    font-size:11px;line-height:16px;font-variant-numeric:tabular-nums;font-weight:600;
+  }
+  .chip-ever:hover{background:var(--warnBg);border-color:var(--warn)}
+  .chip-ever[aria-pressed="true"]{
+    background:var(--everOn);border-color:var(--everOn);color:var(--everInk);font-weight:600;
+    box-shadow:0 0 0 3px var(--warnBg);
+  }
+  .chip-ever[aria-pressed="true"]::before{background:var(--everInk)}
+  .chip-ever[aria-pressed="true"] .evern{background:rgba(255,255,255,.28);color:var(--everInk)}
+  .chip-ever[data-empty="true"]{opacity:.55}
+  .chip-ever[data-empty="true"]:hover{background:transparent}
+  /* 紧跟其后的「题目集」入口：平时是低调文字链，chip 选中后升级成实底胶囊 */
+  .everlink{
+    display:inline-flex;align-items:center;gap:4px;
+    min-height:44px;padding:0 10px;
+    background:transparent;border:1px solid transparent;border-radius:6px;
+    font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer;
+    text-decoration:underline;text-underline-offset:3px;
+  }
+  .everlink:hover{color:var(--ink);background:var(--chip)}
+  .everlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .everlink[data-on="true"]{
+    background:var(--warnBg);border-color:var(--warn);color:var(--warn);
+    font-weight:600;text-decoration:none;
+  }
+  .everlink[hidden]{display:none}
+
+  /* 题目集抽屉：按科目分组，科目头 + 题卡；复用 .favitem/.favq 的骨架 */
+  .evsub{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin:18px 0 9px;padding:0 0 7px;border-bottom:1px solid var(--line);
+  }
+  .evsub:first-child{margin-top:2px}
+  .evsub .evsname{font-size:13px;font-weight:600;color:var(--ink)}
+  .evsub .evsn{
+    padding:0 6px;border-radius:8px;background:var(--warnBg);color:var(--warn);
+    font-size:11.5px;line-height:17px;font-variant-numeric:tabular-nums;
+  }
+  .evsub .evsfix{font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .evsub .evsgo{
+    margin-left:auto;min-height:28px;padding:0 9px;
+    background:transparent;border:1px solid var(--line2);border-radius:5px;
+    font:inherit;font-size:11.5px;color:var(--ink2);cursor:pointer;
+  }
+  .evsub .evsgo:hover{border-color:var(--warn);color:var(--warn);background:var(--warnBg)}
+  .evtag{
+    margin-left:auto;padding:1px 7px;border-radius:9px;
+    font-size:11px;line-height:16px;
+    background:var(--warnBg);color:var(--warn);
+  }
+  .evtag.fixed{background:transparent;border:1px solid var(--line2);color:var(--ink2)}
+  .evmeta{margin:5px 0 0;font-size:11.5px;color:var(--ink2);line-height:1.6}
+  .evmeta b{color:var(--warn);font-weight:600;font-variant-numeric:tabular-nums}
+  .evmeta b.ok{color:var(--ink2);font-weight:400}
+  .evacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+  .evacts button{
+    padding:4px 10px;min-height:32px;
+    background:transparent;border:1px solid var(--line2);border-radius:5px;
+    font:inherit;font-size:12px;color:var(--ink2);cursor:pointer;
+  }
+  .evacts button:hover{border-color:var(--accent);color:var(--accent);background:var(--accentBg)}
+  .evacts .evgo{
+    border-color:var(--warn);background:var(--warnBg);color:var(--warn);font-weight:600;
+  }
+  .evacts .evgo:hover{background:var(--everOn);border-color:var(--everOn);color:var(--everInk)}
+
   body.drawerOpen{overflow:hidden}
 
   /* [sync] 同步按钮圆点与设置面板 */
@@ -1391,6 +1493,9 @@
     .facet{gap:4px 6px}
     .flabel{width:auto;font-size:11.5px;flex:0 0 auto}
     .chip{min-height:32px;padding:0 10px;font-size:12.5px}
+    .chip-ever{padding-left:24px}          /* [ever] 窄屏保留圆点位置，不吃掉文字 */
+    .chip-ever::before{left:10px}
+    .everlink{min-height:32px;padding:0 8px;font-size:12px}
 
     /* 级别分组收紧 */
     .grp{margin-top:12px;padding-top:8px}
@@ -2862,6 +2967,17 @@
     <button class="btn small" id="favClose" type="button">关闭</button>
   </div>
   <div class="drawerBody" id="favBody"></div>
+</aside>
+
+<!-- [ever] 曾错过题目集：跨科目汇总所有「答错过一次」的题，按科目分组，可单练/跳卡片 -->
+<div class="drawerScrim" id="everScrim" hidden></div>
+<aside class="drawer" id="everDrawer" role="dialog" aria-modal="true" aria-labelledby="everTitle" tabindex="-1" hidden>
+  <div class="drawerHead">
+    <h2 id="everTitle">曾错过题目集</h2>
+    <span class="drawerHint" id="everHint"></span>
+    <button class="btn small" id="everClose" type="button">关闭</button>
+  </div>
+  <div class="drawerBody" id="everBody"></div>
 </aside>
 
 <!-- [data] 资料库：导入科目/资料、导出当前科目、管理自建科目 -->
@@ -17635,7 +17751,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.56.0";
+  var APP_VERSION = "3.57.0";
   var DATA_VERSION = "2026-11-06";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -17843,7 +17959,8 @@
   applyUserSubjects();
 
   var SID = null;
-  var filters = { level: "全部", form: "全部", source: "全部", notes: "全部", mastery: "全部" };
+  var filters = { level: "全部", form: "全部", source: "全部", notes: "全部", mastery: "全部",
+                  ever: "全部" };   /* [ever] 「曾错过」维度：全部 / 曾错过 */
   var filterOpen = false;   // 筛选面板展开状态，跨 renderFilters 重渲染保持
 
   function cur() {
@@ -18340,6 +18457,7 @@
     filters.source = "全部";
     filters.notes = "全部";
     filters.mastery = "全部";
+    filters.ever = "全部";   // [ever]
   }
 
   function sourcesOf(list) {
@@ -18362,6 +18480,7 @@
     if (filters.source !== "全部") n++;
     if (filters.notes !== "全部") n++;
     if (filters.mastery !== "全部") n++;
+    if (filters.ever !== "全部") n++;          // [ever]
     return n;
   }
 
@@ -18428,6 +18547,42 @@
       renderGroups();
     });
     bar.appendChild(onlyUndone);
+
+    /* [ever] 「曾错过」：本科目所有「答错过一次」的题（已改正的也算）。
+       它跟「只看未掌握」不是一个层级——用琥珀描边 + 常驻圆点 + 计数压过普通 chip，
+       选中时整颗实底反白；右边紧跟的「题目集」入口同时升级，两块一起说明现在在看什么。 */
+    var everN = qzEverCount(SID);
+    var everTotal = qzEverTotal();
+    var everChip = txt("button", "chip chip-ever", "曾错过");
+    everChip.type = "button";
+    everChip.id = "everChip";
+    everChip.setAttribute("aria-pressed", filters.ever === "曾错过" ? "true" : "false");
+    everChip.setAttribute("data-empty", everN ? "false" : "true");
+    everChip.title = everN
+      ? "只看有曾错题的知识点（本科目 " + everN + " 道题答错过，已改正的也算）"
+      : "本科目还没有答错过的题";
+    var everNum = txt("span", "evern", String(everN));
+    everNum.setAttribute("aria-hidden", "true");
+    everChip.appendChild(everNum);
+    everChip.addEventListener("click", function () {
+      /* 计数现取：刷题回来计数变了，但这条闭包还是渲染那一刻的，不能拿旧值判空 */
+      if (!qzEverCount(SID)) { showToast("本科目还没有答错过的题——刷一组题，答错的会自动收进来", 2600); return; }
+      filters.ever = (filters.ever === "曾错过") ? "全部" : "曾错过";
+      renderFilters();
+      renderGroups();
+    });
+    bar.appendChild(everChip);
+
+    var everLink = txt("button", "everlink", "题目集 " + everTotal + " 道 ›");
+    everLink.type = "button";
+    everLink.id = "everOpen";
+    everLink.setAttribute("data-on", filters.ever === "曾错过" ? "true" : "false");
+    everLink.setAttribute("aria-haspopup", "dialog");
+    everLink.setAttribute("aria-expanded", "false");
+    everLink.title = "打开「曾错过题目集」：全部科目 " + everTotal + " 道答错过的题，按科目分组";
+    if (!everTotal) everLink.hidden = true;
+    everLink.addEventListener("click", function () { openEver(); });
+    bar.appendChild(everLink);
 
     var inlineProg = txt("span", "inlineprog", "");
     inlineProg.id = "inlineProg";
@@ -18994,20 +19149,24 @@
   }
 
   /* ---------------- 渲染 ---------------- */
-  function matches(k) {
+  function matches(k, everKids) {
     if (filters.mastery === "未掌握" && isCountedDone(k.id)) return false;
     if (filters.mastery === "已掌握" && !isCountedDone(k.id)) return false;
     if (filters.level !== "全部" && k.level !== filters.level) return false;
     if (filters.form !== "全部" && (k.forms || []).indexOf(filters.form) === -1) return false;
     if (filters.source !== "全部" && k.source !== filters.source) return false;
     if (filters.notes === "有笔记" && !noteCardHas(k.id)) return false;   // [note]
+    /* [ever] 只看「有曾错题」的知识点：集合在 renderGroups 里一次算好传进来，
+       不在这里逐张卡片重扫题库（46～68 张卡 × 665 题会明显拖慢筛选点击） */
+    if (filters.ever === "曾错过" && !(everKids && everKids[k.id])) return false;
     return true;
   }
 
   function renderGroups() {
     var box = byId("groups");
     box.innerHTML = "";
-    var list = pts().filter(matches);
+    var everKids = (filters.ever === "曾错过") ? qzEverKids(SID) : null;   // [ever]
+    var list = pts().filter(function (k) { return matches(k, everKids); });
 
     if (!pts().length) {
       box.appendChild(txt("p", "empty", "该科目暂无知识点。"));
@@ -19167,6 +19326,7 @@
     renderFavBadge();
     applyRecallBtn();   // [recall] 切科目后按钮状态跟着变（按科目独立）
     if (!favDrawer.hidden) renderFavDrawer();
+    if (everDrawer && !everDrawer.hidden) renderEverDrawer();   // [ever] 抽屉开着就按最新记录重算
     if (navDrawer && !navDrawer.hidden) renderNav();
     /* [qzkp] 整表重建后旧卡片已作废，悬浮入口一并收起（新卡片自带卡片内按钮） */
     if (typeof kpGoHide === "function") kpGoHide();
@@ -19387,6 +19547,258 @@
   favScrim.addEventListener("click", function () { closeFav(); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !favDrawer.hidden) closeFav();
+  });
+
+  /* ================== [ever] 曾错过题目集 ================== */
+  /* 口径：累计答错次数 w > 0，或留着历史上那次错答（wa ＋ wt）——「答错过一次就算」，
+     与卡片头部「错过 N 道」同一批记录；「未改正」只看最近一次是否答对（r !== 1）。
+     不新增存储、不升 schema：每次打开抽屉都从 snap.quiz 现算，
+     所以集合内容与题目状态（含另一端同步回来的记录）天然同步，不需要额外维护。 */
+  var everDrawer = byId("everDrawer");
+  var everScrim = byId("everScrim");
+  var everBody = byId("everBody");
+  var everHint = byId("everHint");
+  var everCloseBtn = byId("everClose");
+  var EVER_LIMIT = 6;        // 每个科目默认先列 6 道，与「蒙对 / 薄弱知识点」的节奏一致
+  var EVER_OPEN = {};        // sid → 该科目是否已展开全部
+
+  function qzEverRec(rec) {
+    if (!rec) return false;
+    if (qzNum(rec.w) > 0) return true;
+    return typeof rec.wa === "string" && !!normT(rec.wt);
+  }
+
+  /* 单个科目的曾错过清单：未改正在前 → 累计错次多 → 最近错过的时间新（与薄弱知识点同序） */
+  function qzEverList(sid) {
+    var idx = qzIdx()[sid], sub = qzSubject(sid), out = [];
+    if (!idx || !sub) return out;
+    for (var kid in idx) {
+      if (!has0(idx, kid)) continue;
+      var kp = qzKpOf(sub, kid), m = idx[kid];
+      if (!kp || !m) continue;
+      for (var i in m) {
+        if (!has0(m, i)) continue;
+        var rec = qzRecOf(sid, m[i]);
+        if (!qzEverRec(rec)) continue;
+        var it = qzItem(sid, kid, i);
+        var ex = kp.examples && kp.examples[parseInt(i, 10)];
+        if (!it || !ex) continue;
+        out.push({
+          sid: sid, kid: kid, i: parseInt(i, 10), key: m[i],
+          it: it, ex: ex, kp: kp,
+          n: qzNum(rec.w),                                  // 累计答错次数
+          open: rec.r === 1 ? 0 : 1,                        // 1 = 最近一次仍错（未改正）
+          ts: qzNum(rec.t)
+        });
+      }
+    }
+    out.sort(function (a, b) {
+      if (b.open !== a.open) return b.open - a.open;
+      if (b.n !== a.n) return b.n - a.n;
+      return b.ts - a.ts;
+    });
+    return out;
+  }
+  function qzEverCount(sid) { return qzEverList(sid).length; }
+  /* 给卡片筛选用：只关心「这个知识点下有没有曾错的题」，返回 {kid:1} */
+  function qzEverKids(sid) {
+    var list = qzEverList(sid), set = {};
+    for (var i = 0; i < list.length; i++) set[list[i].kid] = 1;
+    return set;
+  }
+  /* 全部科目合计（筛选条上「题目集 N 道」用），只数不排序，省掉一轮 sort */
+  function qzEverTotal() {
+    var total = 0, subs = DATA.subjects || [];
+    for (var s = 0; s < subs.length; s++) total += qzEverCount(subs[s].id);
+    return total;
+  }
+
+  /* 刷题回来后只改这两个节点（计数、可点状态、题目集链接），不重建整条 filterbar——
+     重建会把「筛选」折叠状态和焦点位置打回默认，属于对既有逻辑的无谓改动。 */
+  function qzRefreshEver() {
+    var chip = byId("everChip"), link = byId("everOpen");
+    if (!chip) return;
+    var n = qzEverCount(SID), total = qzEverTotal();
+    var num = chip.querySelector(".evern");
+    if (num) num.textContent = String(n);
+    chip.setAttribute("data-empty", n ? "false" : "true");
+    chip.title = n
+      ? "只看有曾错题的知识点（本科目 " + n + " 道题答错过，已改正的也算）"
+      : "本科目还没有答错过的题";
+    if (link) {
+      link.textContent = "题目集 " + total + " 道 ›";
+      link.hidden = !total;
+      link.setAttribute("data-on", filters.ever === "曾错过" ? "true" : "false");
+      link.title = "打开「曾错过题目集」：全部科目 " + total + " 道答错过的题，按科目分组";
+    }
+    if (everDrawer && !everDrawer.hidden) renderEverDrawer();
+  }
+
+  /* 切科目：与点科目 tab 完全同一条路径（写 active、复位筛选、整页重绘） */
+  function switchSubject(sid) {
+    if (!sid || sid === SID) return;
+    SID = sid;
+    lsSet(LS_ACTIVE, SID);
+    resetFilters();
+    renderAll();
+  }
+
+  function qzEverItem(g) {
+    var box = el("div", "favitem");
+
+    var head = el("div", "favkp");
+    head.appendChild(txt("span", "fid", g.kid));
+    head.appendChild(txt("span", "", (g.ex.type || "") + " · 第 " + (g.i + 1) + " 题"));
+    head.appendChild(txt("span", "evtag" + (g.open ? "" : " fixed"), g.open ? "未改正" : "已改正"));
+    head.appendChild(txt("span", "fname", g.kp.name || ""));
+    box.appendChild(head);
+
+    var q = el("p", "favq");
+    q.innerHTML = codeAwareHtml(g.it.q || g.ex.q || "");
+    box.appendChild(q);
+
+    var meta = el("p", "evmeta");
+    var em = txt("b", g.open ? "" : "ok", "错 " + g.n + " 次");
+    meta.appendChild(em);
+    meta.appendChild(txt("span", "", " · 最近 " + qzWhen(g.ts) + (g.open ? "" : " · 已改对")));
+    box.appendChild(meta);
+
+    var acts = el("div", "evacts");
+    var go = txt("button", "evgo", "练这道");
+    go.type = "button";
+    go.title = "只重练这一道（进入刷题模式）";
+    go.addEventListener("click", function () { everPractice(g); });
+    acts.appendChild(go);
+
+    var jump = txt("button", "", "看卡片");
+    jump.type = "button";
+    jump.title = "跳到「" + (g.kp.name || g.kid) + "」的知识点卡片，定位到这道例题";
+    jump.addEventListener("click", function () { everGoto(g); });
+    acts.appendChild(jump);
+
+    box.appendChild(acts);
+
+    var sol = el("details", "exsol");
+    var sm = el("summary");
+    sm.appendChild(txt("span", "caret2", "▸"));
+    sm.appendChild(txt("span", "", "看解析"));
+    sol.appendChild(sm);
+    var a = el("div", "sol");
+    a.innerHTML = codeAwareHtml(g.ex.a || "");
+    sol.appendChild(a);
+    box.appendChild(sol);
+
+    return box;
+  }
+
+  /* 「练这道」「看卡片」都可能跨科目：先切过去，再走既有的刷题 / 定位逻辑 */
+  function everPractice(g) {
+    closeEver(true);
+    switchSubject(g.sid);
+    qzEnter();
+    qzStartRun([{ it: g.it, kp: g.kp, ex: g.ex, key: g.key }], "曾错过的题");
+  }
+  function everGoto(g) {
+    closeEver(true);
+    switchSubject(g.sid);
+    gotoCard(g.kid, g.i);
+  }
+
+  function renderEverDrawer() {
+    everBody.innerHTML = "";
+    var subs = DATA.subjects || [], blocks = [], total = 0, openSum = 0, i;
+
+    for (i = 0; i < subs.length; i++) {
+      var list = qzEverList(subs[i].id);
+      if (!list.length) continue;
+      var opens = 0, j;
+      for (j = 0; j < list.length; j++) if (list[j].open) opens++;
+      total += list.length;
+      openSum += opens;
+      blocks.push({ sub: subs[i], list: list, opens: opens });
+    }
+
+    everHint.textContent = total
+      ? "全部科目 · 共 " + total + " 道 · 未改正 " + openSum + " 道"
+      : "暂无";
+
+    if (!total) {
+      everBody.appendChild(txt("p", "favempty",
+        "还没有答错过的题。刷题时答错的题会自动收进这里——已改正的也留着，方便回头再看一遍。" +
+        "换个科目看看，或者先去刷一组题。"));
+      return;
+    }
+
+    everBody.appendChild(txt("p", "qwhint",
+      "这里汇总全部科目里「答错过至少一次」的题，已改正的也在——按「未改正 → 错得多 → 最近错过」排序。" +
+      "「练这道」直接重练，「看卡片」跳到对应知识点（会自动切科目）。"));
+
+    for (i = 0; i < blocks.length; i++) appendEverBlock(blocks[i]);
+    renderMath(everBody);   // 题干与解析里的 \(...\) 必须渲染，否则会露出 LaTeX 源码
+  }
+
+  function appendEverBlock(blk) {
+    var head = el("div", "evsub");
+    head.appendChild(txt("span", "evsname", blk.sub.name || blk.sub.id));
+    head.appendChild(txt("span", "evsn", blk.list.length + " 道"));
+    head.appendChild(txt("span", "evsfix",
+      blk.opens ? "未改正 " + blk.opens : "全部已改正"));
+
+    var all = txt("button", "evsgo", "练这些");
+    all.type = "button";
+    all.title = "把这 " + blk.list.length + " 道题重练一遍（切到该科目）";
+    all.addEventListener("click", function () {
+      closeEver(true);
+      switchSubject(blk.sub.id);
+      qzEnter();
+      qzStartRun(blk.list.slice(), "曾错过的题");
+    });
+    head.appendChild(all);
+    everBody.appendChild(head);
+
+    var expanded = !!EVER_OPEN[blk.sub.id];
+    var show = expanded ? blk.list.length : Math.min(blk.list.length, EVER_LIMIT);
+    for (var k = 0; k < show; k++) everBody.appendChild(qzEverItem(blk.list[k]));
+
+    if (blk.list.length > EVER_LIMIT) {
+      var more = txt("button", "qwmore",
+        expanded ? "收起，只看前 " + EVER_LIMIT + " 道" : "展开全部 " + blk.list.length + " 道");
+      more.type = "button";
+      more.addEventListener("click", function () {
+        EVER_OPEN[blk.sub.id] = !EVER_OPEN[blk.sub.id];
+        renderEverDrawer();
+      });
+      everBody.appendChild(more);
+    }
+  }
+
+  function openEver() {
+    closeOverview();
+    closeFav(true);
+    renderEverDrawer();
+    everScrim.hidden = false;
+    everDrawer.hidden = false;
+    document.body.classList.add("drawerOpen");
+    var link = byId("everOpen");
+    if (link) link.setAttribute("aria-expanded", "true");
+    everCloseBtn.focus();
+  }
+  function closeEver(keepFocus) {
+    if (everDrawer.hidden) return;
+    everDrawer.hidden = true;
+    everScrim.hidden = true;
+    document.body.classList.remove("drawerOpen");
+    var link = byId("everOpen");
+    if (link) link.setAttribute("aria-expanded", "false");
+    if (!keepFocus) {
+      var link = byId("everOpen");
+      if (link) link.focus();
+    }
+  }
+  everCloseBtn.addEventListener("click", function () { closeEver(); });
+  everScrim.addEventListener("click", function () { closeEver(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !everDrawer.hidden) closeEver();
   });
 
   /* [sync] ================= 存档快照 v2 · 数据层 ================= */
@@ -22199,6 +22611,7 @@
     if (!favDrawer.hidden) trapFocusIn(favDrawer, e);
     else if (!syncDrawer.hidden) trapFocusIn(syncDrawer, e);
     else if (!navDrawer.hidden) trapFocusIn(navDrawer, e);
+    else if (everDrawer && !everDrawer.hidden) trapFocusIn(everDrawer, e);   // [ever]
   });
 
   /* ---------------- 全局快捷键（Ctrl/Cmd+K 与 /） ---------------- */
@@ -24026,6 +24439,7 @@
     closeMore();
     closeNav(true);
     closeFav(true);
+    if (typeof closeEver === "function") closeEver(true);   // [ever] 进刷题页时收起曾错过题目集
     closeOverview();
     if (dataDrawer && !dataDrawer.hidden) dataShut(true);   // [data] 抽屉的遮罩会挡住刷题页的点击
     qzHideToast();
@@ -24042,6 +24456,8 @@
     QZ.state = "setup";
     qzRefreshMarks();   // [quiz] 回到卡片模式前把整科目的标识与正确率重算一遍
     if (typeof refreshInlineProg === "function") refreshInlineProg();
+    /* [ever] 这一组改变了错题记录：筛选条上的「曾错过」计数与题目集入口跟着更新 */
+    if (typeof qzRefreshEver === "function") qzRefreshEver();
     /* [sync] 刷题期间攒下的改动在这里统一推一次（详见 qzSaveRec 的说明） */
     if (QZ.dirty) { QZ.dirty = false; syncMarkDirty(); }
     /* [learn] 这一组是从教学页开出来的：回到收尾页看掌握度变化，而不是直接掉回卡片 */
@@ -26481,7 +26897,11 @@
     /* [reflect] 反思写入 */
     reflectSave: qzReflectSave,
     /* [recall] 回忆模式 */
-    recallOn: recallOn
+    recallOn: recallOn,
+    /* [ever] 曾错过：筛选集合、题目集抽屉、跨科目跳转 */
+    everList: qzEverList, everCount: qzEverCount, everKids: qzEverKids, everTotal: qzEverTotal,
+    everRec: qzEverRec, renderEver: renderEverDrawer, openEver: openEver, closeEver: closeEver,
+    switchSubject: switchSubject
   };
 
   /* ---------------- 启动 ---------------- */
