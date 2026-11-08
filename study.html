@@ -3,9 +3,23 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.59.0
+  APP_VERSION: 3.60.0
   DATA_VERSION: 2026-11-06
-  本次变更: （3.59.0）答题阶段先藏章节名，答完（或看解析）再展开——
+  本次变更: （3.60.0）刷题选项随机排布（可开关）——
+             ①开关：刷题设置页「顺序」下面新增「选项」一行，默认开；状态存快照 prefs.shuf（可选字段，
+               缺省当开），关掉后按题目原始 A、B、C… 顺序显示，适合对着讲义看；
+             ②洗牌口径：每次「渲染一道题」重洗一次——换题、上一题/下一题、回看已答过的题、重练，
+               看到的顺序都不会是上一次那个；三项洗成原序时强制换头两项，保证「每题都换过」；
+             ③判定按内容：每个选项按钮带 data-i＝原始下标，点选、勾选、标色、键盘作答全部先翻回原始下标
+               再与 a / ma 比，屏幕位置换了也不影响对错；
+             ④显示：字母按显示位置重编（永远 A、B、C…），「正确答案 X / 你选了 X」这类提示一律翻成屏幕字母；
+               小结的「本次作答」也存了一份当时的屏幕字母（rec.wrong.disp）；
+             ⑤记录不改口径：落库的 wa 仍是原始字母，卡片上「上次答错 B. xxx」照样能取到正确的选项文本；
+               解析是按原始顺序写的，所以洗牌时解析顶部会加一句「A/B/C 指原始顺序，以内容为准」；
+             ⑥边界：两项的判断题（正确 / 错误）不换位；填空、自评、计算题没有选项，不受影响；
+               关掉开关只影响「之后渲染的题」，已作答的记录与掌握度不受任何影响；
+             ⑦未动：题库、判分、掌握度、三态、进度、快照 schema 2、同步格式一律未改。
+  上次变更: （3.59.0）答题阶段先藏章节名，答完（或看解析）再展开——
              ①起因：答题卡右上角原来常驻「§1.3 · 选择 · 辩证对待人生矛盾（得失、生死、顺逆、苦乐…）」，
                动笔前就把考点说破了，等于先送一个解题方向；遮挡题号的记忆提取也弱化了；
              ②隐藏期：只显示题型（选择 / 判断 / 填空 / 计算…）＋一句「答完显示章节」的浅提示；
@@ -713,7 +727,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.59.0">
+<meta name="app-version" content="3.60.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1895,7 +1909,16 @@
   }
   .qsel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .qbuttons{gap:12px;margin-top:20px}
+  /* [shuf] 选项顺序开关：与筛选条同款胶囊，选中用实底强调 */
+  .qrow-sw{gap:8px}
+  .qsw{min-height:38px;padding:0 12px;font-size:13px}
+  .qsw[aria-pressed="true"]{background:var(--chipOn);color:var(--chipOnInk);border-color:var(--accent);font-weight:600}
+  .qswhint{font-size:12px;line-height:1.6;color:var(--ink2);flex:1 1 220px;min-width:0}
   .qnote{margin:20px 0 0;font-size:12px;line-height:1.8;color:var(--ink2)}
+  /* [shuf] 解析顶部的「字母按原始顺序」提示：低调但看得见 */
+  .shufhint{margin:0 0 9px;padding:6px 9px;border-left:2px solid var(--warn);
+    border-radius:0 4px 4px 0;background:var(--warnBg);color:var(--ink2);
+    font-size:11.5px;line-height:1.7}
 
   .qcard{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px}
   .qhead{display:flex;align-items:baseline;gap:12px;justify-content:space-between;margin-bottom:8px}
@@ -2952,6 +2975,12 @@
           <option value="newrand">随机刷没做过的</option>
         </select>
       </div>
+      <!-- [shuf] 选项顺序开关：开＝每题重洗（字母按显示位置重编，判定仍按选项内容） -->
+      <div class="qrow qrow-sw">
+        <span class="qlabel">选项</span>
+        <button class="chip qsw" id="qShufBtn" type="button" aria-pressed="true">随机打乱顺序</button>
+        <span class="qswhint" id="qShufHint"></span>
+      </div>
       <div class="qrow qbuttons">
         <button class="btn" id="qBegin" type="button">开始刷题</button>
         <button class="btn small" id="qReset" type="button">重置本科目进度</button>
@@ -2971,7 +3000,8 @@
       <p class="qnote">单选与判断点选项即判分；多选勾选后按「提交答案」结算，全部选对才算答对（多选、少选均不得分），提交前可反复改；填空输入后回车核对。计算、简答、编程题作答后看解析自评。<br>
         键盘：A–D 或 1–4 选答（多选为勾选/取消），回车在填空与多选中为提交、其余为下一步，空格跳过，G 标记蒙对，H 标记「想了很久」，Esc 退出。<br>
         「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。<br>
-        答题时右上角只显示题型——章节名会提前把考点说破，所以先藏起来，提交答案或点「看解析」后自动展开。</p>
+        答题时右上角只显示题型——章节名会提前把考点说破，所以先藏起来，提交答案或点「看解析」后自动展开。<br>
+        选项顺序默认随机打乱（判断题的「正确 / 错误」保持原序）；可在上面「选项」里关掉，改回原始顺序。</p>
     </div>
 
     <div class="qcard" id="qCard" hidden>
@@ -17834,7 +17864,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.59.0";
+  var APP_VERSION = "3.60.0";
   var DATA_VERSION = "2026-11-06";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -23174,6 +23204,7 @@
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
     kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
     kpMode: "",  // [qzkp] 那一组是按哪一档开的（""=全部 / wrong=只练错题 / ever=只练曾错过），复跑沿用
+    perm: [],    // [shuf] 当前题「显示位置 → 原始下标」的映射，每次渲染重洗
     /* [v3.41.0] 反馈层的运行时状态：只在内存里，不落快照、不进 schema */
     streak: 0,        // 当前连对题数
     streakBest: 0,    // 本组最长连对
@@ -24401,7 +24432,9 @@
     if (/[\\^_{}]/.test(raw)) return "";
     return qzClip(raw, 16);
   }
-  function qzWrongBody(r, it) {
+  /* disp（可选）：作答那一刻屏幕上的字母串（"B、C"）。给了就照它显示字母，
+     选项文本仍按 wa 的原始字母去 it.o 里取——洗过牌时这两件事必须分开算。 */
+  function qzWrongBody(r, it, disp) {
     var kind = qzWrongKind(r, it), wa = (r && typeof r.wa === "string") ? r.wa : "";
     if (kind === "self") return "没做对";
     if (kind === "fill") {
@@ -24418,11 +24451,12 @@
       if (ai >= 0 && it && it.o && it.o[ai] !== undefined && picks.indexOf(ai) < 0) picks.push(ai);
     }
     var out;
+    var dsp = String(disp || "");
     if (picks.length > 1) {
-      out = qzMarksOf(picks);
+      out = dsp || qzMarksOf(picks);
     } else if (picks.length === 1) {
       var lbl1 = qzOptLabel(it.o[picks[0]]);
-      out = qzWaOf(picks) + (lbl1 ? ". " + lbl1 : "");
+      out = (dsp && dsp.indexOf("、") < 0 ? dsp : qzWaOf(picks)) + (lbl1 ? ". " + lbl1 : "");
     } else {
       out = qzClip(wa, 24);
     }
@@ -24619,6 +24653,7 @@
   /* ---------- 设置页 ---------- */
   function qzRenderSetup() {
     if (!QZ_READY) return;
+    qzPaintShuf();   // [shuf] 开关状态以快照 prefs 为准，每次进设置页重画
     if (!QZ.pool.length) QZ.pool = qzPoolOf(QZ.sid);
     var pool = QZ.pool;
     var sub = qzSubject(QZ.sid);
@@ -24850,6 +24885,75 @@
     qzRenderQ();
   }
 
+  /* ---------------- [shuf] 选项随机排布 ----------------
+     目的：别让人把「答案在第三个」当记忆线索。三个约定，贯穿全链路：
+     ①屏幕上字母按**显示位置**重编（A、B、C…），看起来永远是正常顺序；
+     ②判定、记录、错题回顾一律用**原始下标**（按钮 data-i 带着它），所以换位置不影响对错，
+       落库的 wa 仍是原始字母，卡片上的「上次答错 B. xxx」依然能取到正确选项文本；
+     ③perm 是「显示位置 → 原始下标」的映射，每渲染一道题重算一次：换题、回看、重练都会重洗。 */
+  function qzShufOn() {
+    var s = snap();
+    return !(s.prefs && s.prefs.shuf === 0);   // 缺省＝开
+  }
+  /* 开关的三种状态文案：开 / 关；旁边那行小字解释「为什么可以放心开」 */
+  function qzPaintShuf() {
+    var b = byId("qShufBtn"), tip = byId("qShufHint");
+    if (!b) return;
+    var on = qzShufOn();
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.textContent = on ? "随机打乱顺序 · 开" : "随机打乱顺序 · 关";
+    b.title = on ? "当前每题都会重洗选项顺序；点一下改成原始顺序" : "当前按原始顺序显示；点一下每题重洗";
+    if (tip) tip.textContent = on
+      ? "每题显示时重洗一次，字母按位置重排；判分与记录仍按选项内容，换位置不影响对错。"
+      : "按题目原始顺序显示（A、B、C…固定），适合想对照教材或讲义的时候。";
+  }
+  function qzSetShuf(on) {
+    var s = snap();
+    if (!s.prefs || typeof s.prefs !== "object") s.prefs = {};
+    s.prefs.shuf = on ? 1 : 0;   // 快照 schema 2 的可选字段，缺省当「开」
+    commitSnap();
+    syncMarkDirty();
+    qzPaintShuf();
+    qzToast(on ? "选项顺序已开：每题重洗，判定按选项内容" : "选项顺序已关：按原始顺序显示");
+  }
+
+  /* n 项选项的显示顺序；两项（判断题的「正确 / 错误」）保持原序，语义有先后 */
+  function qzShufflePerm(n) {
+    var a = [], i, j, t;
+    for (i = 0; i < n; i++) a.push(i);
+    if (n < 3 || !qzShufOn()) return a;
+    for (i = n - 1; i > 0; i--) {
+      j = Math.floor(Math.random() * (i + 1));
+      t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    /* 洗成原序等于没洗：小样本（三项）有 1/6 概率撞上，换头两项保证「每题都换过」 */
+    var same = true;
+    for (i = 0; i < n; i++) if (a[i] !== i) { same = false; break; }
+    if (same) { t = a[0]; a[0] = a[1]; a[1] = t; }
+    return a;
+  }
+  /* 显示位置 → 原始下标；越界返回 -1（键盘按到不存在的字母时用它兜底） */
+  function qzOrigAt(pos) {
+    var pm = QZ.perm || [];
+    return (pos >= 0 && pos < pm.length) ? pm[pos] : -1;
+  }
+  /* 原始下标 → 显示位置，用于把「正确答案」翻译成屏幕上的字母 */
+  function qzPermPos(orig) {
+    var pm = QZ.perm || [], i;
+    for (i = 0; i < pm.length; i++) if (pm[i] === orig) return i;
+    return -1;
+  }
+  /* 原始下标数组 → 屏幕字母串（按显示顺序，如「A、C」）；洗牌关闭时与原字母一致 */
+  function qzDispLetters(origIdxs) {
+    var pos = [], i, p;
+    for (i = 0; i < (origIdxs || []).length; i++) {
+      p = qzPermPos(origIdxs[i]);
+      if (p >= 0) pos.push(p);
+    }
+    pos.sort(function (x, y) { return x - y; });
+    return qzMarksOf(pos);
+  }
+
   /* [quiet] 答题头只露题型，章节名藏起来：
      章节里写着考点名（「§1.3 辩证对待人生矛盾」），动笔前看到等于先被告知该往哪个方向想。
      作答（含看解析）后才把「章节 · 考点」展开——两次都用同一个函数，收起/展开只有一条路径，
@@ -24879,6 +24983,8 @@
     if (!q) return;
     var it = q.it, mode = qzModeOf(it);
     QZ.qTs = nowMs();   // [v3.41.0] 单题用时起点
+    /* [shuf] 每次显示一道题都重洗：换题、回看已答的题、重练，看到的顺序都不会是上一次那个 */
+    QZ.perm = qzShufflePerm(it.o ? it.o.length : 0);
 
     byId("qIdx").textContent = (QZ.pos + 1) + " / " + QZ.list.length;
     qzMetaPaint(q, false);   // [quiet] 动笔前只给题型，章节 · 考点先收起（作答后自动展开）
@@ -24923,12 +25029,15 @@
   function qzRenderOpts(it) {
     var box = byId("qOpts");
     var multi = !!(it.ma && it.ma.length);
-    for (var i = 0; i < it.o.length; i++) {
+    var n = it.o.length;
+    var pm = (QZ.perm && QZ.perm.length === n) ? QZ.perm : null;
+    for (var p = 0; p < n; p++) {
+      var i = pm ? pm[p] : p;              // i＝原始下标：决定选项内容与判定，和屏幕位置解耦
       var b = el("button", "qopt");
       b.type = "button";
       b.setAttribute("data-i", String(i));
       if (multi) { b.setAttribute("data-on", "0"); b.setAttribute("aria-pressed", "false"); }
-      b.appendChild(txt("span", "qkey", QMARKS.charAt(i)));
+      b.appendChild(txt("span", "qkey", QMARKS.charAt(p)));   // 字母按显示位置重编，视觉上永远是 A、B、C…
       var t = el("span", "qtext");
       t.innerHTML = safeHtml(it.o[i]);
       b.appendChild(t);
@@ -24956,8 +25065,11 @@
   function qzChosen() {
     var out = [], opts = byId("qOpts").querySelectorAll(".qopt");
     for (var i = 0; i < opts.length; i++) {
-      if (opts[i].getAttribute("data-on") === "1") out.push(i);
+      if (opts[i].getAttribute("data-on") !== "1") continue;
+      var oi = parseInt(opts[i].getAttribute("data-i"), 10);   // [shuf] 取原始下标，不看 DOM 位置
+      if (oi >= 0) out.push(oi);
     }
+    out.sort(function (a, b) { return a - b; });   // 与 ma 的升序口径对齐
     return out;
   }
   function qzMarksOf(idxs) {
@@ -24996,9 +25108,9 @@
       for (i = 0; i < ans.length; i++) if (picked[i] !== ans[i]) { right = false; break; }
     }
     QZ.done[QZ.pos] = { right: right, picked: picked, mode: "multi" };
-    qzCount(right, q, right ? null : { wa: qzWaOf(picked), wm: "opt" });
+    qzCount(right, q, right ? null : { wa: qzWaOf(picked), wm: "opt", disp: qzDispLetters(picked) });
     qzMarkOpts(picked, ans);
-    qzFeedback(right, right ? "" : "你选了 " + qzMarksOf(picked) + "，正确答案 " + qzMarksOf(ans));
+    qzFeedback(right, right ? "" : "你选了 " + qzDispLetters(picked) + "，正确答案 " + qzDispLetters(ans));
     byId("qSubmit").disabled = true;
     byId("qSubWrap").hidden = true;
     if (!right) qzToggleExpl(true);
@@ -25032,10 +25144,11 @@
     var q = QZ.list[QZ.pos], it = q.it;
     var right = idx === it.a;
     QZ.done[QZ.pos] = { right: right, picked: idx, mode: "opt" };
-    qzCount(right, q, right ? null : { wa: QMARKS.charAt(idx), wm: "opt" });
+    qzCount(right, q, right ? null : { wa: QMARKS.charAt(idx), wm: "opt", disp: qzDispLetters([idx]) });
     qzMarkOpts(idx, it.a);
     /* [v3.41.0] 答对时不再重复报「正确答案 X」——图标和绿框已经说清楚了 */
-    qzFeedback(right, (!right && it.a >= 0) ? "正确答案 " + QMARKS.charAt(it.a) : "");
+    /* [shuf] 提示里的字母要用屏幕上显示的那个，洗过牌后原始字母已经不是它 */
+    qzFeedback(right, (!right && it.a >= 0) ? "正确答案 " + qzDispLetters([it.a]) : "");
     if (!right) qzToggleExpl(true);
     byId("qShow").textContent = byId("qExpl").hidden ? "看解析" : "收起解析";
   }
@@ -25049,11 +25162,13 @@
       : (Object.prototype.toString.call(ans) === "[object Array]" ? ans : [ans]);
     var opts = byId("qOpts").querySelectorAll(".qopt");
     for (var i = 0; i < opts.length; i++) {
+      var oi = parseInt(opts[i].getAttribute("data-i"), 10);   // [shuf] 用原始下标比对，位置换了也标得对
+      if (oi < 0) oi = i;
       opts[i].disabled = true;
       opts[i].setAttribute("data-on", "0");
       opts[i].setAttribute("aria-pressed", "false");
-      if (ansArr.indexOf(i) >= 0) opts[i].className = "qopt right";
-      else if (pickArr.indexOf(i) >= 0) opts[i].className = "qopt wrong";
+      if (ansArr.indexOf(oi) >= 0) opts[i].className = "qopt right";
+      else if (pickArr.indexOf(oi) >= 0) opts[i].className = "qopt wrong";
       else opts[i].className = "qopt";
     }
   }
@@ -25236,7 +25351,8 @@
     else rec.wrong.push({
       pos: QZ.pos, key: q.key, stem: (q.it.q || q.ex.q), type: q.ex.type,
       kpName: q.kp.name, kid: q.kp.id, ei: q.it.i,
-      wa: wrong ? String(wrong.wa || "") : "", wm: wrong ? (wrong.wm || "opt") : "opt"
+      wa: wrong ? String(wrong.wa || "") : "", wm: wrong ? (wrong.wm || "opt") : "opt",
+      disp: wrong ? String(wrong.disp || "") : ""   // [shuf] 作答时屏幕上的字母，小结照它显示
     });
     var t = q.ex.type;
     if (!rec.byType[t]) rec.byType[t] = { n: 0, right: 0 };
@@ -25382,6 +25498,12 @@
     if (qzModeOf(q.it) !== "self") html = html.replace(/^<p><b>答案[：:][\s\S]*?<\/b><\/p>/, "");
     if (!String(html).replace(/\s/g, "")) html = q.ex.a;
     ex.innerHTML = codeAwareHtml(html);
+    /* [shuf] 解析是按原始顺序写的（「易错：选 B 只看到…」），洗过牌后屏幕字母和它对不上；
+       与其让人以为自己看错了题，不如先说明一句。只在这一组确实洗过牌时加。 */
+    if (qzShufOn() && q.it.o && q.it.o.length >= 3) {
+      var sh = el("p", "shufhint", "选项已随机排布：解析里提到的 A / B / C 指题目原始顺序，判断时以选项内容为准。");
+      ex.insertBefore(sh, ex.firstChild);
+    }
     ex.setAttribute("data-pos", String(QZ.pos));
     ex.setAttribute("data-loaded", "1");
     ex.hidden = false;
@@ -25394,11 +25516,12 @@
     var extra;
     if (st.mode === "opt") {
       qzMarkOpts(st.picked, it.a);
-      extra = (it.a >= 0) ? "正确答案 " + QMARKS.charAt(it.a) : "";
+      /* [shuf] 回看时顺序又换了一次，提示里的字母要按这次的显示位置重新翻译 */
+      extra = (it.a >= 0) ? "正确答案 " + qzDispLetters([it.a]) : "";
     } else if (st.mode === "multi") {
       qzMarkOpts(st.picked, it.ma);
       byId("qSubWrap").hidden = true;   // 已经作答，提交区不再出现
-      extra = "正确答案 " + qzMarksOf(it.ma);
+      extra = "正确答案 " + qzDispLetters(it.ma);
     } else if (st.mode === "self") {
       var opts = byId("qOpts").querySelectorAll(".qopt");
       for (var i = 0; i < opts.length; i++) opts[i].disabled = true;
@@ -25600,7 +25723,7 @@
           li.appendChild(txt("span", "qwl-meta", w.kpName + " · " + w.type + " · 已错 " + times + " 次"));
           if (w.wa !== undefined || w.wm === "self") {
             var mineIt = qzItem(QZ.sid, w.kid, w.ei);
-            var mine = qzWrongBody({ wa: w.wa, wm: w.wm, r: 0 }, mineIt);
+            var mine = qzWrongBody({ wa: w.wa, wm: w.wm, r: 0 }, mineIt, w.disp);
             if (mine) li.appendChild(txt("span", "qwl-ans", "本次作答：" + mine));
           }
 
@@ -25826,8 +25949,9 @@
     /* [multi] 多选时字母键是「勾选/取消」，不是作答；结算统一交给提交按钮或回车 */
     if (idx >= 0 && (mode === "opt" || mode === "multi") && idx < q.it.o.length) {
       e.preventDefault(); e.stopImmediatePropagation();
+      /* [shuf] 字母/数字指的是屏幕上第几个，先翻回原始下标（多选仍按位置勾选） */
       if (mode === "multi") qzToggleByIndex(idx);
-      else qzAnswer(idx);
+      else qzAnswer(qzOrigAt(idx));
       return;
     }
     if (k === " " || k === "Spacebar") {
@@ -27018,6 +27142,9 @@
     byId("qSecSel").addEventListener("change", function () { QZ.cfg.sec = this.value; qzRenderStat(); });
     byId("qTypeSel").addEventListener("change", function () { QZ.cfg.type = this.value; qzRenderStat(); });
     byId("qOrderSel").addEventListener("change", function () { QZ.cfg.order = this.value; qzRenderStat(); });
+    /* [shuf] 选项顺序开关：随时可切，下一次渲染就生效（已答的题不受影响，答过的记录也不会变） */
+    var shufBtn = byId("qShufBtn");
+    if (shufBtn) shufBtn.addEventListener("click", function () { qzSetShuf(!qzShufOn()); });
     byId("qReset").addEventListener("click", function () {
       if (!window.confirm("重置「" + (qzSubject(QZ.sid) || {}).name + "」的刷题进度、错题记录与「蒙对」标记？此操作不可撤销。")) return;
       var qzAll = qzData(), qzSnap = snap();
@@ -27059,6 +27186,9 @@
     item: qzItem, wrongCount: qzWrongCount, wrongText: qzWrongText, wrongBody: qzWrongBody, wrongLabel: qzWrongLabel,
     /* [qzkp] 考点题池三档：all / wrong（未改正）/ ever（曾错过） */
     kpPool: qzPoolOfKp, kpPoolMode: qzKpPoolMode,
+    /* [shuf] 选项随机排布：开关、当前映射、下标互转 */
+    shufOn: qzShufOn, setShuf: qzSetShuf, perm: function () { return QZ.perm; },
+    origAt: qzOrigAt, dispLetters: qzDispLetters, shuffle: qzShufflePerm,
     weakList: qzWeakList, renderWeak: qzRenderWeak,
     /* [mastery] 掌握程度的自动化测试入口 */
     masteryOf: qzMasteryOf, masteryList: qzMasteryList, masteryGroups: qzMasteryGroups,
