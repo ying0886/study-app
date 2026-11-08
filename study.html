@@ -3,9 +3,21 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.58.0
+  APP_VERSION: 3.59.0
   DATA_VERSION: 2026-11-06
-  本次变更: （3.58.0）学习台跳转后的悬浮练习入口由一项变三档：全部 / 只练错题 / 只练曾错过——
+  本次变更: （3.59.0）答题阶段先藏章节名，答完（或看解析）再展开——
+             ①起因：答题卡右上角原来常驻「§1.3 · 选择 · 辩证对待人生矛盾（得失、生死、顺逆、苦乐…）」，
+               动笔前就把考点说破了，等于先送一个解题方向；遮挡题号的记忆提取也弱化了；
+             ②隐藏期：只显示题型（选择 / 判断 / 填空 / 计算…）＋一句「答完显示章节」的浅提示；
+               章节 · 考点两个字段仍在 DOM 里（用 max-width:0 + opacity:0 裁掉），
+               所以展开是一次 0.3s 的横向擦出，不是文字突然蹦出来，也不是靠 display:none 硬切；
+             ③展开时机：判分（单选/判断、多选提交、填空核对、自评）与「看解析」都算已揭晓，
+               两条路径都只调 qzMetaOpen()，状态不会分叉；作答后回看同一题保持展开；
+             ④复位：换题（下一题 / 上一题 / 跳过）一律重画回收起态——「跳过」不算作答，回来仍是收起的；
+             ⑤无障碍：收起时 .qmk 带 aria-hidden="true"、容器 aria-label 写「选择，章节与考点答完显示」，
+               读屏不会提前念出章节；prefers-reduced-motion 下取消过渡；
+             ⑥未动：题干、选项、判分、记录、掌握度、进度、小结、快照格式一律未改；章节字段只是延后显示。
+  上次变更: （3.58.0）学习台跳转后的悬浮练习入口由一项变三档：全部 / 只练错题 / 只练曾错过——
              ①口径（同一个考点题池的三个子集，后两档只会更小，都只读 snap.quiz，不新增存储）：
                练这个考点＝该考点全部题（含没做过的），与原来完全一致；
                只练错题＝最近一次作答仍是错的（rec.r !== 1），即「还没改对」，没作答过的题不算；
@@ -701,7 +713,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.58.0">
+<meta name="app-version" content="3.59.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1888,7 +1900,21 @@
   .qcard{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px}
   .qhead{display:flex;align-items:baseline;gap:12px;justify-content:space-between;margin-bottom:8px}
   .qidx{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .qmeta{font-size:12px;color:var(--ink2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* [quiet] 答题头：序号 + 题型常显；「章节 · 考点」作答/看解析后才横向擦出——
+     收起时 max-width 归 0（不占位、不换行），展开时给足宽度让省略号接管超长章节名。
+     目的是别让「§1.3 辩证对待人生矛盾」在动笔前就把考点说破。 */
+  .qmeta{display:inline-flex;align-items:baseline;justify-content:flex-end;min-width:0;max-width:100%;
+    font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden}
+  .qmeta .qmt{flex:0 0 auto}
+  .qmeta .qmh{flex:0 0 auto;max-width:12em;overflow:hidden;opacity:.72;
+    transition:max-width .24s var(--ease),opacity .14s ease}
+  .qmeta .qmk{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+    max-width:0;opacity:0;
+    transition:max-width .3s var(--ease),opacity .18s ease}
+  .qmeta .qmk::before{content:"· ";opacity:.6}
+  .qmeta.open .qmh{max-width:0;opacity:0}
+  .qmeta.open .qmk{max-width:30em;opacity:1}
+  @media (prefers-reduced-motion:reduce){ .qmeta .qmk{transition:none} }
   .qbar{height:3px;background:var(--barBg);border-radius:2px;overflow:hidden;margin-bottom:16px}
   .qbar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .25s ease}
 
@@ -2187,7 +2213,7 @@
     .qacts{gap:6px}
     .qacts .btn{flex:1 1 auto;min-height:42px;padding:0 8px}
     .qhead{flex-wrap:wrap}
-    .qmeta{max-width:100%;text-align:left}
+    .qmeta{max-width:100%;justify-content:flex-start}
     .qweak{padding:12px 12px 10px}
     .qmhint{display:none}          /* 窄屏省一行：组标题只留等级、数量、平均与折叠 */
     .qmhead{gap:6px;padding:9px 2px}
@@ -2944,13 +2970,18 @@
       <div class="qweak" id="qPlain"></div>
       <p class="qnote">单选与判断点选项即判分；多选勾选后按「提交答案」结算，全部选对才算答对（多选、少选均不得分），提交前可反复改；填空输入后回车核对。计算、简答、编程题作答后看解析自评。<br>
         键盘：A–D 或 1–4 选答（多选为勾选/取消），回车在填空与多选中为提交、其余为下一步，空格跳过，G 标记蒙对，H 标记「想了很久」，Esc 退出。<br>
-        「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。</p>
+        「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。<br>
+        答题时右上角只显示题型——章节名会提前把考点说破，所以先藏起来，提交答案或点「看解析」后自动展开。</p>
     </div>
 
     <div class="qcard" id="qCard" hidden>
       <div class="qhead">
         <span class="qidx" id="qIdx"></span>
-        <span class="qmeta" id="qMeta"></span>
+        <span class="qmeta" id="qMeta">
+          <span class="qmt" id="qMetaType"></span>
+          <span class="qmh" id="qMetaHint">· 答完显示章节</span>
+          <span class="qmk" id="qMetaKp"></span>
+        </span>
       </div>
       <div class="qbar" role="progressbar" aria-label="本组进度" aria-valuemin="0" aria-valuemax="100"><i id="qBar"></i></div>
       <div class="qstem" id="qStem"></div>
@@ -17803,7 +17834,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.58.0";
+  var APP_VERSION = "3.59.0";
   var DATA_VERSION = "2026-11-06";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -24819,6 +24850,30 @@
     qzRenderQ();
   }
 
+  /* [quiet] 答题头只露题型，章节名藏起来：
+     章节里写着考点名（「§1.3 辩证对待人生矛盾」），动笔前看到等于先被告知该往哪个方向想。
+     作答（含看解析）后才把「章节 · 考点」展开——两次都用同一个函数，收起/展开只有一条路径，
+     所以来回切题、回看已答过的题都不会出现两边状态不一致。
+     open 为真且确实有章节文本时才展开；换题时 qzRenderQ 会带着 false 重画，自然复位。 */
+  function qzMetaPaint(q, open) {
+    var meta = byId("qMeta");
+    if (!meta) return;
+    var typeEl = byId("qMetaType"), kpEl = byId("qMetaKp");
+    var type = (q && q.ex && q.ex.type) ? String(q.ex.type) : "";
+    var kp = (q && q.kp) ? q.kp : {};
+    var sec = kp.section ? (String(kp.section) + " · " + (kp.name || "")) : String(kp.name || "");
+    if (typeEl) typeEl.textContent = type;
+    if (kpEl) kpEl.textContent = sec;
+    var hintEl = byId("qMetaHint");
+    if (hintEl) hintEl.setAttribute("aria-hidden", "true");   // 纯视觉提示，读屏走 aria-label
+    var on = !!open && !!sec;
+    meta.className = "qmeta" + (on ? " open" : "");
+    meta.title = on ? "" : "章节与考点先不显示——作答或看解析后自动展开";
+    meta.setAttribute("aria-label", on ? (type + "，" + sec) : (type + "，章节与考点答完显示"));
+    if (kpEl) kpEl.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+  function qzMetaOpen() { if (QZ.list[QZ.pos]) qzMetaPaint(QZ.list[QZ.pos], true); }
+
   function qzRenderQ() {
     var q = QZ.list[QZ.pos];
     if (!q) return;
@@ -24826,7 +24881,7 @@
     QZ.qTs = nowMs();   // [v3.41.0] 单题用时起点
 
     byId("qIdx").textContent = (QZ.pos + 1) + " / " + QZ.list.length;
-    byId("qMeta").textContent = q.kp.section + " · " + q.ex.type + " · " + q.kp.name;
+    qzMetaPaint(q, false);   // [quiet] 动笔前只给题型，章节 · 考点先收起（作答后自动展开）
     var bar = byId("qBar");
     bar.style.width = Math.round((QZ.pos + 1) / QZ.list.length * 100) + "%";
     bar.parentNode.setAttribute("aria-valuenow", String(QZ.pos + 1));
@@ -25196,6 +25251,7 @@
      答错时把「正确答案」放在副行第一位，并补一句这题历史上错过几次。 */
   function qzFeedback(right, extra) {
     var fb = byId("qFb"), q = QZ.list[QZ.pos];
+    qzMetaOpen();   // [quiet] 作答完成（含回看已答过的题）：章节 · 考点现在可以露出来了
     fb.hidden = false;
     fb.className = "qfb " + (right ? "ok" : "no");
     fb.innerHTML = "";
@@ -25316,6 +25372,7 @@
     var ex = byId("qExpl"), q = QZ.list[QZ.pos];
     var show = (force === undefined) ? ex.hidden : !!force;
     if (!show) { ex.hidden = true; byId("qShow").textContent = "看解析"; return; }
+    qzMetaOpen();   // [quiet] 点了看解析就等于答案已经揭晓，章节不必再藏
     if (ex.getAttribute("data-loaded") === "1" && ex.getAttribute("data-pos") === String(QZ.pos)) {
       ex.hidden = false;
       byId("qShow").textContent = "收起解析";
