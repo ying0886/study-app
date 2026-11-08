@@ -3,9 +3,24 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.57.0
+  APP_VERSION: 3.58.0
   DATA_VERSION: 2026-11-06
-  本次变更: （3.57.0）「曾错过」升成一级筛选，并新增跨科目的「曾错过题目集」——
+  本次变更: （3.58.0）学习台跳转后的悬浮练习入口由一项变三档：全部 / 只练错题 / 只练曾错过——
+             ①口径（同一个考点题池的三个子集，后两档只会更小，都只读 snap.quiz，不新增存储）：
+               练这个考点＝该考点全部题（含没做过的），与原来完全一致；
+               只练错题＝最近一次作答仍是错的（rec.r !== 1），即「还没改对」，没作答过的题不算；
+               只练曾错过＝历史上答错过至少一次（w>0 或留着 wa），已经改对的也在内，即「错题 ⊆ 曾错过」；
+             ②界面：主按钮不变（实底、带题量与考点名），下面一行两个次级胶囊——「只练错题 N」「只练曾错过 N」，
+               纸底细边比主按钮低一层；「只练曾错过」沿用筛选条上的琥珀色系，两处同名同色，一眼能对上；
+               题数为 0 的那档直接禁用并降透明度，鼠标悬停/读屏给出原因（没有还没改对的错题 / 还没有答错过的题）；
+             ③互斥：三档是同一池子的三个切法，浮层里点哪个都先收起浮层再开刷，不存在同时选中两个的状态；
+               组标题分别写「考点练习 / 考点错题 / 考点曾错过」，收尾页看标题就知道刚练的是哪一档；
+             ④收尾页「再练一遍」沿用开组时的档位（QZ.kpMode），按钮文案跟着变成「再练一遍这几道错题 /
+               再练一遍曾错题」，不会突然变回整组；
+             ⑤原有入口一律不变：卡片内的「练这个考点」、薄弱知识点行、掌握度分组、蒙对清单都还是全部题；
+             ⑥空态：这个考点一道都没答错过时不再进刷题页空转，直接在卡片视图里提示；
+             ⑦未动：题库、判分口径、掌握度、三态、进度、曾错过题目集、同步快照格式一律未改。
+  上次变更: （3.57.0）「曾错过」升成一级筛选，并新增跨科目的「曾错过题目集」——
              ①口径：累计答错次数 w > 0，或还留着历史上那次错答（wa ＋ wt），即「答错过一次就算」，
                与卡片头部「错过 N 道」同一批记录；已改正的题目仍留在集合里，只标「已改正」；
              ②筛选条：新增 chip「曾错过 N」（N＝本科目答错过的题数），比普通 chip 高一层级——琥珀描边 +
@@ -686,7 +701,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.57.0">
+<meta name="app-version" content="3.58.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -720,6 +735,9 @@
     /* [ever] 「曾错过」选中态的实底与反白字：浅色用琥珀实底 + 纸白字 */
     --everOn:#A9762F;
     --everInk:#FFFDF8;
+    /* 主色实底按钮上的字与徽标底（深色主题里 --accent 会变亮，白字会糊） */
+    --accentInk:#FFFFFF;
+    --accentInkBg:rgba(255,255,255,.24);
   }
   html[data-theme="dark"]{
     --bg:#1A1A1A;
@@ -744,6 +762,8 @@
     /* [ever] 深色下琥珀偏亮，实底上改用深墨字，保证对比度 */
     --everOn:#D2A45F;
     --everInk:#211C14;
+    --accentInk:#10201A;
+    --accentInkBg:rgba(0,0,0,.18);
   }
   @media (prefers-color-scheme:dark){
     html:not([data-theme="light"]){
@@ -1009,12 +1029,17 @@
     box-shadow:none;cursor:not-allowed;font-weight:500}
   .qzbarHint{font-size:11.5px;line-height:1.6;color:var(--ink2)}
 
-  /* 跳转后的悬浮按钮：固定右下，卡片滚出视野/收起/进刷题时自动隐去 */
-  .kpgo{position:fixed;right:20px;bottom:20px;z-index:36;
-    display:inline-flex;align-items:center;gap:10px;
+  /* 跳转后的悬浮练习入口：固定右下，卡片滚出视野/收起/进刷题时整块隐去。
+     三档共用一块：主按钮＝该考点全部题，下面一行两个次级按钮＝未改正错题 / 曾错过（含已改对）。 */
+  .kpgowrap{position:fixed;right:20px;bottom:20px;z-index:36;
+    display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+    max-width:calc(100vw - 24px)}
+  .kpgowrap[hidden]{display:none}
+  .kpgo{
+    display:inline-flex;align-items:center;gap:10px;max-width:100%;
     font:inherit;font-size:14px;font-weight:600;line-height:1.2;text-align:left;
     padding:11px 18px;border-radius:999px;border:1px solid var(--accent);
-    background:var(--accent);color:#fff;cursor:pointer;
+    background:var(--accent);color:var(--accentInk);cursor:pointer;
     box-shadow:0 10px 30px rgba(0,0,0,.24);
     transition:transform .14s ease,box-shadow .18s ease}
   .kpgo:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(0,0,0,.3)}
@@ -1023,18 +1048,39 @@
   .kpgo .kbody{display:flex;flex-direction:column;gap:2px;min-width:0}
   .kpgo .ktxt{display:flex;align-items:center;gap:7px;white-space:nowrap}
   .kpgo .n{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;
-    background:rgba(255,255,255,.24)}
+    background:var(--accentInkBg)}
   .kpgo .ksub{font-size:10.5px;font-weight:400;opacity:.88;max-width:220px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 两个次级入口：比主按钮低一层（纸底 + 细边），题数为 0 时降透明度并禁用 */
+  .kpgo2s{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .kpgo2{
+    display:inline-flex;align-items:center;gap:6px;
+    font:inherit;font-size:12.5px;font-weight:600;line-height:1.2;
+    padding:8px 12px;border-radius:999px;
+    border:1px solid var(--line2);background:var(--card);color:var(--ink);
+    cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.12);
+    transition:background .14s ease,border-color .14s ease,color .14s ease}
+  .kpgo2:hover{border-color:var(--warn);color:var(--warn);background:var(--warnBg)}
+  .kpgo2 .n{font-size:11px;font-weight:600;padding:1px 6px;border-radius:999px;
+    background:var(--chip);color:var(--ink2);font-variant-numeric:tabular-nums}
+  .kpgo2:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* 「只练曾错过」沿用筛选条上的琥珀色系，和「曾错过」有视觉呼应 */
+  .kpgo2.ever{border-color:var(--warn);color:var(--warn)}
+  .kpgo2.ever .n{background:var(--warnBg);color:var(--warn)}
+  .kpgo2.ever:hover{background:var(--everOn);border-color:var(--everOn);color:var(--everInk)}
+  .kpgo2[data-empty="true"]{opacity:.5;cursor:not-allowed}
+  .kpgo2[data-empty="true"]:hover{border-color:var(--line2);color:var(--ink);background:var(--card)}
+  .kpgo2.ever[data-empty="true"]:hover{border-color:var(--warn);color:var(--warn)}
   @media (max-width:560px){
     .qzbarBtn{width:100%;justify-content:center}
     .qzbarHint{font-size:11px}
-    .kpgo{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
-      padding:12px 16px;font-size:14.5px;max-width:calc(100vw - 24px)}
+    .kpgowrap{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+    .kpgo{padding:12px 16px;font-size:14.5px}
     .kpgo .ksub{max-width:150px}
+    .kpgo2{font-size:12px;padding:7px 11px}
   }
-  body.mode-quiz .kpgo{display:none !important}
-  @media print{ .kpgo,.qzbar{display:none !important} }
+  body.mode-quiz .kpgowrap{display:none !important}
+  @media print{ .kpgowrap,.qzbar{display:none !important} }
 
   /* 勾选 */
   /* 手动标记（个人书签）：视觉降权——缩小、变灰、默认半透明；
@@ -2648,7 +2694,7 @@
   body.mode-learn #favBtn,
   body.mode-learn #ovBtn,
   body.mode-learn #mapBtn,
-  body.mode-learn .kpgo{display:none !important}
+  body.mode-learn .kpgowrap{display:none !important}
 
   .learn{padding:18px 16px 72px}
   .lwrap{max-width:880px;margin:0 auto}
@@ -2950,14 +2996,20 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite">点卡片展开，勾选即记录掌握</div>
 
-<!-- [qzkp] 跳转到知识点后浮出的「练这个考点」入口：点一下直接开始这一组题 -->
-<button class="kpgo" id="kpGo" type="button" hidden>
-  <span class="ico" aria-hidden="true">▶</span>
-  <span class="kbody">
-    <span class="ktxt">练这个考点<span class="n" id="kpGoN"></span></span>
-    <span class="ksub" id="kpGoName"></span>
-  </span>
-</button>
+<!-- [qzkp] 跳转到知识点后浮出的练习入口：全部 / 只练错题 / 只练曾错过，点哪个就进哪一组 -->
+<div class="kpgowrap" id="kpGoWrap" hidden>
+  <button class="kpgo" id="kpGo" type="button">
+    <span class="ico" aria-hidden="true">▶</span>
+    <span class="kbody">
+      <span class="ktxt">练这个考点<span class="n" id="kpGoN"></span></span>
+      <span class="ksub" id="kpGoName"></span>
+    </span>
+  </button>
+  <div class="kpgo2s" role="group" aria-label="按错题范围练习这个考点">
+    <button class="kpgo2" id="kpGoWrong" type="button">只练错题<span class="n" id="kpGoWrongN">0</span></button>
+    <button class="kpgo2 ever" id="kpGoEver" type="button">只练曾错过<span class="n" id="kpGoEverN">0</span></button>
+  </div>
+</div>
 
 <div class="drawerScrim" id="favScrim" hidden></div>
 <aside class="drawer" id="favDrawer" role="dialog" aria-modal="true" aria-labelledby="favTitle" tabindex="-1" hidden>
@@ -17751,7 +17803,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.57.0";
+  var APP_VERSION = "3.58.0";
   var DATA_VERSION = "2026-11-06";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -22449,12 +22501,30 @@
   }
 
   /* ---------------- [qzkp] 跳转后的悬浮入口 ---------------- */
-  /* 跟卡片绑定：卡片收起、滚出视野、切科目、进刷题都会自动隐去；滚回来还会再现。 */
+  /* 跟卡片绑定：卡片收起、滚出视野、切科目、进刷题都会自动隐去；滚回来还会再现。
+     三档共用一块浮层：主按钮＝该考点全部题，两个次级按钮＝未改正错题 / 曾错过（含已改对），
+     题数为 0 的那档直接禁用——三档是同一个考点的三个「子集」，同时只能点一个。 */
   var kpGo = byId("kpGo");
   var kpGoN = byId("kpGoN");
   var kpGoName = byId("kpGoName");
+  var kpGoWrap = byId("kpGoWrap");
+  var kpGoWrong = byId("kpGoWrong");
+  var kpGoWrongN = byId("kpGoWrongN");
+  var kpGoEver = byId("kpGoEver");
+  var kpGoEverN = byId("kpGoEverN");
   var KP_GO = { kid: "", card: null };
 
+  function kpGoPaintBtn(btn, numEl, n, okText, emptyText) {
+    if (numEl) numEl.textContent = String(n);
+    if (!btn) return;
+    btn.setAttribute("data-empty", n ? "false" : "true");
+    btn.disabled = !n;
+    var tip = n ? ("只练这 " + n + " 道" + okText) : ("这个考点" + emptyText);
+    btn.title = tip;
+    btn.setAttribute("aria-label", tip);
+  }
+
+  /* 题量随记录变，所以每次浮出来都重算一遍（三档计数都走同一份题库池） */
   function kpGoShow(kid, card) {
     if (!kpGo || !kid || !card) return;
     var st = qzKpStat(SID, kid);
@@ -22464,20 +22534,30 @@
     var kp = findPoint(kid);
     if (kpGoN) kpGoN.textContent = st.total + " 题";
     if (kpGoName) kpGoName.textContent = kp ? kp.name : "";
+    var nWrong = qzKpPoolMode(SID, kid, "wrong").length;
+    var nEver = qzKpPoolMode(SID, kid, "ever").length;
+    kpGoPaintBtn(kpGoWrong, kpGoWrongN, nWrong,
+      "还没改对的错题（最近一次作答仍是错的）", "没有还没改对的错题");
+    kpGoPaintBtn(kpGoEver, kpGoEverN, nEver,
+      "答错过的题（已经改对的也在内）", "还没有答错过的题");
+    kpGoWrap.hidden = false;
     kpGo.hidden = false;
   }
   function kpGoHide() {
     KP_GO.kid = "";
     KP_GO.card = null;
+    if (kpGoWrap) kpGoWrap.hidden = true;
     if (kpGo) kpGo.hidden = true;
   }
   function kpGoSync() {
     if (!kpGo || !KP_GO.kid) return;
     var c = KP_GO.card;
-    if (!c || !c.open || !document.body.contains(c)) { kpGo.hidden = true; return; }
+    if (!c || !c.open || !document.body.contains(c)) { kpGoHide(); return; }
     var r = c.getBoundingClientRect();
     var vh = window.innerHeight || 800;
-    kpGo.hidden = !(r.bottom > 90 && r.top < vh - 24);
+    var on = !!(r.bottom > 90 && r.top < vh - 24);
+    kpGoWrap.hidden = !on;
+    kpGo.hidden = !on;
   }
   if (kpGo) {
     kpGo.addEventListener("click", function () {
@@ -22485,6 +22565,23 @@
       if (!kid) return;
       kpGoHide();
       qzPracticeKp(kid);
+    });
+  }
+  /* 两个次级入口：同样是「收起浮层 → 直接开刷」，只是题池换成子集 */
+  if (kpGoWrong) {
+    kpGoWrong.addEventListener("click", function () {
+      var kid = KP_GO.kid;
+      if (!kid) return;
+      kpGoHide();
+      qzPracticeKp(kid, "wrong");
+    });
+  }
+  if (kpGoEver) {
+    kpGoEver.addEventListener("click", function () {
+      var kid = KP_GO.kid;
+      if (!kid) return;
+      kpGoHide();
+      qzPracticeKp(kid, "ever");
     });
   }
   (function () {
@@ -23045,6 +23142,7 @@
     state: "setup", done: {}, rec: null, startTs: 0,
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
     kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
+    kpMode: "",  // [qzkp] 那一组是按哪一档开的（""=全部 / wrong=只练错题 / ever=只练曾错过），复跑沿用
     /* [v3.41.0] 反馈层的运行时状态：只在内存里，不落快照、不进 schema */
     streak: 0,        // 当前连对题数
     streakBest: 0,    // 本组最长连对
@@ -24401,12 +24499,35 @@
     for (var i = 0; i < pool.length; i++) if (pool[i].kp.id === kid) out.push(pool[i]);
     return out;
   }
-  function qzPracticeKp(kid) {
+  /* [qzkp] 一个考点题池的三档切法（互斥的三个子集，后两档只会更小）：
+       all   全部题——含没做过的，与「练这个考点」完全一致；
+       wrong 只练错题——最近一次作答仍是错的（rec.r !== 1），即「还没改对」；
+       ever  只练曾错过——历史上答错过至少一次（w>0 或有 wa），已改对的也在内。
+     三个口径都只读 snap.quiz，不新增存储；没作答过的题只进 all。 */
+  function qzKpPoolMode(sid, kid, mode) {
+    var all = qzPoolOfKp(sid, kid), out = [];
+    if (mode !== "wrong" && mode !== "ever") return all;
+    for (var i = 0; i < all.length; i++) {
+      var rec = qzRecOf(sid, all[i].key);
+      if (!rec) continue;
+      if (mode === "wrong") { if (rec.r === 1) continue; }
+      else if (!qzEverRec(rec)) continue;
+      out.push(all[i]);
+    }
+    return out;
+  }
+  /* mode 省略＝全部题（卡片、薄弱知识点、蒙对清单、掌握度分组都走这条，行为不变） */
+  function qzPracticeKp(kid, mode) {
     if (!QZ_READY) return;
+    var m = (mode === "wrong" || mode === "ever") ? mode : "all";
+    var only = qzKpPoolMode(SID, kid, m);
+    if (!only.length) {
+      qzToast(m === "wrong" ? "这个考点没有还没改对的错题"
+        : m === "ever" ? "这个考点还没有答错过的题" : "该知识点暂无可用题目");
+      return;
+    }
     qzEnter();
-    var only = qzPoolOfKp(SID, kid);
-    if (!only.length) { qzToast("该知识点暂无可用题目"); return; }
-    qzStartRun(only, "考点练习", kid);
+    qzStartRun(only, m === "wrong" ? "考点错题" : (m === "ever" ? "考点曾错过" : "考点练习"), kid, m);
   }
 
   /* ---------- 视图切换 ---------- */
@@ -24663,7 +24784,7 @@
   }
 
   /* ---------- 答题 ---------- */
-  function qzStartRun(list, title, kpId) {
+  function qzStartRun(list, title, kpId, kpMode) {
     if (!list.length) {
       /* [newrand] 没做过的题刷完了要给准话，别只说「换个筛选试试」 */
       if (QZ.cfg.order === "new" || QZ.cfg.order === "newrand") {
@@ -24675,6 +24796,7 @@
     }
     QZ.list = list;
     QZ.kpRun = kpId || "";
+    QZ.kpMode = (kpMode === "wrong" || kpMode === "ever") ? kpMode : "";
     QZ.pos = 0;
     QZ.done = {};
     QZ.rec = { total: list.length, answered: 0, right: 0, wrong: [], byType: {} };
@@ -25507,10 +25629,13 @@
       }));
     }
     /* [qzkp] 若是「练这个考点」开的组，再来一组还只出这个考点，别突然变成整科题库 */
-    acts.appendChild(qzBtnNode(QZ.kpRun ? "再练一遍这个考点" : "再来一组", function () {
+    acts.appendChild(qzBtnNode(QZ.kpRun
+      ? (QZ.kpMode === "wrong" ? "再练一遍这几道错题" : (QZ.kpMode === "ever" ? "再练一遍曾错题" : "再练一遍这个考点"))
+      : "再来一组", function () {
       if (QZ.kpRun) {
-        var kid = QZ.kpRun;
-        qzStartRun(qzPoolOfKp(QZ.sid, kid), "考点练习", kid);
+        var kid = QZ.kpRun, m = QZ.kpMode || "all";
+        qzStartRun(qzKpPoolMode(QZ.sid, kid, m),
+          m === "wrong" ? "考点错题" : (m === "ever" ? "考点曾错过" : "考点练习"), kid, m);
       } else {
         qzStartRun(qzBuildList(), "再来一组");
       }
@@ -26875,6 +27000,8 @@
     next: qzNext, prev: qzPrev, summary: qzSummary, store: function () { return qzData(); }, LS: LS_QUIZ,
     kpStat: qzKpStat, idx: qzIdx, exRec: qzExRec, practiceKp: qzPracticeKp, refreshMarks: qzRefreshMarks,
     item: qzItem, wrongCount: qzWrongCount, wrongText: qzWrongText, wrongBody: qzWrongBody, wrongLabel: qzWrongLabel,
+    /* [qzkp] 考点题池三档：all / wrong（未改正）/ ever（曾错过） */
+    kpPool: qzPoolOfKp, kpPoolMode: qzKpPoolMode,
     weakList: qzWeakList, renderWeak: qzRenderWeak,
     /* [mastery] 掌握程度的自动化测试入口 */
     masteryOf: qzMasteryOf, masteryList: qzMasteryList, masteryGroups: qzMasteryGroups,
