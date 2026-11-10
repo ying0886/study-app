@@ -17,7 +17,16 @@
              ⑥不落快照、不升 schema：与限时一样只在内存里，交卷或退出后设定保留、下一轮沿用；
              ⑦自测：_tmp/sim-count-test.mjs 27 项（默认态、固定档、自定义继承、手输、超量提示、
                先滤后截、关模拟不生效、清空与越界边界）；_tmp/sim-test.mjs 22 项与 ever / guess / mastery / why 回归全过。
-             ⑧未动：题库、判分口径、掌握度、三态、进度、快照 schema 2、教学层、白话层、概念地图一律未改。
+             ⑧错题小结的字母口径（[E40]）：「本次作答」按作答那一刻的屏幕字母、「应选」却一直用原始字母，
+               选项一洗牌就出现「本次作答：B　应选 B」却判错——看着像判错，其实是两个字母在说不同选项。
+               现在两边都记当时的屏幕字母（rec.wrong.ansdisp；模拟模式在作答时就存 picks.disp/ansdisp，
+               不能等交卷再算，那时 QZ.perm 已停在最后一题上），清单上方另加一句「选项已随机排布」的说明。
+             ⑨小结题干降级：qzPlain 会把不认识的命令整段丢掉，「\Delta_{r}H^{\ominus}」只剩「_rH^」；
+               新增 qzTexPlain 先把 Δ / ° / ± / → 等符号换成人能读的字符再交给 qzPlain，只作用于展示层，
+               填空判定的容错口径不动。
+             ⑩自测：_tmp/wrong-disp-test.mjs 14 项（点错判错、点对判对、模拟交卷每题各按各的排列、
+               关闭洗牌时仍一致）；fill-plain（40 项）与 ever / guess / sim / sim-count 回归全过。
+             ⑪未动：题库、判分口径、掌握度、三态、进度、快照 schema 2、教学层、白话层、概念地图一律未改。
   上次变更: （3.71.0）把「专家 vs 普通高手」里没落地的那三件补上：整套模拟、丢分归因、待复盘（数据未动）——
              ①整套模拟（[sim]）：刷题设置页新增「模拟模式」＋限时（30/45/60/90/不限）。开了之后过程完全不判分、
                不给解析、多选题的提交按钮收起，作答先存内存（QZ.sim.picks），翻页/回看都保留，交卷时一次性判分
@@ -2197,6 +2206,8 @@
   .qwl-stem{display:block;color:var(--ink);font-size:13.5px;overflow-wrap:anywhere}
   .qwl-meta{display:block;color:var(--ink2);font-size:12px;margin-top:3px}
   .qwl-ans{display:block;color:var(--warn);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+  /* [E40] 洗过牌时的说明：字母只对得上「当时的屏幕」，回看卡片是原始顺序 */
+  .qwlhint{margin:4px 0 0;font-size:11.5px;line-height:1.6;color:var(--ink2)}
   .qwl-act{display:flex;gap:8px;margin-top:7px}
   .qempty{padding:40px 0;text-align:center;color:var(--ink2);font-size:14px}
 
@@ -30301,6 +30312,24 @@
     var t = qzPlain(s);
     return t.length > n ? (t.slice(0, n) + "…") : t;
   }
+  /* [E40] 小结里的题干是纯文本行：qzPlain 会把不认识的命令整段丢掉，
+     「\Delta_{r}H^{\ominus}」于是只剩「_rH^」，读不出是 ΔrH°。
+     这里先把符号换成人能读的字符，再交给 qzPlain 收尾。只用于展示（题干 / 错题行），
+     不去动 qzPlain 本身——填空判定的容错口径走的是那一条，别互相牵连。 */
+  var TEX_SYM = [
+    ["\\Delta", "Δ"], ["\\delta", "δ"], ["\\alpha", "α"], ["\\beta", "β"],
+    ["\\gamma", "γ"], ["\\mu", "μ"], ["\\rho", "ρ"], ["\\theta", "θ"],
+    ["\\lambda", "λ"], ["\\sigma", "σ"], ["\\omega", "ω"],
+    ["\\Sigma", "Σ"], ["\\Omega", "Ω"], ["\\pi", "π"],
+    ["\\ominus", "°"], ["\\circ", "°"], ["\\degree", "°"],
+    ["\\pm", "±"], ["\\to", "→"], ["\\rightarrow", "→"],
+    ["\\partial", "∂"], ["\\sum", "Σ"], ["\\int", "∫"], ["\\equiv", "≡"]
+  ];
+  function qzTexPlain(s) {
+    var t = String(s == null ? "" : s), i;
+    for (i = 0; i < TEX_SYM.length; i++) t = t.split(TEX_SYM[i][0]).join(TEX_SYM[i][1]);
+    return qzPlain(t);
+  }
 
   /* 错答行的文案：拆成「类型 → 前缀 → 正文 → 整行」四层，
      卡片上要带时间与「已改正」，刷题小结里只要正文，避免用字符串后处理去砍时间。 */
@@ -30325,8 +30354,10 @@
   }
   /* disp（可选）：作答那一刻屏幕上的字母串（"B、C"）。给了就照它显示字母，
      选项文本仍按 wa 的原始字母去 it.o 里取——洗过牌时这两件事必须分开算。 */
-  function qzWrongBody(r, it, disp) {
+  function qzWrongBody(r, it, disp, ansdisp) {
     var kind = qzWrongKind(r, it), wa = (r && typeof r.wa === "string") ? r.wa : "";
+    /* disp＝作答那一刻屏幕上的字母；ansdisp＝同一刻正确答案的屏幕字母。
+       两个都缺（卡片上的历史记录）就退回原始字母，那一行里两者仍同源，不会打架。 */
     if (kind === "self") return "没做对";
     if (kind === "fill") {
       var f = qzClip(wa, 24) || "（空）";
@@ -30342,7 +30373,7 @@
       if (ai >= 0 && it && it.o && it.o[ai] !== undefined && picks.indexOf(ai) < 0) picks.push(ai);
     }
     var out;
-    var dsp = String(disp || "");
+    var dsp = String(disp || ""), adsp = String(ansdisp || "");
     if (picks.length > 1) {
       out = dsp || qzMarksOf(picks);
     } else if (picks.length === 1) {
@@ -30357,10 +30388,10 @@
       else if (it.a >= 0 && it.o[it.a] !== undefined) ansArr = [it.a];
     }
     if (ansArr.length > 1) {
-      out += "　应选 " + qzMarksOf(ansArr);
+      out += "　应选 " + (adsp || qzMarksOf(ansArr));
     } else if (ansArr.length === 1) {
       var rl1 = qzOptLabel(it.o[ansArr[0]]);
-      out += "　应选 " + QMARKS.charAt(ansArr[0]) + (rl1 ? ". " + rl1 : "");
+      out += "　应选 " + (adsp || QMARKS.charAt(ansArr[0])) + (rl1 ? ". " + rl1 : "");
     }
     return out;
   }
@@ -30909,6 +30940,14 @@
     pos.sort(function (x, y) { return x - y; });
     return qzMarksOf(pos);
   }
+  /* [shuf] 正确答案在「当前这一次屏幕」上的字母：单选取 a、多选取 ma。
+     小结和卡片里要跟「本次作答」并排显示，两者必须同一套口径——一个按屏幕、一个按原始，
+     就会出现「本次作答：B　应选 B」这种自相矛盾（E40）。 */
+  function qzAnsDisp(it) {
+    if (!it) return "";
+    if (it.ma && it.ma.length) return qzDispLetters(it.ma);
+    return (it.a >= 0 && it.a !== undefined) ? qzDispLetters([it.a]) : "";
+  }
 
   /* [quiet] 答题头只露题型，章节名藏起来：
      章节里写着考点名（「§1.3 辩证对待人生矛盾」），动笔前看到等于先被告知该往哪个方向想。
@@ -31078,7 +31117,7 @@
       for (i = 0; i < ans.length; i++) if (picked[i] !== ans[i]) { right = false; break; }
     }
     QZ.done[QZ.pos] = { right: right, picked: picked, mode: "multi" };
-    qzCount(right, q, right ? null : { wa: qzWaOf(picked), wm: "opt", disp: qzDispLetters(picked) });
+    qzCount(right, q, right ? null : { wa: qzWaOf(picked), wm: "opt", disp: qzDispLetters(picked), ansdisp: qzDispLetters(ans) });
     qzMarkOpts(picked, ans);
     qzFeedback(right, right ? "" : "你选了 " + qzDispLetters(picked) + "，正确答案 " + qzDispLetters(ans));
     byId("qSubmit").disabled = true;
@@ -31116,7 +31155,7 @@
     var q = QZ.list[QZ.pos], it = q.it;
     var right = idx === it.a;
     QZ.done[QZ.pos] = { right: right, picked: idx, mode: "opt" };
-    qzCount(right, q, right ? null : { wa: QMARKS.charAt(idx), wm: "opt", disp: qzDispLetters([idx]) });
+    qzCount(right, q, right ? null : { wa: QMARKS.charAt(idx), wm: "opt", disp: qzDispLetters([idx]), ansdisp: qzAnsDisp(it) });
     qzMarkOpts(idx, it.a);
     /* [v3.41.0] 答对时不再重复报「正确答案 X」——图标和绿框已经说清楚了 */
     /* [shuf] 提示里的字母要用屏幕上显示的那个，洗过牌后原始字母已经不是它 */
@@ -31211,14 +31250,17 @@
     while (i < n) {
       c = t.charAt(i);
       if (c === "^" || c === "_") {
-        out += c;
         i++;
         if (t.charAt(i) === "{") {
           g = qzGroup(t, i);
           i = g[1];
           inner = qzPlain(g[0]);
+          /* [E40] 单符号上标（°、′）直接跟在后面：写「H^°」没人这么写 */
+          if (c === "^" && inner.length === 1 && !/[0-9A-Za-z]/.test(inner)) { out += inner; continue; }
           /* 单个负号、单个字母这类保持 10^-10、e^-2 的形状；真是复合式才补括号 */
-          out += (/^-?[0-9A-Za-z.]+$/.test(inner) || inner.length <= 2) ? inner : "(" + inner + ")";
+          out += c + ((/^-?[0-9A-Za-z.]+$/.test(inner) || inner.length <= 2) ? inner : "(" + inner + ")");
+        } else {
+          out += c;
         }
         continue;
       }
@@ -31331,7 +31373,10 @@
       pos: QZ.pos, key: q.key, stem: (q.it.q || q.ex.q), type: q.ex.type,
       kpName: q.kp.name, kid: q.kp.id, ei: q.it.i,
       wa: wrong ? String(wrong.wa || "") : "", wm: wrong ? (wrong.wm || "opt") : "opt",
-      disp: wrong ? String(wrong.disp || "") : ""   // [shuf] 作答时屏幕上的字母，小结照它显示
+      disp: wrong ? String(wrong.disp || "") : "",   // [shuf] 作答时屏幕上的字母，小结照它显示
+      /* [E40] 正确答案在同一刻屏幕上的字母。没有它的话，「应选」只能印原始字母，
+         而「本次作答」印的是屏幕字母——洗过牌就会出现「B　应选 B」这种假矛盾。 */
+      ansdisp: wrong ? String(wrong.ansdisp || "") : ""
     });
     var t = q.ex.type;
     if (!rec.byType[t]) rec.byType[t] = { n: 0, right: 0 };
@@ -31753,17 +31798,21 @@
     var q = QZ.list[QZ.pos];
     if (!q) return;
     var mode = qzModeOf(q.it);
+    /* [E40] 屏幕字母必须在这里就存下来：交卷时 QZ.perm 停在最后一题上，
+       那时再算 qzDispLetters 会得到别的题的排列，字母全是错的。 */
+    var ad = qzAnsDisp(q.it);
     if (mode === "fill") {
       QZ.sim.picks[QZ.pos] = { mode: "fill", val: byId("qFill").value };
       return;
     }
     if (mode === "multi") {
-      QZ.sim.picks[QZ.pos] = { mode: "multi", picked: qzChosen() };
+      var pk = qzChosen();
+      QZ.sim.picks[QZ.pos] = { mode: "multi", picked: pk, disp: qzDispLetters(pk), ansdisp: ad };
       return;
     }
     var o = qzSimSel();
     if (o === null) delete QZ.sim.picks[QZ.pos];
-    else QZ.sim.picks[QZ.pos] = { mode: "opt", picked: o };
+    else QZ.sim.picks[QZ.pos] = { mode: "opt", picked: o, disp: qzDispLetters([o]), ansdisp: ad };
   }
   /* 回到一题时把 picks 画回去——回看、改答案都不丢 */
   function qzSimRestore() {
@@ -31789,7 +31838,8 @@
       var oi = parseInt(opts[i].getAttribute("data-i"), 10);
       opts[i].className = (oi === idx) ? "qopt on" : "qopt";
     }
-    QZ.sim.picks[QZ.pos] = { mode: "opt", picked: idx };
+    var q = QZ.list[QZ.pos];
+    QZ.sim.picks[QZ.pos] = { mode: "opt", picked: idx, disp: qzDispLetters([idx]), ansdisp: qzAnsDisp(q && q.it) };
   }
   function qzSimAnswered() {
     var n = 0, k;
@@ -31809,14 +31859,17 @@
       if (p.mode === "opt") {
         picked = p.picked;
         right = p.picked === it.a;
-        if (!right) wrong = { wa: QMARKS.charAt(p.picked), wm: "opt", disp: qzDispLetters([p.picked]) };
+        /* 字母用作答当时存下来的 disp / ansdisp，不再现算（现算会套到最后一题的排列上） */
+        if (!right) wrong = { wa: QMARKS.charAt(p.picked), wm: "opt",
+                              disp: p.disp || qzMarksOf([p.picked]), ansdisp: p.ansdisp || qzAnsDisp(it) };
       } else if (p.mode === "multi") {
         var ans = it.ma.slice().sort(function (a, b) { return a - b; });
         var pick = (p.picked || []).slice().sort(function (a, b) { return a - b; });
         right = pick.length === ans.length;
         for (k = 0; right && k < ans.length; k++) if (pick[k] !== ans[k]) right = false;
         picked = pick;
-        if (!right) wrong = { wa: qzWaOf(pick), wm: "opt", disp: qzDispLetters(pick) };
+        if (!right) wrong = { wa: qzWaOf(pick), wm: "opt",
+                              disp: p.disp || qzMarksOf(pick), ansdisp: p.ansdisp || qzAnsDisp(it) };
       } else {
         right = qzFillMatch(p.val, it.e);
         if (!right) wrong = { wa: String(p.val == null ? "" : p.val), wm: "fill" };
@@ -32136,18 +32189,31 @@
       for (i = 0; i < order.length && i < 6; i++) kpText.push(order[i] + " ×" + byKp[order[i]]);
       if (order.length > 6) kpText.push("…共 " + order.length + " 个考点");
       qzSum.appendChild(txt("div", "qkpsum", "考点分布：" + kpText.join("、")));
+      /* [E40] 洗过牌时这两行字母只对得上「作答那一刻的屏幕」；卡片上按原始顺序，会不一样。
+         不说这一句，回头对不上就会以为自己记错了或者系统判错了。 */
+      var shufed = false;
+      for (i = 0; i < rec.wrong.length; i++) {
+        var w1 = rec.wrong[i];
+        var d1 = w1 && w1.disp ? String(w1.disp).replace(/、/g, "") : "";
+        var w1raw = w1 && w1.wa ? String(w1.wa).toUpperCase().replace(/、/g, "") : "";
+        if (d1 && w1raw && d1 !== w1raw) { shufed = true; break; }
+      }
+      if (shufed) {
+        qzSum.appendChild(txt("p", "qwlhint",
+          "选项在作答时是随机排布的：下面两行的字母对应你当时屏幕上的顺序；在知识点卡片上回看时按原始顺序，字母可能对不上，以选项内容为准。"));
+      }
       var ul = el("ul", "qwrong");
       for (i = 0; i < rec.wrong.length; i++) {
         (function (w) {
           var li = el("li");
-          var stem = String(w.stem || "").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/\\\(|\\\)/g, "");
+          var stem = qzTexPlain(w.stem || "");
           li.appendChild(txt("span", "qwl-stem", stem.length > 62 ? stem.slice(0, 62) + "…" : stem));
           var r = qzRecOf(QZ.sid, w.key);
           var times = (r && r.w) ? r.w : 1;
           li.appendChild(txt("span", "qwl-meta", w.kpName + " · " + w.type + " · 已错 " + times + " 次"));
           if (w.wa !== undefined || w.wm === "self") {
             var mineIt = qzItem(QZ.sid, w.kid, w.ei);
-            var mine = qzWrongBody({ wa: w.wa, wm: w.wm, r: 0 }, mineIt, w.disp);
+            var mine = qzWrongBody({ wa: w.wa, wm: w.wm, r: 0 }, mineIt, w.disp, w.ansdisp);
             if (mine) li.appendChild(txt("span", "qwl-ans", "本次作答：" + mine));
           }
 
@@ -34419,6 +34485,7 @@
     renderQ: qzRenderQ, quit: qzQuit,
     kpStat: qzKpStat, idx: qzIdx, exRec: qzExRec, practiceKp: qzPracticeKp, refreshMarks: qzRefreshMarks,
     item: qzItem, wrongCount: qzWrongCount, wrongText: qzWrongText, wrongBody: qzWrongBody, wrongLabel: qzWrongLabel,
+    texPlain: qzTexPlain,   // [E40] 小结题干降级：自动化测试要能直接验
     /* [qzkp] 考点题池三档：all / wrong（未改正）/ ever（曾错过） */
     kpPool: qzPoolOfKp, kpPoolMode: qzKpPoolMode,
     /* [shuf] 选项随机排布：开关、当前映射、下标互转 */
