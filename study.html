@@ -30345,12 +30345,11 @@
     if (kind === "fill") return fixed ? "曾填：" : "上次填：";
     return fixed ? "曾答错：" : "上次答错：";
   }
-  /* 选项文本里带 LaTeX（\frac、^、_ 等）就只给字母——题干下面的选项本来就是渲染好的，
-     在这一行再塞一段源码反而更乱 */
+  /* [E40] 选项文本带 LaTeX 时不再丢成空——那样错题行只剩字母，洗过牌后根本分不清
+     自己选的是哪一项。降级成人能读的（ΔrH°、kJ · mol^-1）再截断，字母 + 内容互相印证。 */
   function qzOptLabel(o) {
     var raw = String(o == null ? "" : o);
-    if (/[\\^_{}]/.test(raw)) return "";
-    return qzClip(raw, 16);
+    return qzClip(/[\\^_{}]/.test(raw) ? qzTexPlain(raw) : raw, 18);
   }
   /* disp（可选）：作答那一刻屏幕上的字母串（"B、C"）。给了就照它显示字母，
      选项文本仍按 wa 的原始字母去 it.o 里取——洗过牌时这两件事必须分开算。 */
