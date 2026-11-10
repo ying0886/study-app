@@ -3,9 +3,22 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.71.0
+  APP_VERSION: 3.72.0
   DATA_VERSION: 2026-11-08
-  本次变更: （3.71.0）把「专家 vs 普通高手」里没落地的那三件补上：整套模拟、丢分归因、待复盘（数据未动）——
+  本次变更: （3.72.0）模拟考试支持自定义题量（数据未动）——
+             ①刷题设置页「模拟」下方新增「题量」一行：全部题目 / 10 / 20 / 30 / 50 / 100 / 自定义…；
+               选「自定义」会露出数字框，可直接输具体题数（1–999），清空或输 0＝全部题目；
+             ②只对模拟模式生效：模拟关着时这一行只作预设，不影响零散练习的组卷；
+             ③生效点在 qzStartRun，顺序是「按原筛选排好 → 滤掉自评题 → 取前 N 道」。顺序不能反：
+               先截断再过滤的话，自评题会白占名额（自测里专门把一道自评题放在首位验证）；
+             ④筛出来不够 N 道时不硬凑、也不静默缩水：按实际数量组卷，并提示「只凑到 X 道（设定 N 道）」；
+             ⑤界面上三处同步显示当前题量：题量下拉/数字框本身、设置页统计条「模拟 N 题」（全卷时写「模拟全卷」）、
+               下方说明「本次按 N 道组卷；筛出来不够 N 道就按实际数量考」；
+             ⑥不落快照、不升 schema：与限时一样只在内存里，交卷或退出后设定保留、下一轮沿用；
+             ⑦自测：_tmp/sim-count-test.mjs 27 项（默认态、固定档、自定义继承、手输、超量提示、
+               先滤后截、关模拟不生效、清空与越界边界）；_tmp/sim-test.mjs 22 项与 ever / guess / mastery / why 回归全过。
+             ⑧未动：题库、判分口径、掌握度、三态、进度、快照 schema 2、教学层、白话层、概念地图一律未改。
+  上次变更: （3.71.0）把「专家 vs 普通高手」里没落地的那三件补上：整套模拟、丢分归因、待复盘（数据未动）——
              ①整套模拟（[sim]）：刷题设置页新增「模拟模式」＋限时（30/45/60/90/不限）。开了之后过程完全不判分、
                不给解析、多选题的提交按钮收起，作答先存内存（QZ.sim.picks），翻页/回看都保留，交卷时一次性判分
                并写原有的逐题记录；交卷页先给分数（有官方题型按分值折算，没有的按正确率折算）再给错题；
@@ -876,7 +889,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.71.0">
+<meta name="app-version" content="3.72.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2235,6 +2248,14 @@
   .qwhybar2 i{display:block;height:100%}
   /* [sim] 整套模拟：过程不判分，只有计时与交卷；窄屏也不挤成两行 */
   .qsimsel{max-width:9.5em;min-height:34px;font-size:12.5px}
+  /* [sim] 自定义题量的数字输入：与下拉同高同款，留空＝全部题目 */
+  .qsimnum{
+    width:6.5em;min-height:34px;padding:0 8px;flex:0 0 auto;
+    background:var(--card);color:var(--ink);border:1px solid var(--line2);
+    border-radius:6px;font:inherit;font-size:12.5px;font-variant-numeric:tabular-nums;
+  }
+  .qsimnum[hidden]{display:none}
+  .qsimnum:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .qsim{
     margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--warnBg);color:var(--warn);
     font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;
@@ -3268,6 +3289,22 @@
           <option value="90">限时 90 分钟</option>
         </select>
         <span class="qswhint" id="qSimHint">开＝答完不判分、不给解析；交卷后统一出分并记一条校准</span>
+      </div>
+      <!-- [sim] 模拟题量：全部 / 固定档 / 自定义；只在模拟模式下生效 -->
+      <div class="qrow qrow-sw">
+        <span class="qlabel">题量</span>
+        <select class="qsel qsimsel" id="qSimCount" aria-label="模拟题量">
+          <option value="all">全部题目</option>
+          <option value="10">10 题</option>
+          <option value="20">20 题</option>
+          <option value="30">30 题</option>
+          <option value="50">50 题</option>
+          <option value="100">100 题</option>
+          <option value="custom">自定义…</option>
+        </select>
+        <input class="qsimnum" id="qSimNum" type="number" inputmode="numeric" min="1" max="999" step="1"
+               placeholder="题数" aria-label="自定义题量，留空＝全部题目" hidden>
+        <span class="qswhint" id="qSimCountHint">只在模拟模式下生效：按当前顺序从本次组卷里取前若干道</span>
       </div>
       <div class="qrow qbuttons">
         <button class="btn" id="qBegin" type="button">开始刷题</button>        <button class="btn small" id="qReset" type="button">重置本科目进度</button>
@@ -23623,7 +23660,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.71.0";
+  var APP_VERSION = "3.72.0";
   var DATA_VERSION = "2026-11-08";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -29042,8 +29079,9 @@
     on: false, sid: null, pool: [], list: [], pos: 0,
     state: "setup", done: {}, rec: null, startTs: 0,
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
-    /* [sim] 整套模拟：作答先进 picks，交卷才判分。只在内存里，不落快照 */
-    sim: { on: false, limit: 0, picks: {}, t0: 0, tick: 0, done: false },
+    /* [sim] 整套模拟：作答先进 picks，交卷才判分。只在内存里，不落快照。
+       count＝本卷题量（0＝全部），cust＝题量是否停在「自定义」档（仅用于回画下拉） */
+    sim: { on: false, limit: 0, count: 0, cust: false, picks: {}, t0: 0, tick: 0, done: false },
     kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
     kpMode: "",  // [qzkp] 那一组是按哪一档开的（""=全部 / wrong=只练错题 / ever=只练曾错过），复跑沿用
     perm: [],    // [shuf] 当前题「显示位置 → 原始下标」的映射，每次渲染重洗
@@ -30627,6 +30665,11 @@
     }
     /* [layer] 层次筛选生效时也要说一句，否则「怎么只剩 40 题」会被当成 bug */
     if (qzNum(QZ.cfg.ly)) txt += " · 只出" + LY_NAME[qzNum(QZ.cfg.ly)] + "层";
+    /* [sim] 模拟开着就把本卷题量写进统计条：全库题数和本卷题数不是一回事，得说清 */
+    if (qzSimOn()) {
+      var swant = qzNum(QZ.sim.count);
+      txt += swant ? " · 模拟 " + swant + " 题" : " · 模拟全卷";
+    }
     byId("qStat").textContent = txt;
   }
 
@@ -30760,10 +30803,17 @@
         qzToast("模拟模式只收选择 / 判断 / 多选 / 填空——这一组全是自评题，换个筛选或关掉模拟");
         return;
       }
-      if (sonly.length < list.length) {
-        qzToast("模拟模式略过 " + (list.length - sonly.length) + " 道自评题（无法机器判分）", 3200);
-      }
+      var skipped = list.length - sonly.length, notes = [];
       list = sonly;
+      /* [sim] 题量：按当前顺序（顺序筛选已生效）取前 N 道；题库不够时如实说，不静默缩水 */
+      var want = qzNum(QZ.sim.count);
+      if (want > 0 && list.length > want) {
+        list = list.slice(0, want);
+      } else if (want > 0 && list.length < want) {
+        notes.push("只凑到 " + list.length + " 道（设定 " + want + " 道）");
+      }
+      if (skipped) notes.push("略过 " + skipped + " 道自评题（无法机器判分）");
+      if (notes.length) qzToast("模拟：" + notes.join("；") + "，本次按 " + list.length + " 道组卷", 3400);
     }
     QZ.list = list;
     QZ.kpRun = kpId || "";
@@ -31803,7 +31853,9 @@
     }
     return { est: Math.round(est), total: total || 100, kind: "按题型分值折算", items: items };
   }
-  /* 设置页那个开关：文案与下拉都从 QZ.sim 现画，不用另存状态 */
+  /* 设置页那个开关：文案、限时与题量都从 QZ.sim 现画，不用另存状态 */
+  var SIM_COUNTS = [10, 20, 30, 50, 100];   // [sim] 下拉里的固定档；不在这里的数一律算「自定义」
+  function qzSimCount() { return qzNum(QZ.sim.count); }   // 0＝全部
   function qzPaintSim() {
     var b = byId("qSimBtn"), h = byId("qSimHint"), s = byId("qSimLimit");
     if (!b) return;
@@ -31813,6 +31865,25 @@
       ? "已开：答完不判分、不给解析，交卷后统一出分并记一条校准（自评题不收）"
       : "开＝答完不判分、不给解析；交卷后统一出分并记一条校准";
     if (s) s.value = String(qzNum(QZ.sim.limit));
+    /* [sim] 题量：固定档直接对应下拉，其它值归到「自定义」并让数字框露出来 */
+    var c = byId("qSimCount"), n = byId("qSimNum"), ch = byId("qSimCountHint");
+    if (!c) return;
+    var want = qzSimCount(), i;
+    if (want && SIM_COUNTS.indexOf(want) < 0) QZ.sim.cust = true;   // 外部直接塞了个非固定值
+    c.value = QZ.sim.cust ? "custom" : (want ? String(want) : "all");
+    if (n) {
+      n.hidden = !QZ.sim.cust;
+      if (!QZ.sim.cust) n.value = "";
+      /* 正在敲数字时别回写，否则光标会跳；值已一致也不用动 */
+      else if (document.activeElement !== n) n.value = want ? String(want) : "";
+    }
+    if (ch) {
+      ch.textContent = !qzSimOn()
+        ? "题量只在模拟模式下生效；开模拟后按这里出卷"
+        : (want
+          ? "本次按 " + want + " 道组卷；筛出来不够 " + want + " 道就按实际数量考"
+          : "本次出全卷：符合上面筛选的全部题目");
+    }
   }
 
   function qzToggleExpl(force) {
@@ -34267,10 +34338,30 @@
     if (byId("qSimBtn")) byId("qSimBtn").addEventListener("click", function () {
       QZ.sim.on = !QZ.sim.on;
       qzPaintSim();
+      qzRenderStat();   // [sim] 统计条里有「模拟 N 题」，开关一变就得重画
     });
     if (byId("qSimLimit")) byId("qSimLimit").addEventListener("change", function () {
       QZ.sim.limit = qzNum(this.value);
       qzPaintSim();
+    });
+    /* [sim] 题量：下拉切档与数字框手输都即时生效，统计条跟着回画 */
+    if (byId("qSimCount")) byId("qSimCount").addEventListener("change", function () {
+      if (this.value === "custom") {
+        QZ.sim.cust = true;
+        if (!qzSimCount()) QZ.sim.count = 20;   // 进「自定义」先给个起点，空着看不出效果
+      } else {
+        QZ.sim.cust = false;
+        QZ.sim.count = this.value === "all" ? 0 : qzNum(this.value);
+      }
+      qzPaintSim();
+      qzRenderStat();
+    });
+    if (byId("qSimNum")) byId("qSimNum").addEventListener("input", function () {
+      var v = Math.round(qzNum(this.value));
+      QZ.sim.count = v > 0 ? Math.min(999, v) : 0;   // 清空或 0＝全部
+      QZ.sim.cust = true;
+      qzPaintSim();
+      qzRenderStat();
     });
     byId("qBegin").addEventListener("click", function () {
       QZ.cfg.sec = byId("qSecSel").value;
@@ -34362,12 +34453,18 @@
     /* [recall] 回忆模式 */
     recallOn: recallOn,
     /* [sim] 整套模拟：开关、交卷、得分口径 */
-    simOn: qzSimOn, simSubmit: qzSimSubmit, simScore: qzSimScore,
+    simOn: qzSimOn, simSubmit: qzSimSubmit, simScore: qzSimScore, simCount: qzSimCount,
     simCapture: qzSimCapture, paintSim: qzPaintSim,
-    setSim: function (on, limit) {
+    setSim: function (on, limit, count) {
       QZ.sim.on = !!on;
       if (limit !== undefined) QZ.sim.limit = qzNum(limit);
+      if (count !== undefined) {
+        var cv = Math.round(qzNum(count));
+        QZ.sim.count = cv > 0 ? Math.min(999, cv) : 0;
+        QZ.sim.cust = !!(QZ.sim.count && SIM_COUNTS.indexOf(QZ.sim.count) < 0);
+      }
       qzPaintSim();
+      qzRenderStat();
     },
     /* [ever] 曾错过：筛选集合、题目集抽屉、跨科目跳转 */
     everList: qzEverList, everCount: qzEverCount, everKids: qzEverKids, everTotal: qzEverTotal,
