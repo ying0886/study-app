@@ -3,9 +3,14 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.77.2
+  APP_VERSION: 3.77.3
   DATA_VERSION: 2026-11-13
-  本次变更: （3.77.2）白话层「大模型三阶段」术语释义由复述正文改为翻译黑话，并加防复述校验——
+  本次变更: （3.77.3）刷题可随时「结束练习」并出小结——
+             ①刷题页底部「退出」改为「结束练习」：随时主动结束本轮（无论答几题），模拟模式下等同提前交卷；
+             ②结束即出小结：已完成题数、正确率、错题清单（每条附一句简要解析）、整体表现评价（掌握度变化/元认知校准）；
+             ③中途结束只结算已答的题：已答记录照常落库，未答保持未做、不计入本次统计；
+             ④未动：题库 800 题、判分口径、分级、快照 schema 2、白话层/教学层/概念地图/公式库/学习路径。
+  上次变更: （3.77.2）白话层「大模型三阶段」术语释义由复述正文改为翻译黑话，并加防复述校验——
              ①a6s1-03 术语由「萌芽期/沉淀期/爆发期」（释义只是把正文的时间区间再抄一遍）换成 5 个真黑话：
                卷积神经网络、LeNet-5、Transformer、GPT、预训练，各配一句人话；
              ②check.mjs 新增「术语释义不得复述正文」断言（抓「为代表」句式 /「阶段」配年份区间），构建时拦下再犯；
@@ -962,7 +967,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.77.2">
+<meta name="app-version" content="3.77.3">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2270,6 +2275,8 @@
   .qwl-stem{display:block;color:var(--ink);font-size:13.5px;overflow-wrap:anywhere}
   .qwl-meta{display:block;color:var(--ink2);font-size:12px;margin-top:3px}
   .qwl-ans{display:block;color:var(--warn);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+  /* [endrun] 小结错题的简要解析：一句说清为什么是这个答案 */
+  .qwl-expl{display:block;color:var(--ink2);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
   /* [E40] 洗过牌时的说明：字母只对得上「当时的屏幕」，回看卡片是原始顺序 */
   .qwlhint{margin:4px 0 0;font-size:11.5px;line-height:1.6;color:var(--ink2)}
   .qwl-act{display:flex;gap:8px;margin-top:7px}
@@ -27976,7 +27983,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.77.2";
+  var APP_VERSION = "3.77.3";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -34821,6 +34828,8 @@
     qzStart.hidden = which !== "setup";
     qzCard.hidden = which !== "run";
     qzSum.hidden = which !== "sum";
+    /* [endrun] 刷题页的退出键是「结束练习」，设置页/小结页才是「退出」 */
+    byId("qQuit").textContent = which === "run" ? "结束练习" : "退出";
   }
 
   function qzEnter() {
@@ -36311,7 +36320,13 @@
   function qzSkip() { qzNext(); }
 
   function qzQuit() {
-    if (QZ.state === "run") { qzShow("setup"); qzRenderSetup(); return; }
+    if (QZ.state === "run") {
+      /* [endrun] 刷题中主动结束：模拟模式等同提前交卷（只判已答的），普通模式直接出小结。
+         已作答的题在 qzCount 里已实时落库，这里不回滚、不丢；未作答的保持未做。 */
+      if (qzSimOn() && !QZ.sim.done) { qzSimSubmit(false); return; }
+      qzSummary(true);
+      return;
+    }
     qzExit();
   }
 
@@ -36358,17 +36373,32 @@
     if (mapBtn) mapBtn.click();
   }
 
-  function qzSummary() {
+  /* [endrun] 小结错题的简要解析：把例题解析剥掉「答案」段与 HTML 标签、降级 LaTeX 后截短，
+     让人扫一眼就知道这道题为什么是这个答案。 */
+  function qzBriefExpl(q) {
+    if (!q || !q.ex || !q.ex.a) return "";
+    var html = String(q.ex.a);
+    if (qzModeOf(q.it) !== "self") html = html.replace(/^<p><b>答案[：:][\s\S]*?<\/b><\/p>/, "");
+    var txt = html.replace(/<[^>]+>/g, " ");
+    txt = qzTexPlain(txt);
+    txt = txt.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    return txt.length > 56 ? txt.slice(0, 56) + "…" : txt;
+  }
+
+  function qzSummary(ended) {
     var rec = QZ.rec;
     var secs = Math.max(1, Math.round((nowMs() - QZ.startTs) / 1000));
     var mm = Math.floor(secs / 60), ss = secs % 60;
     var rate = rec.answered ? Math.round(rec.right / rec.answered * 100) : 0;
 
     qzSum.innerHTML = "";
-    qzSum.appendChild(txt("h3", "", QZ.sim.done ? "模拟交卷" : "本组完成"));
-    qzSum.appendChild(txt("div", "qsumsub",
-      "用时 " + mm + " 分 " + (ss < 10 ? "0" : "") + ss + " 秒 · 共 " + rec.total +
-      " 题 · 已答 " + rec.answered + " 题"));
+    /* [endrun] 标题三态：中途主动结束 / 刷完 / 模拟交卷 */
+    qzSum.appendChild(txt("h3", "", ended ? "练习结束" : (QZ.sim.done ? "模拟交卷" : "本组完成")));
+    var subTxt = "用时 " + mm + " 分 " + (ss < 10 ? "0" : "") + ss + " 秒 · 共 " + rec.total +
+      " 题 · 已答 " + rec.answered + " 题";
+    /* [endrun] 中途结束（且没刷完）时，把「还剩几题没做」摆在明面上 */
+    if (ended && rec.answered < rec.total) subTxt += " · 未答 " + (rec.total - rec.answered) + " 题";
+    qzSum.appendChild(txt("div", "qsumsub", subTxt));
     /* [sim] 交卷后先给分数，再给原有的正确率与错题——分数是「按题型折算」的口径 */
     if (QZ.sim.done) {
       var sc = qzSimScore(rec), sbox = el("div", "qsimres");
@@ -36513,6 +36543,12 @@
             var mineIt = qzItem(QZ.sid, w.kid, w.ei);
             var mine = qzWrongBody({ wa: w.wa, wm: w.wm, r: 0 }, mineIt, w.disp, w.ansdisp);
             if (mine) li.appendChild(txt("span", "qwl-ans", "本次作答：" + mine));
+          }
+          /* [endrun] 简要解析：这条错题为什么是这个答案，一句扫完 */
+          var wq = QZ.list[w.pos];
+          if (wq) {
+            var expl = qzBriefExpl(wq);
+            if (expl) li.appendChild(txt("span", "qwl-expl", "解析：" + expl));
           }
 
           var acts = el("div", "qwl-act");
