@@ -3,9 +3,14 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.77.0
+  APP_VERSION: 3.77.1
   DATA_VERSION: 2026-11-12
-  本次变更: （3.77.0）补入课本复习题的计算大题（13 道，答案已逐题核算）——
+  本次变更: （3.77.1）全面排查后的代码修复与精简——
+             ①修复 qzPlain 函数重复定义：旧简版被完整版覆盖成死代码，且完整版缺 HTML 标签剥离，
+               将来填空答案若含 <sub>/<br> 会把标签字面量印上屏幕；现删除死代码并补上标签剥离；
+             ②清理 closeEver 内重复的局部变量声明、lnQueue 里「只循环一次的 for」写法；
+             ③纯逻辑/健壮性改动，数据未动，判分、分级、快照 schema 2、题库 800 题均不变。
+  上次变更: （3.77.0）补入课本复习题的计算大题（13 道，答案已逐题核算）——
              ①盖斯定律（燃烧焓求 CH₄ 生成焓）、反应商 Q 判方向（N₂O₄⇌2NO₂）、一级反应半衰期求 k、
                拉乌尔定律蒸气压下降、渗透压、弱酸解离度、同离子效应（HAc+HCl）、强碱 pH、
                Mg(OH)₂ 开始沉淀 pH、配离子转化平衡常数、原电池电动势（Cu-Ag）、
@@ -952,7 +957,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.77.0">
+<meta name="app-version" content="3.77.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -27964,7 +27969,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.77.0";
+  var APP_VERSION = "3.77.1";
   var DATA_VERSION = "2026-11-12";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -30019,10 +30024,7 @@
     document.body.classList.remove("drawerOpen");
     var link = byId("everOpen");
     if (link) link.setAttribute("aria-expanded", "false");
-    if (!keepFocus) {
-      var link = byId("everOpen");
-      if (link) link.focus();
-    }
+    if (!keepFocus && link) link.focus();
   }
   everCloseBtn.addEventListener("click", function () { closeEver(); });
   everScrim.addEventListener("click", function () { closeEver(); });
@@ -34592,15 +34594,6 @@
     var d = new Date(t), p = function (n) { return (n < 10 ? "0" : "") + n; };
     return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
   }
-  /* 选项/填空里可能带 \(...\) 与 <br>，这里的错答行只用纯文本，先剥掉标记 */
-  function qzPlain(s) {
-    return String(s == null ? "" : s)
-      .replace(/<br\s*\/?>/gi, " ")
-      .replace(/\\\(|\\\)/g, "")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
   function qzClip(s, n) {
     var t = qzPlain(s);
     return t.length > n ? (t.slice(0, n) + "…") : t;
@@ -35535,8 +35528,13 @@
     }
     return [s.substring(i + 1), s.length];
   }
+  /* 错答行 / 填空参考答案统一走这里：先把 <br> 等标签剥成纯文本，再解析 \(...\) LaTeX。
+     完整版才是唯一生效的口径（简版旧定义会被本定义覆盖，已删除）；补上标签剥离，
+     避免将来某道填空题答案带 <sub>/<br> 时把标签字面量印到屏幕上。 */
   function qzPlain(s) {
     var t = String(s == null ? "" : s)
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/<[^>]+>/g, "")
       .replace(/\\\(|\\\)|\\\[|\\\]/g, "")
       .replace(/\\[,;:! ]/g, "");
     var out = "", i = 0, n = t.length, c, j, cmd, g, num, den, inner;
@@ -37363,15 +37361,14 @@
     return null;
   }
   function lnQueue(sid, kid) {
-    var info = lnStageOf(sid, kid), out = [], i, j, m, pt, hit;
+    var info = lnStageOf(sid, kid), out = [], j, m, pt, hit;
     if (!info) return kid ? [kid] : [];
     hit = false;
-    for (i = info.i; i < info.i + 1 && out.length < LN_SIZE; i++) {
-      for (j = 0; j < info.st.pts.length && out.length < LN_SIZE; j++) {
-        pt = info.st.pts[j];
-        if (!hit) { if (pt.k.indexOf(kid) < 0) continue; hit = true; }
-        for (m = 0; m < pt.k.length && out.length < LN_SIZE; m++) out.push(pt.k[m]);
-      }
+    /* 只取 kid 所在的这一个阶段（不跨阶段），从命中点起往后排，最多 LN_SIZE 个 */
+    for (j = 0; j < info.st.pts.length && out.length < LN_SIZE; j++) {
+      pt = info.st.pts[j];
+      if (!hit) { if (pt.k.indexOf(kid) < 0) continue; hit = true; }
+      for (m = 0; m < pt.k.length && out.length < LN_SIZE; m++) out.push(pt.k[m]);
     }
     if (!out.length) out.push(kid);
     return out;
