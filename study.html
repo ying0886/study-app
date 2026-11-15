@@ -3,9 +3,16 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.79.0
+  APP_VERSION: 3.79.1
   DATA_VERSION: 2026-11-13
-  本次变更: （3.79.0）教学层第 1 拍接入「交互图元」（先只做化学 c1s3-02 一个样板）——
+  本次变更: （3.79.1）渲染器兼容「模型生成的规格」——
+             ①横轴变量在公式里现在两种写法都认：x，或 x.id（如 Q / T / t）。只认一个的话，
+               另一种会变成未知量，表现为「图画出来了、读数全是 —」；
+             ②x 轴改为左标最小值、右标最大值、轴名居中，原来只标了最大值，看不出起点；
+             ③同一张图有多条 marks 竖线时，标签按 21px 错开，避免叠在一起；
+             ④新增配套工具：交互图元生成器（_tmp/ix-gen.html，模型只输出规格、本地校验后预览）；
+             ⑤未动：数据、判分、分级、快照 schema 2、其余 100 条教学条目；c1s3-02 的图元行为不变。
+  上次变更: （3.79.0）教学层第 1 拍接入「交互图元」（先只做化学 c1s3-02 一个样板）——
              ①新增渲染器 ix-render.js（28 KB，纯 ES5、零外部依赖、不用 eval）：自带调度场表达式求值器，
                公式以字符串存放，白名单文法（+ - * / ^ 比较 逻辑 括号 一元负号 + abs/sqrt/round/floor/ceil/exp/ln），
                未知量直接抛错而不是静默返回 NaN；
@@ -990,7 +997,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.79.0">
+<meta name="app-version" content="3.79.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -28322,6 +28329,9 @@
     /* 横轴变量在公式里**固定叫 x**，不跟 xs.id 走——否则规格写 id:"T"、公式写 "x" 就对不上。
        xs.id 只作为标识留着，将来要支持多横轴再说。 */
     vars.x = (typeof xs.def === "number") ? xs.def : xs.min;
+    /* 横轴在公式里两种写法都认：x，或 xs.id（模型常按语义写成 Q / T / t）。
+       只认一个的话，另一种写法会变成「未知量」→ 曲线空、读数全「—」（E44 复发的形态）。 */
+    if (xs.id && xs.id !== "x") { vars[xs.id] = vars.x; }
 
     /* --- 顶部：实时读数 --- */
     var readWrap = el("div", "ix-read");
@@ -28363,6 +28373,7 @@
       r.addEventListener("input", function () {
         var v = parseFloat(r.value);
         vars[key] = v;
+        if (isX && xs.id && xs.id !== "x") { vars[xs.id] = v; }
         val.textContent = fmt(v) + (cfg.unit ? " " + cfg.unit : "");
         paint();
       });
@@ -28408,18 +28419,22 @@
       var fn = compile(f.expr);
       var N = 96, pts = [], k, xv, yv;
       var keep = vars.x;                 /* 采样会改写 x 变量，先存后还，别污染滑块当前值 */
+      var keepId = (xs.id && xs.id !== "x") ? vars[xs.id] : null;
       for (k = 0; k <= N; k++) {
         xv = xs.min + (xs.max - xs.min) * k / N;
         vars.x = xv;
+        if (xs.id && xs.id !== "x") { vars[xs.id] = xv; }
         try { yv = fn(vars); } catch (e) { yv = NaN; }
         pts.push({ x: xv, y: yv });
       }
       vars.x = keep;
+      if (keepId !== null) { vars[xs.id] = keepId; }
       return { pts: pts, padL: padL, padR: padR, padT: padT, padB: padB, plotW: plotW, plotH: plotH, f: f };
     }
 
     function paint() {
       var curX = vars.x;                 /* 采样前后都要保持滑块当前位置 */
+      var curId = (xs.id && xs.id !== "x") ? vars[xs.id] : null;
       var pal = palette(box);
       var w = sizeCanvas();
       var ctx = cv.getContext("2d");
@@ -28428,6 +28443,7 @@
 
       var sp = seriesPoints(w);
       vars.x = curX;
+      if (curId !== null) { vars[xs.id] = curId; }
       if (!sp) return;
 
       /* y 轴范围：含 0，留 8% 余量 */
@@ -28498,7 +28514,7 @@
       ctx.stroke();
 
       /* 转变温度竖线 */
-      (spec.marks || []).forEach(function (m) {
+      (spec.marks || []).forEach(function (m, mi) {
         var mv;
         try { mv = compile(m.expr)(vars); } catch (e) { mv = NaN; }
         if (!isFinite(mv) || mv < xs.min || mv > xs.max) return;
@@ -28514,7 +28530,7 @@
         /* 标签放在图底部，并垫一块纸色底，免得压在曲线上看不清 */
         var lab = m.label + " " + fmt(mv) + (m.unit ? m.unit : "");
         var lx = clamp(px, sp.padL + 38, sp.padL + sp.plotW - 38);
-        var ly = sp.padT + sp.plotH - 26;
+        var ly = sp.padT + sp.plotH - 26 - mi * 21;   /* 多条竖线时错开，免得两个标签叠在一起 */
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         var tw = ctx.measureText(lab).width;
         ctx.fillStyle = pal.card;
@@ -28544,12 +28560,15 @@
         ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2); ctx.fill();
       }
 
-      /* x 轴标签 */
+      /* x 轴：左端标最小值、右端标最大值、轴名居中——只标右端会让人不知道起点在哪 */
       ctx.fillStyle = pal.ink2;
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillText(xs.label + (xs.unit ? "（" + xs.unit + "）" : ""), sp.padL, sp.padT + sp.plotH + 8);
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      ctx.fillText(String(xs.min), sp.padL, sp.padT + sp.plotH + 8);
       ctx.textAlign = "right";
       ctx.fillText(String(xs.max), sp.padL + sp.plotW, sp.padT + sp.plotH + 8);
+      ctx.textAlign = "center";
+      ctx.fillText(xs.label + (xs.unit ? "（" + xs.unit + "）" : ""), sp.padL + sp.plotW / 2, sp.padT + sp.plotH + 8);
 
       /* 读数 */
       for (k = 0; k < readCells.length; k++) {
@@ -28570,6 +28589,7 @@
     /* 重置 */
     btnR.addEventListener("click", function () {
       vars.x = (typeof xs.def === "number") ? xs.def : xs.min;
+      if (xs.id && xs.id !== "x") { vars[xs.id] = vars.x; }
       var rs = ctrl.querySelectorAll("input.ix-range");
       var j = 0;
       sliders.forEach(function (cfg) {
@@ -28847,7 +28867,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.79.0";
+  var APP_VERSION = "3.79.1";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
