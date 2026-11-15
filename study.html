@@ -3,9 +3,18 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.79.1
+  APP_VERSION: 3.80.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.79.1）渲染器兼容「模型生成的规格」——
+  本次变更: （3.80.0）第 2 个知识点接入图元，并把「生成 → 装进主程序」这条链打通——
+             ①化学 c1s2-02「热力学第一定律与符号约定」第 1 拍新增图元：横轴取 Q（−100~100 kJ）、
+               滑块调 W，曲线是 ΔU=Q+W，过零点标在 Q=−W；读数给出「此刻 ΔU」与「要 ΔU=0 时的 Q」；
+               W 拖成负值时弹出「系统对外作功要记 W<0」的误判提示——这是本点最常错的地方；
+             ②新增 _build/add-interact.mjs：一条命令完成 校验 → 落盘 _build/interact/ → 注入 → 全量检查，
+               校验含「知识点必须真实存在、科目对得上、必须有 warn 与 quiz、单条 ≤4KB」；
+             ③图元规格改为一文件一知识点（c1s3-02.json / c1s2-02.json），不再按科目合并，天然去重；
+             ④生成器页面（_tmp/ix-gen.html，不随程序发布）新增「装进主程序」：下载规格并把命令复制好；
+             ⑤未动：题库、判分、分级、掌握度、同步、白话层、概念地图、公式库、学习路径、其余 99 条教学条目。
+  上次变更: （3.79.1）渲染器兼容「模型生成的规格」——
              ①横轴变量在公式里现在两种写法都认：x，或 x.id（如 Q / T / t）。只认一个的话，
                另一种会变成未知量，表现为「图画出来了、读数全是 —」；
              ②x 轴改为左标最小值、右标最大值、轴名居中，原来只标了最大值，看不出起点；
@@ -997,7 +1006,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.79.1">
+<meta name="app-version" content="3.80.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -28054,7 +28063,7 @@
 <!-- katex-bundle:js:start -->
 <!-- KaTeX 0.19.0 内核 + auto-render（内嵌，无网络请求） -->
 <!-- [ix-block-begin] -->
-<script type="application/json" id="interact-data">{"v":1,"map":{"c1s3-02":[{"beat":0,"t":"param","title":"拖三个滑块，看 ΔG 什么时候翻符号","hint":"先定 ΔH 与 ΔS 的符号，再用 T 去撞 T转。注意 ΔH 的单位是 kJ，代入时要先乘 1000。","x":{"id":"T","label":"温度 T","min":200,"max":900,"step":10,"def":298,"unit":"K"},"sliders":[{"id":"dh","label":"ΔH","min":-100,"max":100,"step":1,"def":50,"unit":"kJ·mol⁻¹"},{"id":"ds","label":"ΔS","min":-300,"max":300,"step":5,"def":100,"unit":"J·mol⁻¹·K⁻¹"}],"series":[{"id":"g","label":"ΔG","expr":"dh*1000 - x*ds","unit":"J·mol⁻¹"}],"marks":[{"expr":"dh*1000/ds","label":"T转","unit":" K"}],"readout":[{"label":"此刻 ΔG","expr":"dh*1000 - x*ds","unit":"J·mol⁻¹"},{"label":"T转 = ΔH/ΔS","expr":"dh*1000/ds","unit":"K"}],"warn":[{"when":"ds == 0","text":"ΔS = 0：ΔG 与温度无关，不存在转变温度，别去算 ΔH/ΔS。"},{"when":"dh*1000/ds < 0","text":"T转 < 0：这个组合在正温区方向不变，算出来的负温度没有物理意义。"},{"when":"dh > 0 && ds < 0","text":"ΔH>0 且 ΔS<0：任何温度都不自发，曲线整体在 ΔG=0 之上。"}],"quiz":[{"q":"取 ΔH = +50 kJ·mol⁻¹、ΔS = +100 J·mol⁻¹·K⁻¹，T转 等于多少 K？（直接填数字）","a":"500","tol":2},{"q":"同一组参数，T = 400 K 时 ΔG 的符号是？（填 + 或 −）","a":"+"}]}]}}</script>
+<script type="application/json" id="interact-data">{"v":1,"map":{"c1s2-02":[{"beat":0,"t":"param","title":"拖 Q 和 W，看 ΔU 什么时候过零","hint":"本课程约定 ΔU = Q + W：吸热 Q > 0，环境对系统作功 W > 0。先把 W 定住，再拉横轴上的 Q——过零那一点就是 Q = −W。","x":{"id":"Q","label":"热量 Q（吸热为正）","min":-100,"max":100,"step":1,"def":-15,"unit":"kJ"},"sliders":[{"id":"W","label":"功 W（环境对系统作功为正）","min":-100,"max":100,"step":1,"def":20,"unit":"kJ"}],"series":[{"id":"dU","label":"内能变化 ΔU = Q + W","expr":"Q + W","unit":"kJ"}],"marks":[{"expr":"0 - W","label":"ΔU = 0 处","unit":" kJ"}],"readout":[{"label":"此刻的 ΔU = Q + W","expr":"Q + W","unit":"kJ"},{"label":"要使 ΔU = 0，Q 该取","expr":"0 - W","unit":"kJ"}],"warn":[{"when":"W < 0","text":"W < 0 表示系统对环境作功，不是环境对系统作功。这一步的方向最容易写反：系统对外作功 40 kJ，要记 W = −40，不是 +40。"},{"when":"Q*W < 0","text":"Q 与 W 异号：一个在吸热、一个在放功，两者互相抵消，别只看其中一个就下「内能变大」的结论。"}],"quiz":[{"q":"取 W = +20 kJ、Q = −15 kJ，ΔU 是多少 kJ？","a":"5","tol":0.5},{"q":"保持 W = +20 kJ，要使 ΔU = 0，Q 应取多少 kJ？","a":"-20","tol":0.5}]}],"c1s3-02":[{"beat":0,"t":"param","title":"拖三个滑块，看 ΔG 什么时候翻符号","hint":"先定 ΔH 与 ΔS 的符号，再用 T 去撞 T转。注意 ΔH 的单位是 kJ，代入时要先乘 1000。","x":{"id":"T","label":"温度 T","min":200,"max":900,"step":10,"def":298,"unit":"K"},"sliders":[{"id":"dh","label":"ΔH","min":-100,"max":100,"step":1,"def":50,"unit":"kJ·mol⁻¹"},{"id":"ds","label":"ΔS","min":-300,"max":300,"step":5,"def":100,"unit":"J·mol⁻¹·K⁻¹"}],"series":[{"id":"g","label":"ΔG","expr":"dh*1000 - x*ds","unit":"J·mol⁻¹"}],"marks":[{"expr":"dh*1000/ds","label":"T转","unit":" K"}],"readout":[{"label":"此刻 ΔG","expr":"dh*1000 - x*ds","unit":"J·mol⁻¹"},{"label":"T转 = ΔH/ΔS","expr":"dh*1000/ds","unit":"K"}],"warn":[{"when":"ds == 0","text":"ΔS = 0：ΔG 与温度无关，不存在转变温度，别去算 ΔH/ΔS。"},{"when":"dh*1000/ds < 0","text":"T转 < 0：这个组合在正温区方向不变，算出来的负温度没有物理意义。"},{"when":"dh > 0 && ds < 0","text":"ΔH>0 且 ΔS<0：任何温度都不自发，曲线整体在 ΔG=0 之上。"}],"quiz":[{"q":"取 ΔH = +50 kJ·mol⁻¹、ΔS = +100 J·mol⁻¹·K⁻¹，T转 等于多少 K？（直接填数字）","a":"500","tol":2},{"q":"同一组参数，T = 400 K 时 ΔG 的符号是？（填 + 或 −）","a":"+"}]}]}}</script>
 <script id="ix-core">/* ix-render.js —— 交互图元渲染器（地基版 v0.1.0）
  *
  * 设计要点（三条不可破）：
@@ -28867,7 +28876,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.79.1";
+  var APP_VERSION = "3.80.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
