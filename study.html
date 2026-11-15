@@ -3,9 +3,19 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.77.3
+  APP_VERSION: 3.78.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.77.3）刷题可随时「结束练习」并出小结——
+  本次变更: （3.78.0）模拟考试里也能标「蒙的 / 想了很久」——
+             ①模拟作答时题目下方出现两个标记按钮（快捷键 G / H）：考试中不判分、不写记录，标记只记在本题，
+               翻页与回看都保留，计时徽标上同步显示「已标 N」；
+             ②交卷时一次性落库：蒙的只在答对的题上生效（标了却答错的按错题计），想了很久答对答错都留；
+               仍用原有的 gz/gu/hz/hu 四个字段，不新增存储、不升 schema；
+             ③交卷小结新增「本次模拟的标记」：蒙的几道（其中蒙对几道、答错几道）、想了很久几道、
+               标了但没作答几道，并按题型折算「扣掉蒙对后的实际分」（表面分 → 扣蒙分）；
+             ④修一处旧问题：模拟交卷后接着开的普通练习，收尾会误套「模拟交卷」的标题与分数块
+               （QZ.sim.done 交卷后没有复位，开新组时才清）；
+             ⑤未动：题库 800 题、判分口径、分级、快照 schema 2、普通练习里原有的标记路径、其余数据与结构。
+  上次变更: （3.77.3）刷题可随时「结束练习」并出小结——
              ①刷题页底部「退出」改为「结束练习」：随时主动结束本轮（无论答几题），模拟模式下等同提前交卷；
              ②结束即出小结：已完成题数、正确率、错题清单（每条附一句简要解析）、整体表现评价（掌握度变化/元认知校准）；
              ③中途结束只结算已答的题：已答记录照常落库，未答保持未做、不计入本次统计；
@@ -967,7 +977,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.77.3">
+<meta name="app-version" content="3.78.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2343,6 +2353,12 @@
     font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;
   }
   .qsim.warn{background:var(--warn);color:#fff}
+  /* [sim-mark] 模拟中的标记条：位置就在反馈条那儿，模拟时不判分所以那里本来空着。
+     两个按钮沿用 .qgzbtn 的外观与选中态，容器里自己管间距，别再叠加左边的 margin。 */
+  .qsimmark{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+  .qsimmark[hidden]{display:none}
+  .qsimmark .qgzbtn{margin-left:0}
+  .qsimmark .qmmhint{font-size:11.5px;color:var(--ink3);min-width:0;line-height:1.5}
   .qsimres{
     margin:10px 0 0;padding:10px 12px;border-radius:8px;background:var(--warnBg);color:var(--warn);
     font-size:13px;line-height:1.6;
@@ -3448,7 +3464,8 @@
       <div class="qweak" id="qPlain"></div>
       <p class="qnote">单选与判断点选项即判分；多选勾选后按「提交答案」结算，全部选对才算答对（多选、少选均不得分），提交前可反复改；填空输入后回车核对。计算、简答、编程题作答后看解析自评。<br>
         键盘：A–D 或 1–4 选答（多选为勾选/取消），回车在填空与多选中为提交、其余为下一步，空格跳过，G 标记蒙对，H 标记「想了很久」，Esc 退出。<br>
-        「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。<br>
+        「蒙对」「想了很久」都是手动标记：不计入正确率，只影响复习顺序与提示。模拟考试里也能随手标（按钮或 G / H），
+        标记不打断答题、当场不判分，交卷后按「蒙的」「想了很久」单独统计，并折算一个扣掉蒙对题的分数。<br>
         答题时右上角只显示题型——章节名会提前把考点说破，所以先藏起来，提交答案或点「看解析」后自动展开。<br>
         选项顺序默认随机打乱（判断题的「正确 / 错误」保持原序）；可在上面「选项」里关掉，改回原始顺序。</p>
     </div>
@@ -3476,6 +3493,8 @@
         <input class="qfill" id="qFill" type="text" autocomplete="off" spellcheck="false" placeholder="输入答案，多个空用「；」分隔">
         <button class="btn small" id="qFillCheck" type="button">核对</button>
       </div>
+      <!-- [sim-mark] 模拟考试里的两个手动标记：过程不判分，但「蒙的 / 想了很久」当场能标 -->
+      <div class="qsimmark" id="qSimMark" hidden></div>
       <div class="qfb" id="qFb" hidden></div>
       <div class="qexpl" id="qExpl" hidden></div>
       <div class="qacts">
@@ -27983,7 +28002,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.77.3";
+  var APP_VERSION = "3.78.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -33401,7 +33420,7 @@
     est: -1,     // [calib] 本次预估档（-1 未选）：只在本轮有效，不落盘
     /* [sim] 整套模拟：作答先进 picks，交卷才判分。只在内存里，不落快照。
        count＝本卷题量（0＝全部），cust＝题量是否停在「自定义」档（仅用于回画下拉） */
-    sim: { on: false, limit: 0, count: 0, cust: false, picks: {}, t0: 0, tick: 0, done: false },
+    sim: { on: false, limit: 0, count: 0, cust: false, picks: {}, mark: {}, t0: 0, tick: 0, done: false },
     kpRun: "",   // [qzkp] 本组若是「练这个考点」开的，记下考点 id，收尾页的「再练一遍」据此复跑
     kpMode: "",  // [qzkp] 那一组是按哪一档开的（""=全部 / wrong=只练错题 / ever=只练曾错过），复跑沿用
     perm: [],    // [shuf] 当前题「显示位置 → 原始下标」的映射，每次渲染重洗
@@ -34859,7 +34878,7 @@
 
   function qzExit() {
     /* [sim] 退出即放弃本轮：清计时、关开关，picks 随下一组重开一起清掉 */
-    if (qzSimOn()) { qzSimStop(); QZ.sim.on = false; QZ.sim.done = false; QZ.sim.picks = {}; qzPaintSim(); }
+    if (qzSimOn()) { qzSimStop(); QZ.sim.on = false; QZ.sim.done = false; QZ.sim.picks = {}; QZ.sim.mark = {}; qzPaintSim(); qzPaintSimMark(); }
     QZ.on = false;
     document.body.className = document.body.className.replace(/\s*mode-quiz/g, "");
     qzView.hidden = true;
@@ -35153,6 +35172,10 @@
     QZ.kpMode = (kpMode === "wrong" || kpMode === "ever") ? kpMode : "";
     QZ.pos = 0;
     QZ.done = {};
+    /* [sim-mark] 新一轮一律不是「刚交卷」：模拟交卷后 sim.on 已自动关掉，若 done 还留着 true，
+       接着开的普通练习在收尾时会套上「模拟交卷」的标题和分数块。标记也要清，它只属于上一套卷。 */
+    QZ.sim.done = false;
+    QZ.sim.mark = {};
     QZ.rec = { total: list.length, answered: 0, right: 0, wrong: [], byType: {} };
     QZ.startTs = nowMs();
     QZ.calibDone = false;   // [calib] 每一组只写一条校准记录
@@ -35321,6 +35344,7 @@
     } else {
       byId("qShow").disabled = false;
     }
+    qzPaintSimMark();   // [sim-mark] 模拟中显示「蒙的 / 想了很久」；普通练习与交卷后收起
     byId("qPrev").disabled = QZ.pos === 0;
     byId("qFill").value = "";
     byId("qFill").disabled = false;
@@ -36067,11 +36091,15 @@
     var secs = Math.max(0, Math.round((nowMs() - QZ.sim.t0) / 1000));
     var lim = qzSimLimitSec(), left = lim ? Math.max(0, lim - secs) : 0;
     b.hidden = false;
-    b.textContent = lim ? "模拟 剩 " + qzFmtClock(left) : "模拟 已用 " + qzFmtClock(secs);
+    /* [sim-mark] 已标几道也挂在徽标上：考试中一眼能看见标记有没有生效 */
+    var nk = qzSimMarkNum();
+    b.textContent = (lim ? "模拟 剩 " + qzFmtClock(left) : "模拟 已用 " + qzFmtClock(secs)) +
+      (nk ? " · 已标 " + nk : "");
     b.className = "qsim" + (lim && left <= 300 ? " warn" : "");
   }
   function qzSimBegin() {
     QZ.sim.picks = {};
+    QZ.sim.mark = {};
     QZ.sim.done = false;
     QZ.sim.t0 = nowMs();
     if (QZ.sim.tick) clearInterval(QZ.sim.tick);
@@ -36087,6 +36115,85 @@
     if (QZ.sim.tick) { clearInterval(QZ.sim.tick); QZ.sim.tick = 0; }
     var b = byId("qSim");
     if (b) { b.hidden = true; b.textContent = ""; }
+  }
+
+  /* ---------- [sim-mark] 模拟考试里的「蒙的 / 想了很久」 ---------- */
+  /* 为什么要单独做：模拟的过程不判分，反馈条根本不出现，于是这两个手动标记在考试里
+     无处可点——想标只能等交卷，而交卷时人已经忘了哪几道是蒙的。这里补一条只属于模拟的路径：
+     作答过程中随手标，标记先存在内存 QZ.sim.mark（题号 → {g,h}），交卷时跟着逐题记录一起落库。
+     落库仍用原有的 gz/gu/hz/hu 四个字段，不新增存储、不升 schema；
+     蒙的只在答对时才算（标了蒙的却答错，本来就是错题，标它没有意义）；想了很久答对答错都留。 */
+  function qzSimMarkOn(i, which) {
+    var mk = QZ.sim.mark[i];
+    return !!(mk && mk[which]);
+  }
+  function qzSimMarkNum() {
+    var n = 0, k, mk;
+    for (k in QZ.sim.mark) if (has0(QZ.sim.mark, k)) {
+      mk = QZ.sim.mark[k];
+      if (mk && (mk.g || mk.h)) n++;
+    }
+    return n;
+  }
+  function qzSimToggleMark(which) {
+    if (!qzSimOn() || QZ.sim.done) return;
+    var i = QZ.pos, mk = QZ.sim.mark[i] || {};
+    if (mk[which]) delete mk[which];
+    else mk[which] = 1;
+    if (mk.g || mk.h) QZ.sim.mark[i] = mk;
+    else delete QZ.sim.mark[i];
+    qzPaintSimMark();
+    qzSimPaint();          // 徽标上的「已标 N」跟着变
+    var on = qzSimMarkOn(i, which), isG = which === "g";
+    qzToast(on
+      ? (isG ? "已标「这道是蒙的」——交卷时单独统计" : "已标「想了很久」——交卷时单独统计")
+      : (isG ? "已取消「蒙的」标记" : "已取消「想了很久」标记"));
+  }
+  /* 标记条：只在模拟进行中显示。位置在选项下方、反馈条原来占的地方（模拟时那里是空的） */
+  function qzPaintSimMark() {
+    var box = byId("qSimMark");
+    if (!box) return;
+    if (!qzSimOn() || QZ.sim.done) { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    box.innerHTML = "";
+    var g = qzSimMarkOn(QZ.pos, "g"), h = qzSimMarkOn(QZ.pos, "h");
+    var bg = el("button", "qgzbtn" + (g ? " on" : ""));
+    bg.type = "button";
+    bg.setAttribute("aria-pressed", g ? "true" : "false");
+    bg.textContent = g ? "已标蒙的 · 点一下取消" : "这道是蒙的";
+    bg.title = g ? "取消这条「蒙的」标记" : "标记为「蒙的」：答案是猜的、没真懂。考试中不判分，交卷时只对答对的题生效（快捷键 G）";
+    bg.addEventListener("click", function () { qzSimToggleMark("g"); });
+    box.appendChild(bg);
+
+    var bh = el("button", "qgzbtn qhzbtn" + (h ? " on" : ""));
+    bh.type = "button";
+    bh.setAttribute("aria-pressed", h ? "true" : "false");
+    bh.textContent = h ? "已标想了很久 · 点一下取消" : "这题想了很久";
+    bh.title = h ? "取消「想了很久」标记" : "标记为「想了很久」：答案是硬推出来的。答对答错都会留下（快捷键 H）";
+    bh.addEventListener("click", function () { qzSimToggleMark("h"); });
+    box.appendChild(bh);
+
+    box.appendChild(txt("span", "qmmhint", "考试中不判分，标记只记在本题，交卷后单独统计"));
+  }
+  /* 交卷时把内存里的标记落到记录上：与 qzSetGuess / qzSetHes 同一套字段与时刻口径
+     （时刻严格递增，合并时仍各取 max），差别只是不在这里单独 commit，交卷末尾统一落一次盘。 */
+  function qzSimApplyMark(q, mk, right) {
+    var rec = qzRecOf(QZ.sid, q.key);
+    if (!rec) return false;
+    var t = nowMs(), wrote = false;
+    if (mk.g && right && !qzGuessOn(rec)) {
+      var lg = Math.max(qzNum(rec.gz), qzNum(rec.gu));
+      if (t <= lg) t = lg + 1;
+      rec.gz = t;
+      wrote = true;
+    }
+    if (mk.h && !qzHesOn(rec)) {
+      var lh = Math.max(qzNum(rec.hz), qzNum(rec.hu));
+      if (t <= lh) t = lh + 1;
+      rec.hz = t;
+      wrote = true;
+    }
+    return wrote;
   }
   /* 当前题在屏幕上选中的原始下标（模拟模式下「选中」只是视觉，不判分） */
   function qzSimSel() {
@@ -36158,9 +36265,10 @@
     if (!qzSimOn() || QZ.sim.done) return;
     qzSimCapture();
     QZ.sim.done = true;
-    var keep = QZ.pos, i, k;
+    var keep = QZ.pos, i, k, markWrote = false;
     for (i = 0; i < QZ.list.length; i++) {
       var p = QZ.sim.picks[i];
+      /* [sim-mark] 标了「蒙的 / 想了很久」但最后没作答的题：标记本身没处落，跳过 */
       if (!p) continue;
       var q = QZ.list[i], it = q.it, right = false, wrong = null, picked = null;
       if (p.mode === "opt") {
@@ -36184,20 +36292,34 @@
       QZ.pos = i;                                  // qzCount 用 QZ.pos 记账，这里逐题切换
       QZ.done[i] = { right: right, picked: picked, mode: p.mode, val: p.val };
       qzCount(right, q, wrong);
+      /* [sim-mark] 考试中标的「蒙的 / 想了很久」此刻才写进记录——必须在 qzCount 之后，
+         因为 qzSaveRec 每写一次都会重建 rec，先写标记会被覆盖掉 */
+      var mk = QZ.sim.mark[i];
+      if (mk && (mk.g || mk.h) && qzSimApplyMark(q, mk, right)) markWrote = true;
     }
     QZ.pos = keep;
+    if (markWrote) { commitSnap(); syncMarkDirty(); }   // qzSimApplyMark 只改内存，这里统一落一次盘
     QZ.sim.on = false;                            // 模拟按轮生效，交完自动关掉
     qzSimStop();
     qzPaintSim();
+    qzPaintSimMark();                             // [sim-mark] 交卷即收起标记条，标记已进记录
     if (auto) qzToast("限时到，已自动交卷", 3200);
     qzSummary();
   }
   /* 模拟得分：有官方题型的按分值折算，没有的按正确率折算；没考到的题型记 0 分并如实标注 */
-  function qzSimScore(rec) {
+  /* [sim-mark] fold 可选：{ total N, byType {题型: N} } —— 本次标了「蒙的」且确实答对的题数。
+     传了它就会多算一个 estAdj（把这些题的得分扣掉的折算分），用来回答「表面 82 分，
+     扣掉蒙的还剩多少」。不传时 estAdj 与 est 相同，旧调用方行为不变。 */
+  function qzSimScore(rec, fold) {
     var sub = qzSubject(QZ.sid), fmt = examFormatOf(sub);
     var ratio = rec.answered ? rec.right / rec.answered : 0;
-    if (!fmt) return { est: Math.round(ratio * 100), total: 100, kind: "按正确率折算", items: [] };
-    var items = [], j, t, d, acc, est = 0, total = 0;
+    var ft = fold ? qzNum(fold.total) : 0;
+    if (!fmt) {
+      var adjR = rec.answered ? Math.max(0, rec.right - ft) / rec.answered : 0;
+      return { est: Math.round(ratio * 100), estAdj: Math.round(adjR * 100), total: 100,
+               kind: "按正确率折算", items: [] };
+    }
+    var items = [], j, t, d, acc, est = 0, estAdj = 0, total = 0;
     for (j = 0; j < fmt.items.length; j++) {
       t = fmt.items[j];
       if (!t.score) continue;
@@ -36210,8 +36332,11 @@
       acc = d.right / d.n;
       items.push({ label: t.label || t.type, n: d.n, right: d.right, score: t.score, got: t.score * acc });
       est += t.score * acc;
+      var gf = (fold && fold.byType[t.type]) ? qzNum(fold.byType[t.type]) : 0;
+      estAdj += t.score * Math.max(0, d.right - gf) / d.n;
     }
-    return { est: Math.round(est), total: total || 100, kind: "按题型分值折算", items: items };
+    return { est: Math.round(est), estAdj: Math.round(estAdj), total: total || 100,
+             kind: "按题型分值折算", items: items };
   }
   /* 设置页那个开关：文案、限时与题量都从 QZ.sim 现画，不用另存状态 */
   var SIM_COUNTS = [10, 20, 30, 50, 100];   // [sim] 下拉里的固定档；不在这里的数一律算「自定义」
@@ -36391,6 +36516,26 @@
     var mm = Math.floor(secs / 60), ss = secs % 60;
     var rate = rec.answered ? Math.round(rec.right / rec.answered * 100) : 0;
 
+    /* [sim-mark] 模拟交卷：把这套卷里标过的两类标记归一下类。
+       mkFold 按题型数「蒙的且答对了」的题——折算「扣掉蒙对后的实际分」要用到它；
+       mkLose 是标了蒙的却答错的题（已按错题计，单独点一句）；
+       mkSkip 是标了但最后没作答的题（没有记录可挂，标记作废，也要如实说）；
+       mkH 是想了很久的题数（答对答错都算）。 */
+    var mkFold = { total: 0, byType: {} }, mkLose = 0, mkSkip = 0, mkH = 0, mkI;
+    if (QZ.sim.done) {
+      for (mkI = 0; mkI < QZ.list.length; mkI++) {
+        var mq = QZ.list[mkI], mr = qzRecOf(QZ.sid, mq.key), mmk = QZ.sim.mark[mkI];
+        if (qzGuessOn(mr)) {
+          mkFold.total++;
+          mkFold.byType[mq.ex.type] = (mkFold.byType[mq.ex.type] || 0) + 1;
+        } else if (mmk && mmk.g) {
+          if (mr && mr.r === 0) mkLose++;
+          else mkSkip++;                 // 标完没作答：record 都没有，标记无处可挂
+        }
+        if (qzHesOn(mr)) mkH++;
+      }
+    }
+
     qzSum.innerHTML = "";
     /* [endrun] 标题三态：中途主动结束 / 刷完 / 模拟交卷 */
     qzSum.appendChild(txt("h3", "", ended ? "练习结束" : (QZ.sim.done ? "模拟交卷" : "本组完成")));
@@ -36401,7 +36546,7 @@
     qzSum.appendChild(txt("div", "qsumsub", subTxt));
     /* [sim] 交卷后先给分数，再给原有的正确率与错题——分数是「按题型折算」的口径 */
     if (QZ.sim.done) {
-      var sc = qzSimScore(rec), sbox = el("div", "qsimres");
+      var sc = qzSimScore(rec, mkFold), sbox = el("div", "qsimres");
       sbox.appendChild(txt("b", "", String(sc.est)));
       sbox.appendChild(txt("span", "", "/ " + sc.total + " 分（" + sc.kind + "）"));
       if (sc.items.length) {
@@ -36413,6 +36558,22 @@
         sbox.appendChild(txt("div", "", sparts.join(" · ")));
       }
       qzSum.appendChild(sbox);
+      /* [sim-mark] 分数下面紧跟一句「里面有多少分是蒙来的」：考试中标的标记在这里结算 */
+      if (mkFold.total || mkLose || mkSkip || mkH) {
+        var mkTxt = [], mkGAll = mkFold.total + mkLose;
+        if (mkGAll) {
+          mkTxt.push("「蒙的」" + mkGAll + " 道" + (mkLose
+            ? "（蒙对 " + mkFold.total + " 道、答错 " + mkLose + " 道已按错题计）" : ""));
+        }
+        if (mkH) mkTxt.push("「想了很久」" + mkH + " 道");
+        if (mkSkip) mkTxt.push("另有 " + mkSkip + " 道标了但没作答，标记未保留");
+        qzSum.appendChild(txt("div", "qkpsum", "本次模拟的标记：" + mkTxt.join(" · ")));
+        if (mkFold.total && sc.estAdj !== sc.est) {
+          qzSum.appendChild(txt("div", "qkpsum",
+            "扣掉这 " + mkFold.total + " 道蒙对的题，折算约 " + sc.estAdj + " 分（表面 " + sc.est +
+            " 分）——这个数才是现在真拿得住的，考前先把它们过一遍。"));
+        }
+      }
     }
 
     /* 环形正确率 + 三个关键数字：把「一段文字统计」换成一眼能读的成绩行 */
@@ -36488,17 +36649,18 @@
       qzSum.appendChild(txt("div", "qkpsum", cline));
     }
 
-    /* [guess] 本组里手动标过「蒙对」的题：仍算答对，但单独提一句，并给重练入口 */
+    /* [guess] 本组里手动标过「蒙对」的题：仍算答对，但单独提一句，并给重练入口
+       （模拟交卷时上面那块已经说过了，这里不再重复；gsum/hsum 仍要算，底部按钮靠它） */
     var gsum = 0;
     for (i = 0; i < QZ.list.length; i++) if (qzGuessOn(qzRecOf(QZ.sid, QZ.list[i].key))) gsum++;
-    if (gsum) {
+    if (gsum && !QZ.sim.done) {
       qzSum.appendChild(txt("div", "qkpsum",
         "其中 " + gsum + " 道标了「蒙对」——计为答对，但没真懂，建议单独再过一遍。"));
     }
     /* [hesitate] 本组里标了「想了很久」的题：算答对，但下次未必稳 */
     var hsum = 0;
     for (i = 0; i < QZ.list.length; i++) if (qzHesOn(qzRecOf(QZ.sid, QZ.list[i].key))) hsum++;
-    if (hsum) {
+    if (hsum && !QZ.sim.done) {
       qzSum.appendChild(txt("div", "qkpsum",
         "其中 " + hsum + " 道标了「想了很久」——答案是硬推出来的，换个问法不一定还稳。"));
     }
@@ -36750,6 +36912,13 @@
     if (!q) return;
     var mode = qzModeOf(q.it);
     var low = k.toLowerCase();
+    /* [sim-mark] 模拟进行中 G/H 标的是「本题」而不是记录（记录要等交卷才写），
+       所以必须挡在下面两条前面——那两条都要求 QZ.done 里已有本题的结算结果 */
+    if (qzSimOn() && !QZ.sim.done && (low === "g" || low === "h")) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      qzSimToggleMark(low);
+      return;
+    }
     /* [guess] G：答对后一键标/取消「蒙对」，不用去点反馈条 */
     if (low === "g") {
       if (QZ.done[QZ.pos] && QZ.done[QZ.pos].right) {
@@ -38855,6 +39024,8 @@
     /* [sim] 整套模拟：开关、交卷、得分口径 */
     simOn: qzSimOn, simSubmit: qzSimSubmit, simScore: qzSimScore, simCount: qzSimCount,
     simCapture: qzSimCapture, paintSim: qzPaintSim,
+    /* [sim-mark] 模拟考试中的「蒙的 / 想了很久」：标记开关与计数 */
+    simMarkOn: qzSimMarkOn, simToggleMark: qzSimToggleMark, simMarkNum: qzSimMarkNum,
     setSim: function (on, limit, count) {
       QZ.sim.on = !!on;
       if (limit !== undefined) QZ.sim.limit = qzNum(limit);
