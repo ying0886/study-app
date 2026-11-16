@@ -3,9 +3,23 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.86.1
+  APP_VERSION: 3.87.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.86.1）新增「鬼灭之刃 · 炭治郎」皮肤，默认关闭，在 ⋯ 菜单里手动开——
+  本次变更: （3.87.0）皮肤加氛围层与动效：把「只有配色」补成「有纹样、有呼吸、有反馈」——
+             ①氛围：body::before 叠两层——极淡市松棋盘（conic-gradient，2–3% 透明度）+ 木版斜向 grain，
+               用 mask 从顶部 320px 内淡出，90 秒极慢漂移（走 transform 合成层，不触发重绘）；
+             ②刀锋进度：视口顶端 2px 细线随滚动推进，绿到红，由 CSS 滚动时间轴驱动（零 JS）；
+               不支持的浏览器走 @supports 降级为不显示，不会卡在满格；
+             ③元素：章节标题前的竖条换成刀柄缠绳（斜纹，级别色仍是底色，A/B/C 语义不丢）；
+               顶栏品牌名前加日轮耳饰；页脚右下角一枚「炭」字朱印（微斜，像盖上去的）；
+               卡片悬停时右上角浮出极淡日轮水印；每日一句上下各压一道松绿内线；
+             ④动效：卡片入场浮现（前 10 张错开 28ms）、卡片头部悬停一道斜光扫过、
+               「开始今日路线」低频呼吸圈、进度条刃口轻微搏动、换皮肤时底色渐变过渡；
+             ⑤克制：常驻循环只留「底纹漂移」一个，其余都要用户操作才触发；
+               全部动效包在 prefers-reduced-motion: no-preference 之下，省电模式一律静止；
+             ⑥打印：底纹、刀锋、朱印、水印、斜纹、动画全部关闭，卷面与 3.86.1 一致；
+             ⑦未动：题库、判分、分级、掌握度、题库结构、同步、数据，一律没碰。
+  上次变更: （3.86.1）新增「鬼灭之刃 · 炭治郎」皮肤，默认关闭，在 ⋯ 菜单里手动开——
              ①定位：皮肤只覆盖观感——不改任何类名、不改 DOM 层级、不动任何旧存储键；
                整段 [skin] CSS 删掉、去掉 #skinBtn 即可完全回退到 3.85.0 的观感；
              ②做法：新增 html[data-skin="kimetsu"] 这一层，与 data-theme 正交（皮肤 × 明暗 = 4 种组合），
@@ -1078,7 +1092,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.86.1">
+<meta name="app-version" content="3.87.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -3632,6 +3646,11 @@
     --gold:#B08A3E;--goldBg:#F6EEDA;
     --sh:0 6px 20px -8px rgba(61,53,41,.09);
     --sk-red:#A8321F;
+    --sk-ichimatsu:rgba(31,74,56,.020);
+    --sk-grain:rgba(35,32,27,.020);
+    --sk-pulse:rgba(168,50,31,.16);
+    --sk-sweep:rgba(255,253,246,.55);
+    --sk-rule:rgba(31,74,56,.13);
     --sk-band:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><rect width='14' height='14' fill='%231F4A38'/><rect width='7' height='7' fill='%23F6F1E4'/><rect x='7' y='7' width='7' height='7' fill='%23F6F1E4'/></svg>");
     /* [skin-art] 立绘：只在此处定义一次，深色规则不重定义即自动沿用；96×128 webp，3KB */
     --sk-art:url("data:image/webp;base64,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");
@@ -3653,6 +3672,11 @@
     --gold:#C9A87C;--goldBg:#2C2519;
     --sh:0 8px 24px -6px rgba(0,0,0,.5);
     --sk-red:#D4573C;
+    --sk-ichimatsu:rgba(143,191,166,.028);
+    --sk-grain:rgba(237,231,218,.016);
+    --sk-pulse:rgba(212,87,60,.22);
+    --sk-sweep:rgba(237,231,218,.10);
+    --sk-rule:rgba(143,191,166,.12);
     --sk-band:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><rect width='14' height='14' fill='%2325352B'/><rect width='7' height='7' fill='%239AC4A9'/><rect x='7' y='7' width='7' height='7' fill='%239AC4A9'/></svg>");
     --sk-ear:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3.5 14.5Q12 21 20.5 14.5' fill='none' stroke='%238FBFA6' stroke-width='1.4' stroke-linecap='round'/><circle cx='12' cy='10.5' r='2.6' fill='%23D4573C'/><g stroke='%238FBFA6' stroke-width='1.1' stroke-linecap='round'><path d='M12 6.2V2.6'/><path d='M9.5 6.6L7.8 3.4'/><path d='M14.5 6.6L16.2 3.4'/><path d='M7.8 8.6L4.4 7.2'/><path d='M16.2 8.6L19.6 7.2'/></g></svg>");
   }
@@ -3746,12 +3770,164 @@
     html[data-skin="kimetsu"].sk-enter .skintro{animation-duration:1ms}
   }
 
+  /* ============================================================
+     [skin-atmo] 氛围层：和纸纤维 + 木版斜纹 + 极淡市松底（90s 缓慢漂移）
+     做法参考 GitHub 上几张和风页面的通用技法：底纹一律 z-index:-1、
+     pointer-events:none、透明度 ≤5%，靠 mask 从上往下淡出，保证不干扰阅读。
+     ============================================================ */
+  html[data-skin="kimetsu"] body::before{
+    content:"";position:fixed;inset:-60px;pointer-events:none;z-index:-1;
+    background-image:
+      conic-gradient(var(--sk-ichimatsu) 90deg,transparent 90deg 180deg,var(--sk-ichimatsu) 180deg 270deg,transparent 270deg),
+      repeating-linear-gradient(87deg,transparent 0 3px,var(--sk-grain) 3px 4px);
+    background-size:56px 56px,auto;
+    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.62) 0,rgba(0,0,0,.14) 170px,transparent 320px);
+    mask-image:linear-gradient(to bottom,rgba(0,0,0,.62) 0,rgba(0,0,0,.14) 170px,transparent 320px);
+  }
+  @media (prefers-reduced-motion:no-preference){
+    html[data-skin="kimetsu"] body::before{animation:skDrift 90s linear infinite}
+  }
+  @keyframes skDrift{to{transform:translate(56px,56px)}}
+
+  /* ============================================================
+     [skin-deco] 元素补强：刀柄卷、日轮水印、朱印
+     ============================================================ */
+  /* 章节标题前的 3px 竖条 → 刀柄的菱格缠绳（级别色仍是底色，语义不丢） */
+  html[data-skin="kimetsu"] .grp .gbar{
+    background-image:repeating-linear-gradient(-45deg,rgba(255,253,246,.55) 0 1.5px,transparent 1.5px 4px);
+  }
+  html[data-skin="kimetsu"] .grp[data-level] .gbar{
+    background-image:repeating-linear-gradient(-45deg,rgba(255,253,246,.55) 0 1.5px,transparent 1.5px 4px);
+  }
+
+  /* 卡片右上角：日轮耳饰的极淡水印，只在悬停时浮出 */
+  html[data-skin="kimetsu"] .card{position:relative}
+  html[data-skin="kimetsu"] .card::after{
+    content:"";position:absolute;right:10px;top:50%;width:34px;height:34px;
+    margin-top:-17px;pointer-events:none;opacity:0;
+    background:var(--sk-ear) center/contain no-repeat;transform:scale(.86);
+    transition:opacity var(--t2) var(--ease),transform var(--t2) var(--ease);
+  }
+  @media (hover:hover){
+    html[data-skin="kimetsu"] .card:hover::after{opacity:.16;transform:scale(1)}
+  }
+
+  /* 页脚右下角一枚朱印（红章、微斜，像盖上去的） */
+  html[data-skin="kimetsu"] .stats{position:relative}
+  html[data-skin="kimetsu"] .stats::before{
+    content:"炭";position:absolute;right:0;bottom:0;
+    width:26px;height:26px;line-height:26px;text-align:center;
+    background:var(--sk-red);color:#FFFDF6;font-size:13px;
+    font-family:"Songti SC","STSong","Kaiti SC",serif;
+    border-radius:3px;transform:rotate(-4deg);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
+    pointer-events:none;
+  }
+
+  /* ============================================================
+     [skin-motion] 动效：卡片浮现、悬停斩光、开刃、脉冲
+     原则：只动 transform / opacity / background-position，不动布局；
+     常驻循环只留「底纹漂移」一个，其余都要用户操作才触发。
+     ============================================================ */
+  @keyframes skCardIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  @keyframes skSlash{
+    from{transform:rotate(17deg) translateX(-130%);opacity:0}
+    35%{opacity:1}
+    to{transform:rotate(17deg) translateX(340%);opacity:0}
+  }
+  @keyframes skPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}
+    50%{box-shadow:0 0 0 4px var(--sk-pulse)}
+  }
+  @keyframes skEdge{
+    0%,100%{box-shadow:inset -2px 0 0 var(--sk-red)}
+    50%{box-shadow:inset -3px 0 0 var(--sk-red)}
+  }
+
+  @media (prefers-reduced-motion:no-preference){
+    /* 卡片浮现：前 10 张错开 28ms，之后统一无延迟，避免长列表等太久 */
+    html[data-skin="kimetsu"] #groups .card{animation:skCardIn .42s var(--ease) both}
+    html[data-skin="kimetsu"] #groups .card:nth-child(2){animation-delay:28ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(3){animation-delay:56ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(4){animation-delay:84ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(5){animation-delay:112ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(6){animation-delay:140ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(7){animation-delay:168ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(8){animation-delay:196ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(9){animation-delay:224ms}
+    html[data-skin="kimetsu"] #groups .card:nth-child(10){animation-delay:252ms}
+
+    /* 主按钮：低频呼吸圈，只在首页「开始今日路线」那一颗，不铺满全站 */
+    html[data-skin="kimetsu"] .today .btn.primary{animation:skPulse 3.4s ease-in-out infinite}
+
+    /* 进度条：刃口红端轻微搏动 */
+    html[data-skin="kimetsu"] .bar>i{animation:skEdge 2.6s ease-in-out infinite}
+  }
+
+  /* 卡片头部：悬停时一道斜光扫过（像刀刃掠过纸面） */
+  html[data-skin="kimetsu"] .card>summary{position:relative;overflow:hidden}
+  html[data-skin="kimetsu"] .card>summary::after{
+    content:"";position:absolute;top:-60%;left:0;width:35%;height:220%;
+    background:linear-gradient(90deg,transparent,var(--sk-sweep),transparent);
+    transform:rotate(17deg) translateX(-130%);opacity:0;
+    pointer-events:none;
+  }
+  html[data-skin="kimetsu"] .card>summary:hover::after{
+    animation:skSlash .72s var(--ease);
+  }
+  @media (prefers-reduced-motion:reduce){
+    html[data-skin="kimetsu"] .card>summary:hover::after{animation:none}
+  }
+
+  /* 顶栏品牌名前的日轮耳饰：一进页面就能看见的小记号 */
+  html[data-skin="kimetsu"] .appmark{
+    padding-left:18px;background:var(--sk-ear) left center/14px 14px no-repeat;
+  }
+
+  /* 每日一句上下各压一道极淡的松绿内线，像和纸裁边的压印 */
+  html[data-skin="kimetsu"] .dailyquote{
+    box-shadow:inset 0 1px 0 var(--sk-rule),inset 0 -1px 0 var(--sk-rule);
+  }
+
+  /* 视口顶端一道刀锋：随页面滚动推进的细线，红端在前
+     用 CSS 滚动时间轴驱动，零 JS；不支持的浏览器走 @supports 降级（不显示） */
+  html[data-skin="kimetsu"] body::after{
+    content:"";position:fixed;top:0;left:0;right:0;height:2px;z-index:30;
+    background:linear-gradient(90deg,var(--accent) 0%,var(--accent) 58%,var(--sk-red) 100%);
+    transform:scaleX(0);transform-origin:0 50%;pointer-events:none;
+  }
+  @supports (animation-timeline: scroll()){
+    @media (prefers-reduced-motion:no-preference){
+      html[data-skin="kimetsu"] body::after{
+        animation:skEdgeGrow linear both;
+        animation-timeline:scroll(root block);
+      }
+    }
+  }
+  @keyframes skEdgeGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  /* 换皮肤 / 换主题时，底色与卡片色渐变过去，不硬切 */
+  html[data-skin="kimetsu"] body,
+  html[data-skin="kimetsu"] .topbar,
+  html[data-skin="kimetsu"] .card,
+  html[data-skin="kimetsu"] .dailyquote{transition:background-color .38s var(--ease),border-color .38s var(--ease)}
+
   /* [skin-5] 打印：纹样、落款、红刃一律不输出 */
   @media print{
-    html[data-skin="kimetsu"] .dailyquote{padding:0;border-left:0}
+    html[data-skin="kimetsu"] body::before{display:none}
+    html[data-skin="kimetsu"] body::after{display:none}
+    html[data-skin="kimetsu"] .appmark{background:none;padding-left:0}
+    html[data-skin="kimetsu"] .dailyquote{padding:0;border-left:0;box-shadow:none}
     html[data-skin="kimetsu"] .dailyquote::before{display:none}
     html[data-skin="kimetsu"] .stats::after{content:none}
-    html[data-skin="kimetsu"] .bar>i{box-shadow:none}
+    html[data-skin="kimetsu"] .stats::before{display:none}
+    html[data-skin="kimetsu"] .card::after{display:none}
+    html[data-skin="kimetsu"] .card>summary::after{display:none}
+    html[data-skin="kimetsu"] .grp .gbar,
+    html[data-skin="kimetsu"] .grp[data-level] .gbar{background-image:none}
+    html[data-skin="kimetsu"] .bar>i{box-shadow:none !important;animation:none !important}
+    html[data-skin="kimetsu"] #groups .card{animation:none !important}
+    html[data-skin="kimetsu"] .today .btn.primary{animation:none !important}
     html[data-skin="kimetsu"] .card{background:#fff !important}
   }
 </style>
@@ -29325,7 +29501,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.86.1";
+  var APP_VERSION = "3.87.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
