@@ -3,9 +3,21 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.80.1
+  APP_VERSION: 3.81.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.80.1）掌握度可审计：给每个知识点一个「依据」入口，把「凭什么判成这个等级」摊开（不新增存储、不动算法）——
+  本次变更: （3.81.0）学习报告升级成「学习档案」：从只报数字，变成一份能直接交给 AI 当背景资料的自述（数据未动）——
+             ①新增四块：四科概览（知识点/已掌握/待巩固/薄弱/危险/已刷/正确率，七个数一屏看全）、
+               跨科薄弱 TOP10（每科先取前 4 再统一排序；每行右边「依据」直接切科目并打开该点的判定依据）、
+               错因分布（五类归因，按「打了这个标的题数」算，一道题可同时标两类）、
+               最近 7 天（按每道题最近一次作答分桶，柱子高低＝当天动过的题数）；
+             ②新增「我写下的反思」：只取 notes 里以 [反思] 开头的行，按时间倒序取前 8，不复制、不另存；
+             ③「复制报告」改「复制档案」，另加「下载 .md」：Markdown 七个章节，末尾一节「给 AI 家教的说明」——
+               按最弱科目、错因主项、薄弱点自动写出五条要求（从哪开始 / 优先补哪些 / 针对哪种错因 / 怎么讲 / 节奏与范围）；
+               全文只含统计与我手写的字，不抄题库原文，所以发出去不泄漏内容；
+             ④修一个口径错：初稿把 wh 里存的打标时刻当次数相加，错因会显示成「1794806594166 次」，
+               改成按 qzWhyOn 数题数，显示为「N 道 · x%」；
+             ⑤未动：题库、判分、分级、掌握度判定与分数、依据抽屉、同步、教学层、白话层、概念地图、公式库、学习路径。
+  上次变更: （3.80.1）掌握度可审计：给每个知识点一个「依据」入口，把「凭什么判成这个等级」摊开（不新增存储、不动算法）——
              ①入口两处：设置页「掌握程度」每个分组行、以及「薄弱知识点」每行，右侧新增 button.qwjump.qwev「依据」（data-ev=kid）；
                点徽标仍是「练这个知识点」，原行为不变（不改徽标点击语义，免得破坏既有肌肉记忆与回归用例）；
              ②抽屉三层：判级理由（与 qzMasteryOf 的六条分支一一对应，命中哪条说哪条，不另算一套）、
@@ -1016,7 +1028,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.80.1">
+<meta name="app-version" content="3.81.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -3282,6 +3294,48 @@
   .repbar{flex:1 1 100%;height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:2px}
   .repbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
   .repempty{margin:0;font-size:12.5px;line-height:1.7;color:var(--ink2)}
+
+  /* [arc] 学习档案：四科表 / 近七天柱 / 薄弱行按钮 / 反思摘录 */
+  .reptbl{width:100%;border-collapse:collapse;margin:2px 0 4px;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .reptbl th{font-size:11.5px;font-weight:600;color:var(--ink2);text-align:right;
+    padding:5px 3px;border-bottom:1px solid var(--line2);white-space:nowrap}
+  .reptbl td{text-align:right;padding:7px 3px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap}
+  .reptbl th:first-child,.reptbl td:first-child{text-align:left;white-space:normal;min-width:5.5em}
+  .reptbl tr:last-child td{border-bottom:0}
+  .reptbl td.dim{color:var(--ink3)}
+  .reptbl td.num{font-weight:600}
+  .repdays{display:flex;align-items:flex-end;gap:6px;height:70px;margin:6px 0 2px}
+  .repday{flex:1 1 0;min-width:0;display:flex;flex-direction:column;
+    justify-content:flex-end;align-items:center;gap:4px}
+  .repday i{display:block;width:100%;max-width:32px;background:var(--accent);
+    border:1px solid var(--accent);border-radius:3px 3px 0 0}
+  .repday i.zero{background:transparent;border-color:var(--line2);border-radius:0}
+  .repday span{font-size:10.5px;color:var(--ink3);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .repbtn{flex:0 0 auto;padding:3px 8px;min-height:26px;border:1px solid var(--line2);
+    border-radius:4px;background:transparent;font:inherit;font-size:11.5px;
+    color:var(--ink2);cursor:pointer;white-space:nowrap}
+  .repbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accentBg)}
+  .repbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .repsub{flex:0 0 auto;font-size:11px;color:var(--ink3);white-space:nowrap}
+  /* 薄弱点一行：上面「序号 + 名字 + 依据」，下面一行小字写指标与出处 */
+  .repweak{padding:9px 0;border-top:1px solid var(--line)}
+  .repweak:first-of-type{border-top:0}
+  .repwtop{display:flex;align-items:baseline;gap:8px}
+  .repwrank{flex:0 0 auto;min-width:14px;font-size:11px;color:var(--ink3);
+    font-variant-numeric:tabular-nums}
+  .repwname{flex:1 1 auto;min-width:0;font-size:13px;line-height:1.55;color:var(--ink);
+    overflow-wrap:anywhere}
+  .repwmeta{margin:3px 0 0 22px;font-size:11.5px;line-height:1.6;color:var(--ink2);
+    font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .reprefl{padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.7}
+  .reprefl:last-child{border-bottom:0}
+  .reprt{display:inline-block;margin-right:8px;color:var(--ink3);font-size:11px;
+    font-variant-numeric:tabular-nums}
+  .reprs{color:var(--ink)}
+  @media print{
+    .repbtn{display:none !important}
+    .repday i{border-color:#999 !important;background:#eee !important}
+  }
 
   /* [ev] 判定依据：上结论、中算式、下逐题证据；只用现有灰阶与语义色，不引入新色相 */
   .evhead{margin:0 0 14px}
@@ -28938,7 +28992,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.80.1";
+  var APP_VERSION = "3.81.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -39936,16 +39990,40 @@
   }
 
   /* ---------- 六、学习报告 ---------- */
+  /* [arc] 「哪一天」的键：按本地时区取 年-月-日；近七天分桶、首末日期都用它 */
+  function repDayKey(ms) {
+    var t = normT(ms);
+    if (!t) return "";
+    var d = new Date(t);
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+  function repYmd(ms) { return repDayKey(ms); }
+
   function repStats() {
     var out = {
       recN: 0, recPts: 0, recRate: 0,
       ly: { 1: { n: 0, r: 0 }, 2: { n: 0, r: 0 }, 3: { n: 0, r: 0 } },
-      teachAll: 0, teachDone: 0, plain: [], quiz: { done: 0, right: 0 }
+      teachAll: 0, teachDone: 0, plain: [], quiz: { done: 0, right: 0 },
+      guess: 0, hes: 0,
+      /* [arc] 学习档案（v3.81.0）：四科概览 / 跨科薄弱 / 错因分布 / 近七天 / 反思摘录。
+         全部现算，不新增存储；口径与掌握度、薄弱知识点、丢分归因三处完全同源。 */
+      subs: [], weak: [], why: [], recent: [], refl: [], days: 0, first: 0, last: 0
     };
     var i, j, k, e, s, sid, t, idx, rec, it, ly, sum = 0, pl;
+    var DAY = 86400000, dayMap = {}, d0, dk, now = nowMs();
+    /* 近七天先摆好七个格子（含 0），记录期间往里填——这样「最近没动过」也能一眼看出来 */
+    for (i = 6; i >= 0; i--) {
+      d0 = new Date(now - i * DAY);
+      dk = d0.getFullYear() + "-" + pad2(d0.getMonth() + 1) + "-" + pad2(d0.getDate());
+      dayMap[dk] = {
+        key: dk, label: pad2(d0.getMonth() + 1) + "-" + pad2(d0.getDate()), n: 0, r: 0
+      };
+      out.recent.push(dayMap[dk]);
+    }
     for (i = 0; i < DATA.subjects.length; i++) {
       s = DATA.subjects[i];
       sid = s.id;
+      var subDone = 0, subRight = 0;
       for (j = 0; j < s.knowledgePoints.length; j++) if (s.knowledgePoints[j].teach) out.teachAll++;
       t = (snap().teach && snap().teach[sid]) || {};
       for (k in t) if (has0(t, k)) {
@@ -39961,12 +40039,44 @@
         for (e in idx[k]) if (has0(idx[k], e)) {
           rec = qzRecOf(sid, idx[k][e]);
           if (!rec) continue;
+          /* [arc] 每科的已刷/答对单记一份，顺便把「首末作答时间」和近七天格子填上 */
+          subDone++;
+          if (rec.r === 1) subRight++;
+          if (qzGuessOn(rec)) out.guess++;
+          if (qzHesOn(rec)) out.hes++;
+          var tt = normT(rec.t);
+          if (tt) {
+            if (!out.first || tt < out.first) out.first = tt;
+            if (tt > out.last) out.last = tt;
+            dk = repDayKey(tt);
+            if (dayMap[dk]) { dayMap[dk].n++; if (rec.r === 1) dayMap[dk].r++; }
+          }
           it = qzItem(sid, k, Number(e));
           ly = it ? qzLyOf(it) : 1;
           out.ly[ly].n++;
           out.quiz.done++;
           if (rec.r === 1) { out.ly[ly].r++; out.quiz.right++; }
         }
+      }
+      /* [arc] 这一科的掌握分布：直接借 qzMasteryList，不另算一套（它已含「未开始」） */
+      var ml = qzMasteryList(sid), cnt = { master: 0, review: 0, partial: 0, weak: 0, danger: 0, none: 0 }, mi;
+      for (mi = 0; mi < ml.length; mi++) cnt[ml[mi].tier.key] = (cnt[ml[mi].tier.key] || 0) + 1;
+      out.subs.push({
+        sid: sid, name: s.name, scope: s.examScope || "",
+        kps: s.knowledgePoints.length, quizKps: ml.length,
+        done: subDone, right: subRight,
+        rate: subDone ? Math.round(subRight * 100 / subDone) : 0,
+        master: cnt.master, review: cnt.review, partial: cnt.partial,
+        weak: cnt.weak, danger: cnt.danger, none: cnt.none
+      });
+      /* [arc] 跨科薄弱池：每科先取前 4（qzWeakList 已按「未改正→错次→错误率→最近」排好），最后统一取前 10 */
+      var wl = qzWeakList(sid), wi;
+      for (wi = 0; wi < wl.length && wi < 4; wi++) {
+        out.weak.push({
+          sid: sid, sname: s.name, kid: wl[wi].kid, name: wl[wi].name,
+          section: wl[wi].section, total: wl[wi].total, open: wl[wi].open,
+          errs: wl[wi].errs, rate: wl[wi].rate, last: wl[wi].last
+        });
       }
       pl = (snap().plain && snap().plain[sid]) || {};
       for (k in pl) if (has0(pl, k)) {
@@ -39978,6 +40088,48 @@
       if (b.n !== a.n) return b.n - a.n;
       return a.kid < b.kid ? -1 : 1;
     });
+
+    /* [arc] 跨科薄弱：未改正多的先上，其次累计错次、错误率、最近 */
+    out.weak.sort(function (a, b) {
+      if (b.open !== a.open) return b.open - a.open;
+      if (b.errs !== a.errs) return b.errs - a.errs;
+      if (b.rate !== a.rate) return b.rate - a.rate;
+      return b.last - a.last;
+    });
+    out.weak = out.weak.slice(0, 10);
+
+    /* [arc] 错因分布：五类归因是我手动打标的（wh 里存的是打标时刻，正数有效、负数即取消），
+       这里数的是「打了这个标的题有几道」——**不能把 wh 的值相加**，那是时间戳。 */
+    for (i = 0; i < WHY_CODES.length; i++) {
+      out.why.push({ k: WHY_CODES[i].k, label: WHY_CODES[i].label, tip: WHY_CODES[i].tip, n: 0 });
+    }
+    var qd = qzData(), sk, rk, rr, ci;
+    for (sk in qd) {
+      if (!has0(qd, sk)) continue;
+      for (rk in qd[sk]) {
+        if (!has0(qd[sk], rk)) continue;
+        rr = qd[sk][rk];
+        for (ci = 0; ci < out.why.length; ci++) {
+          if (qzWhyOn(rr, out.why[ci].k)) out.why[ci].n++;
+        }
+      }
+    }
+
+    /* [arc] 反思摘录：只认 notes 里以 [反思] 开头的，按时间倒序取前 8 条 */
+    for (i = 0; i < DATA.subjects.length; i++) {
+      var rl = qzReflectList(DATA.subjects[i].id), ri;
+      for (ri = 0; ri < rl.length && ri < 4; ri++) {
+        out.refl.push({
+          sid: DATA.subjects[i].id, sname: DATA.subjects[i].name,
+          kid: rl[ri].kid, name: (rl[ri].kp && rl[ri].kp.name) || rl[ri].kid,
+          t: rl[ri].t, text: rl[ri].text
+        });
+      }
+    }
+    out.refl.sort(function (a, b) { return b.t - a.t; });
+    out.refl = out.refl.slice(0, 8);
+    out.days = out.first ? Math.max(1, Math.round((out.last - out.first) / DAY) + 1) : 0;
+
     return out;
   }
   function repRow(lbl, val, pct) {
@@ -39993,11 +40145,162 @@
     }
     return row;
   }
+  /* ---------- [arc] 学习档案的四块积木（现算，不缓存） ---------- */
+  function repOverviewSec(st) {
+    var box = el("div", "repsec"), i, j;
+    box.appendChild(txt("h3", "", "四科概览"));
+    if (!st.quiz.done) {
+      box.appendChild(txt("p", "repempty", "还没有任何作答记录。刷一组题，这张表会自动长出来。"));
+      return box;
+    }
+    var HEAD = ["科目", "知识点", "已掌握", "待巩固", "薄弱", "危险", "已刷", "正确率"];
+    var tb = el("table", "reptbl"), tr = el("tr");
+    for (j = 0; j < HEAD.length; j++) tr.appendChild(txt("th", "", HEAD[j]));
+    tb.appendChild(tr);
+    for (i = 0; i < st.subs.length; i++) {
+      var s = st.subs[i], row = el("tr");
+      var nm = txt("td", "", s.name);
+      nm.title = s.scope ? "考试范围：" + s.scope : "没有登记考试范围";
+      row.appendChild(nm);
+      row.appendChild(txt("td", "", s.quizKps + "/" + s.kps));
+      row.appendChild(txt("td", s.master ? "num" : "dim", String(s.master)));
+      row.appendChild(txt("td", (s.partial + s.review) ? "num" : "dim", String(s.partial + s.review)));
+      row.appendChild(txt("td", s.weak ? "num" : "dim", String(s.weak)));
+      row.appendChild(txt("td", s.danger ? "num" : "dim", String(s.danger)));
+      row.appendChild(txt("td", s.done ? "num" : "dim", s.done ? String(s.done) : "—"));
+      row.appendChild(txt("td", s.done ? "num" : "dim", s.done ? s.rate + "%" : "—"));
+      tb.appendChild(row);
+    }
+    box.appendChild(tb);
+    box.appendChild(txt("p", "repempty",
+      "「知识点」是「有题的点 / 全部点」；已掌握＝全对且无蒙对。想追问某个点凭什么：去「掌握程度」点该行的「依据」。"));
+    return box;
+  }
+
+  function repWeakSec(st) {
+    var box = el("div", "repsec"), i;
+    box.appendChild(txt("h3", "", "我最该补的 " + (st.weak.length || 0) + " 个点"));
+    if (!st.weak.length) {
+      box.appendChild(txt("p", "repempty", "没有错题记录——要么还没刷，要么一次没错。"));
+      return box;
+    }
+    for (i = 0; i < st.weak.length; i++) box.appendChild(repWeakRow(st.weak[i], i));
+    box.appendChild(txt("p", "repempty",
+      "排序：未改正的题多的在前，其次累计错次、错误率、最近做过。点「依据」直接看这几道题的作答记录。"));
+    return box;
+  }
+
+  function repWeakRow(w, n) {
+    var row = el("div", "repweak");
+    var top = el("div", "repwtop");
+    top.appendChild(txt("span", "repwrank", String(n + 1)));
+    top.appendChild(txt("span", "repwname", w.name));
+    var b = txt("button", "repbtn", "依据");
+    b.type = "button";
+    b.title = "切到「" + w.sname + "」并打开这个知识点的判定依据";
+    b.setAttribute("data-ev-jump", w.sid + "|" + w.kid);
+    (function (w2) {
+      b.addEventListener("click", function () { repGotoEv(w2); });
+    })(w);
+    top.appendChild(b);
+    row.appendChild(top);
+
+    var bits = [];
+    if (w.open) bits.push("未改正 " + w.open + " 道");
+    bits.push("错 " + w.errs + " 次");
+    bits.push("错误率 " + w.rate + "%");
+    bits.push(w.sname + (w.section ? " · " + w.section : ""));
+    row.appendChild(txt("div", "repwmeta", bits.join(" · ")));
+    return row;
+  }
+
+  /* 跨科跳转：先关报告、再切科目（切完 SID 才是它），最后开依据抽屉 */
+  function repGotoEv(w) {
+    if (!w || !w.kid) return;
+    closeReport(true);
+    if (w.sid !== SID) switchSubject(w.sid);
+    qzEvOpen(w.kid);
+  }
+
+  function repWhySec(st) {
+    var box = el("div", "repsec"), total = 0, i, row, any = 0;
+    box.appendChild(txt("h3", "", "错因分布"));
+    for (i = 0; i < st.why.length; i++) {
+      total += st.why[i].n;
+      if (st.why[i].n) any++;
+    }
+    if (!any) {
+      box.appendChild(txt("p", "repempty",
+        "还没有打标。答错之后在反馈条点「错在哪」，选一次记一次——这张表是「我老在哪一步翻车」。"));
+      return box;
+    }
+    for (i = 0; i < st.why.length; i++) {
+      var w = st.why[i];
+      if (!w.n) continue;                      // 没打过的类不占一行，别用 0 次把表撑满
+      row = repRow(w.label, w.n + " 道 · " + Math.round(w.n * 100 / total) + "%", w.n * 100 / total);
+      row.title = w.tip;
+      box.appendChild(row);
+    }
+    box.appendChild(txt("p", "repempty",
+      "按「打了这个标的题数」算；一道题可以同时标两类，所以合计可能大于错题数。"));
+    return box;
+  }
+
+  function repDaySec(st) {
+    var box = el("div", "repsec"), i, max = 0, sum = 0, right = 0;
+    box.appendChild(txt("h3", "", "最近 7 天"));
+    for (i = 0; i < st.recent.length; i++) {
+      if (st.recent[i].n > max) max = st.recent[i].n;
+      sum += st.recent[i].n;
+      right += st.recent[i].r;
+    }
+    var wrap = el("div", "repdays");
+    for (i = 0; i < st.recent.length; i++) {
+      var d = st.recent[i], col = el("div", "repday");
+      var bar = el("i", d.n ? "" : "zero");
+      bar.style.height = (d.n ? Math.max(8, Math.round(d.n * 100 / max) * 0.52) : 2) + "px";
+      bar.title = d.label + "：" + d.n + " 题" + (d.n ? "（对 " + d.r + "）" : "");
+      col.appendChild(bar);
+      col.appendChild(txt("span", "", d.label));
+      wrap.appendChild(col);
+    }
+    box.appendChild(wrap);
+    box.appendChild(txt("p", "repempty", sum
+      ? "这 7 天动过 " + sum + " 道（按每道题最近一次作答算），答对 " + right + " 道。柱子高低＝当天动过的题数。"
+      : "这 7 天没有作答记录。"));
+    return box;
+  }
+
+  function repReflSec(st) {
+    var box = el("div", "repsec"), i;
+    box.appendChild(txt("h3", "", "我写下的反思"));
+    if (!st.refl.length) {
+      box.appendChild(txt("p", "repempty",
+        "还没有反思。小结页每道错题旁有「写反思」，一句话写清错在哪——它只属于你，不进任何统计。"));
+      return box;
+    }
+    for (i = 0; i < st.refl.length; i++) {
+      var r = st.refl[i], row = el("div", "reprefl");
+      row.appendChild(txt("span", "reprt", repYmd(r.t)));
+      row.appendChild(txt("span", "reprs", r.sname + " · " + r.name + "：" + r.text));
+      box.appendChild(row);
+    }
+    return box;
+  }
+
   function renderReport() {
     var body = byId("repBody"), tip = byId("repHint"), st = repStats(), i;
     if (!body) return;
     body.innerHTML = "";
-    if (tip) tip.textContent = st.quiz.done ? "已作答 " + st.quiz.done + " 题" : "还没有作答记录";
+    if (tip) tip.textContent = st.quiz.done
+      ? "已作答 " + st.quiz.done + " 题" + (st.days ? " · 学习 " + st.days + " 天" : "")
+      : "还没有作答记录";
+
+    /* ---------- [arc] 档案四块：四科概览 / 跨科薄弱 / 错因分布 / 近七天 ---------- */
+    body.appendChild(repOverviewSec(st));
+    body.appendChild(repWeakSec(st));
+    body.appendChild(repWhySec(st));
+    body.appendChild(repDaySec(st));
 
     var sec1 = el("div", "repsec");
     sec1.appendChild(txt("h3", "", "复述"));
@@ -40044,38 +40347,169 @@
     }
     body.appendChild(sec4);
 
+    body.appendChild(repReflSec(st));
+
     var acts = el("div", "essacts");
     var b = el("button", "btn small primary");
     b.type = "button";
-    b.textContent = "复制报告";
+    b.textContent = "复制档案";
     b.addEventListener("click", function () {
       var ok = copyText(repMarkdown(st), byId("repBody"));
       qzToast(ok ? "已复制" : "复制被浏览器拦住了");
     });
     acts.appendChild(b);
+    var bd = el("button", "btn small");
+    bd.type = "button";
+    bd.textContent = "下载 .md";
+    bd.title = "下载一份「学习档案.md」，可直接发给任何 AI 家教当背景资料";
+    bd.addEventListener("click", function () {
+      var ok = downloadText("学习档案_" + repYmd(nowMs()) + ".md", repMarkdown(st));
+      qzToast(ok ? "已下载，可以直接发给 AI" : "下载被浏览器拦住了");
+    });
+    acts.appendChild(bd);
     body.appendChild(acts);
+    body.appendChild(txt("p", "repempty",
+      "下载的 .md 是一份「我在学什么、现在什么水平、哪儿最弱、常常怎么错」的自述，" +
+      "可以直接粘给任何 AI 家教当背景资料。它只含统计与我自己写的字，不含题库原文。"));
   }
+  /* [arc] 学习档案：一份「人话自述」，可直接粘给任何 AI 家教当背景资料。
+     只写统计与我自己写过的字，不抄题库原文——所以既有用，也不泄漏内容。 */
   function repMarkdown(st) {
-    var L = ["# 学习报告", ""], i;
-    L.push("## 复述");
-    L.push("- 写下复述的点：" + st.recPts + " 个");
-    L.push("- 一共复述：" + st.recN + " 次");
-    L.push("- 平均最高命中：" + st.recRate + "%");
+    var L = [], i, weakest = null, topWhy = null, o;
+    L.push("# 学习档案 · " + repYmd(nowMs()));
     L.push("");
-    L.push("## 层次 × 正确率");
+    L.push("> 由本机「学习软件」（单文件离线版）导出。");
+    L.push("> 共 " + st.quiz.done + " 条作答记录" +
+      (st.days ? "，跨度 " + st.days + " 天" : "") +
+      (st.first ? "（" + repYmd(st.first) + " 起，最后一次 " + repYmd(st.last) + "）" : "") + "。");
+    L.push("> 口径：正确率按每道题**最近一次**作答计；「未改正」＝最近一次仍答错；");
+    L.push("> 「蒙对 / 迟疑 / 丢分归因」都是我自己手动打标的，不是机器推断。");
+    L.push("");
+
+    /* 一、四科 */
+    L.push("## 一、我在学什么");
+    L.push("");
+    L.push("| 科目 | 考试范围 | 知识点（有题/全部） | 已掌握 | 待巩固或复核 | 薄弱 | 危险 | 已刷 | 正确率 |");
+    L.push("|---|---|---|---|---|---|---|---|---|");
+    for (i = 0; i < st.subs.length; i++) {
+      var s = st.subs[i];
+      L.push("| " + s.name + " | " + (s.scope || "未登记") + " | " + s.quizKps + " / " + s.kps +
+        " | " + s.master + " | " + (s.partial + s.review) + " | " + s.weak + " | " + s.danger +
+        " | " + s.done + " | " + (s.done ? s.rate + "%" : "—") + " |");
+      if (!weakest || (s.danger * 2 + s.weak) > (weakest.danger * 2 + weakest.weak)) weakest = s;
+    }
+    L.push("");
+    if (st.guess || st.hes) {
+      L.push("另外：我标了 " + st.guess + " 道「蒙对」、 " + st.hes + " 道「想了很久」——这些题虽然算对，其实没底。");
+      L.push("");
+    }
+
+    /* 二、薄弱 */
+    L.push("## 二、我最该补的点");
+    L.push("");
+    if (!st.weak.length) {
+      L.push("（目前没有错题记录。）");
+    } else {
+      for (i = 0; i < st.weak.length; i++) {
+        var w = st.weak[i];
+        L.push((i + 1) + ". **" + w.name + "**（" + w.sname + (w.section ? " · " + w.section : "") + "）" +
+          "：共 " + w.total + " 题，未改正 " + w.open + " 道，累计错 " + w.errs + " 次，错误率 " + w.rate + "%" +
+          (w.last ? "，最近一次 " + repYmd(w.last) : ""));
+      }
+    }
+    L.push("");
+
+    /* 三、错因 */
+    L.push("## 三、我的错因分布（我自己打标的）");
+    L.push("");
+    var whyTotal = 0;
+    for (i = 0; i < st.why.length; i++) {
+      whyTotal += st.why[i].n;
+      if (!topWhy || st.why[i].n > topWhy.n) topWhy = st.why[i];
+    }
+    if (!whyTotal) {
+      L.push("（还没有打标。）");
+    } else {
+      for (i = 0; i < st.why.length; i++) {
+        o = st.why[i];
+        if (!o.n) continue;
+        L.push("- " + o.label + " " + o.n + " 道（" + Math.round(o.n * 100 / whyTotal) + "%）：" + o.tip);
+      }
+    }
+    L.push("");
+
+    /* 四、近七天 */
+    L.push("## 四、最近 7 天");
+    L.push("");
+    var sum7 = 0, r7 = 0;
+    for (i = 0; i < st.recent.length; i++) { sum7 += st.recent[i].n; r7 += st.recent[i].r; }
+    if (!sum7) {
+      L.push("（这 7 天没有作答记录。）");
+    } else {
+      for (i = 0; i < st.recent.length; i++) {
+        o = st.recent[i];
+        L.push("- " + o.label + "：" + o.n + " 道" + (o.n ? "（对 " + o.r + "）" : ""));
+      }
+      L.push("");
+      L.push("合计 " + sum7 + " 道、答对 " + r7 + " 道。");
+    }
+    L.push("");
+
+    /* 五、复述/层次/从零学 */
+    L.push("## 五、我的复述与认知层次");
+    L.push("");
+    L.push("- 复述：写过 " + st.recPts + " 个点、共 " + st.recN + " 次，平均最高命中 " + st.recRate + "%");
     for (i = 1; i <= 3; i++) {
-      var o = st.ly[i];
+      o = st.ly[i];
       if (!o.n) continue;
       L.push("- " + LY_NAME[i] + "层：" + o.r + "/" + o.n + "（" + Math.round(o.r * 100 / o.n) + "%）");
     }
-    L.push("");
-    L.push("## 从零学");
-    L.push("- 走完三拍：" + st.teachDone + " / " + st.teachAll);
-    L.push("");
-    L.push("## 我最卡的点");
-    for (i = 0; i < st.plain.length && i < 6; i++) {
-      L.push("- " + st.plain[i].kid + "：" + st.plain[i].n + " 次");
+    L.push("- 从零学：走完三拍 " + st.teachDone + " / " + st.teachAll);
+    if (st.plain.length) {
+      L.push("- 我点过「这段没看懂」的点：");
+      for (i = 0; i < st.plain.length && i < 6; i++) {
+        var kk = findPointIn(st.plain[i].sid, st.plain[i].kid);
+        L.push("  - " + (kk ? kk.name : st.plain[i].kid) + "：" + st.plain[i].n + " 次");
+      }
     }
+    L.push("");
+
+    /* 六、反思 */
+    L.push("## 六、我写下的反思");
+    L.push("");
+    if (!st.refl.length) {
+      L.push("（还没有。）");
+    } else {
+      for (i = 0; i < st.refl.length; i++) {
+        L.push("- " + repYmd(st.refl[i].t) + " " + st.refl[i].sname + " · " + st.refl[i].name + "：" + st.refl[i].text);
+      }
+    }
+    L.push("");
+
+    /* 七、给 AI 的说明 —— 这份文件真正的用途 */
+    L.push("## 七、给 AI 家教的说明");
+    L.push("");
+    L.push("请把我当成一名非计算机专业的大一学生来教，按下面五条来：");
+    L.push("");
+    if (weakest) {
+      L.push("1. **从哪开始**：「" + weakest.name + "」是我最吃力的科目（危险 " + weakest.danger +
+        " 个点、薄弱 " + weakest.weak + " 个点），先从这里切入。");
+    }
+    if (st.weak.length) {
+      L.push("2. **优先补这些点**：" + (function () {
+        var a = [], j;
+        for (j = 0; j < st.weak.length && j < 5; j++) a.push(st.weak[j].name);
+        return a.join("、");
+      })() + "。这些点我错过、而且还没改对。");
+    }
+    if (topWhy && topWhy.n) {
+      L.push("3. **针对我的错因**：我「" + topWhy.label + "」最多（" + topWhy.n + " 次）——" + topWhy.tip +
+        "。出题和讲评时请专门盯这一点。");
+    }
+    L.push("4. **讲解方式**：先一句白话讲清「这东西在干嘛」，再给定义和公式（公式用 LaTeX）；" +
+      "每讲完一个点，立刻给我 2–3 道能自测的题并批改，错了先问我思路再讲。");
+    L.push("5. **节奏与范围**：一次只讲一个知识点，讲完就测，别一次灌太多；只讲上表「考试范围」内的内容，超范围的别讲。");
+    L.push("");
     return L.join("\n");
   }
   function openReport() {
@@ -40115,6 +40549,8 @@
     },
     lyOf: qzLyOf, targetLy: qzTargetLy, lyName: function (v) { return LY_NAME[v] || ""; },
     report: repStats, renderReport: renderReport, openReport: openReport, closeReport: closeReport,
+    /* [arc] 学习档案：Markdown 全文只从这一个口子取，自测不用猜内部变量 */
+    archiveMd: repMarkdown,
     /* [ev] 判定依据：给自测一个稳定出口，别去猜内部变量 */
     evOpen: qzEvOpen, evClose: qzEvClose, evRows: qzEvRows, evRule: qzEvRule, evScore: qzEvScoreText,
     evOpenNow: function () { return !!(evDrawer && !evDrawer.hidden); },
