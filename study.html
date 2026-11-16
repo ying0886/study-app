@@ -3,9 +3,16 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.84.0
+  APP_VERSION: 3.85.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.84.0）新增「真题卷」：把往年真题原卷收进程序，对答案自测（题库与分级未动）——
+  本次变更: （3.85.0）学习台不再默认打开：启动直接进卡片列表（只改打开时机，功能与数据全保留）——
+             ①起因：每次打开软件先全屏糊一张路径大图，想刷卡片还得再点一下「返回卡片」，这一步实际天天被跳过；
+             ②改法：去掉启动时的 pathOpen(true)，改为只把 PATH_I 对齐当前科目；面板默认 hidden，
+               要看图时点顶栏「学习台」或 ⋯ 菜单「学习路径」，之后的交互与原来一模一样；
+             ③保留：导图本身、三态着色、段浮层「从零学」、节点一键练考点、今日路线的 path.json 数据源、
+               刷题小结「返回学习台」、教学层「回学习台」——一个入口都没删，一条数据都没动；
+             ④未动：题库、判分、分级、掌握度、依据抽屉、学习档案、今日路线、全真卷、真题卷、同步、教学层、白话层、公式库。
+  上次变更: （3.84.0）新增「真题卷」：把往年真题原卷收进程序，对答案自测（题库与分级未动）——
              ①定位：真题只作参考（范围与口径以课件为准），所以它**不进例题、不写 refs、不参与 A/B/C 分级、
                也不写任何刷题记录**；独立数据块 #exam-data，由 _build/build-exam.mjs 从 _build/realexams/*.json 注入；
              ②第一卷：期末模拟卷，判断 10（每题 2 分）+ 选择 10（每题 2 分）+ 简答 5（每题 4 分）+ 计算 4（12/10/8/10 分）
@@ -1057,7 +1064,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.84.0">
+<meta name="app-version" content="3.85.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -29149,7 +29156,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.84.0";
+  var APP_VERSION = "3.85.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -42515,8 +42522,12 @@
     index: function () { return PATH_I; }
   };
 
-  // [path] 学习台作为主界面：启动后默认打开（不抢焦点），点节点即回卡片、点「返回卡片」回列表
-  if (PATH.subjects && PATH.subjects.length) pathOpen(true);
+  // [path 3.85.0] 学习台不再是启动主界面：启动直接进卡片列表，要看导图点顶栏「学习台」或 ⋯ 菜单「学习路径」。
+  //   这里只把 PATH_I 对齐到当前科目（免得首次点开时停在上次看的科目），面板保持 HTML 上的 hidden，不调 pathOpen。
+  if (PATH.subjects && PATH.subjects.length) {
+    var piHome = pathIndexOf(SID);
+    PATH_I = piHome < 0 ? 0 : piHome;
+  }
 })();
 </script>
 </body>
