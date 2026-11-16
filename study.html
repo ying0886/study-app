@@ -3,9 +3,20 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.82.0
+  APP_VERSION: 3.83.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.82.0）新增「今日路线」：从「今天先做哪几件」出发，把补漏和推进合成一组（现算不落盘，数据未动）——
+  本次变更: （3.83.0）新增「全真卷」：按试卷配比出一张整卷，主观题交卷后自评（数据未动）——
+             ①起因：化学 2026-11-22 期末考试，卷面＝判断 10 + 选择 30 + 简答 20 + 计算 40；模拟模式只能「按当前顺序取前 N 道」，
+               出不了「判断几道、选择几道、简答几道、计算几道」的真卷面；
+             ②组卷：读 examFormat 的题型与分值，按每题分值（判断 1 / 选择 2 / 简答 10 / 计算 10）换算题数 →
+               化学为 判断 10 · 选择 15 · 简答 2 · 计算 4 ＝ 31 题 / 100 分；每类洗牌后抽够，每次卷不同、同一份卷不重复；
+             ③考中：自动进模拟（不判分、不给解析、可限时）；主观题只给题面与作答要求，不给答案，也不许当场自评；
+             ④交卷后：小结下面多一块「主观题 · 对答案自评」，逐题给参考答案（折叠），点「算我对 / 算我错」；
+               判一题走一次 qzCount（落原有逐题记录、进掌握度与错题），分数与题型明细就地重画，不整页重刷；
+             ⑤不评就按未作答算 0 分，界面直接说破；评完给全卷得分，并可一键「重刷错题」；
+             ⑥入口在刷题设置页「全真卷」一行，只有配了 examFormat 的科目才露出来；配比与缺口（题库凑不满几道）先写在按钮旁；
+             ⑦未动：题库、判分口径、分级、掌握度判定与分数、依据抽屉、学习档案、今日路线、同步、教学层、白话层、公式库、学习路径。
+  上次变更: （3.82.0）新增「今日路线」：从「今天先做哪几件」出发，把补漏和推进合成一组（现算不落盘，数据未动）——
              ①补漏：危险 / 薄弱 / 待复核三类里挑最多 3 个；打分＝未改正×10＋累计错次×2＋蒙对×8＋遗忘（最多 14 天、每天 0.6）＋级别权重（A3/B2/C1）；
              ②推进：沿 path.json 的段序往下走，找三态仍是 new 的点，最多 2 个——复用 pathStateOf，不另算一套「学没学过」；
              ③每行写清「为什么选它」：未改正几道 / 全对但几道是蒙的 / 曾错几次已改对 / 几天没碰 / 第几段还没开始；
@@ -1036,7 +1047,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.82.0">
+<meta name="app-version" content="3.83.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2423,6 +2434,35 @@
     font-size:13px;line-height:1.6;
   }
   .qsimres b{font-size:19px;font-variant-numeric:tabular-nums;margin-right:4px}
+  /* [paper] 全真卷：考中主观题的空位（不给答案）+ 交卷后的逐题自评区 */
+  .qpself{
+    margin:12px 0 0;padding:13px 15px;border:1px dashed var(--line2);border-radius:8px;
+    background:var(--chip);line-height:1.7;
+  }
+  .qpself b{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
+  .qpself span{display:block;font-size:12.5px;color:var(--ink2)}
+  .qself{margin:14px 0 0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .qself[hidden]{display:none}
+  .qselfhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:0 0 6px}
+  .qselfhead h3{margin:0;font-size:15px;font-weight:600}
+  .qselfhint{flex:1 1 260px;font-size:12px;color:var(--ink2);line-height:1.65}
+  .qselfrow{border-top:1px solid var(--line);padding:12px 0 4px}
+  .qselfrow:first-of-type{border-top:0;padding-top:6px}
+  .qselfq{display:flex;gap:8px;align-items:baseline}
+  .qselfno{flex:0 0 auto;font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .qselfstem{flex:1 1 auto;font-size:13px;line-height:1.7;color:var(--ink);overflow-wrap:anywhere}
+  .qselfmeta{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--ink3);margin:3px 0 0 26px}
+  .qselfans{margin:5px 0 0 26px}
+  .qselfans summary{cursor:pointer;font-size:12px;color:var(--accent);min-height:32px;display:list-item;line-height:32px}
+  .qselfansbody{
+    font-size:12.5px;line-height:1.75;color:var(--ink);margin-top:2px;
+    border-left:2px solid var(--line2);padding:2px 0 2px 11px;overflow-wrap:anywhere;
+  }
+  .qselfacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:9px 0 6px 26px}
+  .qselfdone{font-size:12px;color:var(--ink2)}
+  .qselfrow.ok .qselfdone{color:var(--ok)}
+  .qselfrow.bad .qselfdone{color:var(--warn)}
+  .qselftip{margin:10px 0 0;font-size:12px;color:var(--ink2);line-height:1.65}
   /* [reflect] 待复盘清单：把笔记里以 [反思] 开头的那条抽出来单列 */
   .qrflist{list-style:none;margin:0;padding:0}
   .qrflist li{padding:9px 0;border-bottom:1px solid var(--line);line-height:1.6}
@@ -3661,6 +3701,12 @@
                placeholder="题数" aria-label="自定义题量，留空＝全部题目" hidden>
         <span class="qswhint" id="qSimCountHint">只在模拟模式下生效：按当前顺序从本次组卷里取前若干道</span>
       </div>
+      <!-- [paper] 全真卷：按 examFormat 的题型与分值抽题组卷，凑成一张真卷（只有配了试卷格式的科目才有） -->
+      <div class="qrow qrow-sw" id="qPaperRow" hidden>
+        <span class="qlabel">全真卷</span>
+        <button class="chip qsw" id="qPaperBtn" type="button">出一份全真卷</button>
+        <span class="qswhint" id="qPaperHint"></span>
+      </div>
       <div class="qrow qbuttons">
         <button class="btn" id="qBegin" type="button">开始刷题</button>        <button class="btn small" id="qReset" type="button">重置本科目进度</button>
       </div>
@@ -3725,6 +3771,9 @@
     </div>
 
     <div class="qsum" id="qSum" hidden></div>
+
+    <!-- [paper] 主观题自评区：交卷后逐题给参考答案，自己判对错；判完分数才落定 -->
+    <div class="qself" id="qSelfBox" hidden></div>
 
   </div>
 </section>
@@ -29037,7 +29086,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.82.0";
+  var APP_VERSION = "3.83.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -34468,6 +34517,10 @@
     mt0: null,        // 开组时各考点的掌握档快照，收尾比「这次改写了什么」
     cfg: { sec: "全部", type: "全部", order: "seq", ly: 0 }
   };
+  /* [paper] 全真卷的运行时状态：只在内存里，不落快照、不进 schema。
+     on＝本组是「按试卷配比」出的整卷；plan＝组卷前算好的配比表；
+     pending＝卷里主观题的题位（简答/计算，机器判不了）；judged＝题位 → 自评对错。 */
+  var PAPER = { on: false, plan: null, pending: [], judged: {} };
   /* [v3.41.0] 掌握档的「好坏」序：只用于小结里判断升级/退步，与 QZ_TIERS.rank 的排序口径无关 */
   var QZ_GOOD = { none: 0, danger: 1, weak: 2, partial: 3, review: 4, master: 5 };
   /* [sync] 旧的 review.quiz.v1 不再直接读写：内容由 migrateQuizToSnap() 并入快照，之后统一走 snap.quiz。 */
@@ -36136,6 +36189,8 @@
     qzStart.hidden = which !== "setup";
     qzCard.hidden = which !== "run";
     qzSum.hidden = which !== "sum";
+    /* [paper] 自评区只在小结页出现；回到设置或重置时由 qzPaperSelfRender 自己收起 */
+    if (byId("qSelfBox") && which !== "sum") byId("qSelfBox").hidden = true;
     /* [endrun] 刷题页的退出键是「结束练习」，设置页/小结页才是「退出」 */
     byId("qQuit").textContent = which === "run" ? "结束练习" : "退出";
   }
@@ -36276,6 +36331,22 @@
     qzRenderGuess();  // [guess] 蒙对清单：每次进设置页都按最新标记重算
     qzRenderWeak();   // [weak] 每次进设置页都按最新记录重算
     qzRenderPlain();  // [brief] 「没看懂」清单：与薄弱知识点分开——那是做错，这是读不懂
+    qzPaintPaper();   // [paper] 全真卷入口：只有配了试卷格式的科目才露出来
+  }
+
+  /* [paper] 设置页那一行：把配比写清楚（要几道、库里够不够），别让人点完才发现凑不满 */
+  function qzPaintPaper() {
+    var row = byId("qPaperRow"), b = byId("qPaperBtn"), h = byId("qPaperHint");
+    if (!row) return;
+    var plan = qzPaperPlan(SID);
+    if (!plan) { row.hidden = true; return; }
+    row.hidden = false;
+    if (b) b.textContent = "出一份全真卷（" + plan.total + " 题）";
+    if (h) {
+      h.textContent = qzPaperLine(plan) + (plan.short
+        ? "；题库还差 " + plan.short + " 道，先按实际题量出"
+        : "；按这份配比抽题，考中不判分、交卷后主观题自评");
+    }
   }
 
   /* 设置页顶部那行统计。单独抽出来是因为「顺序」一改就得重算：
@@ -36426,7 +36497,7 @@
   }
 
   /* ---------- 答题 ---------- */
-  function qzStartRun(list, title, kpId, kpMode) {
+  function qzStartRun(list, title, kpId, kpMode, paperPlan) {
     if (!list.length) {
       /* [newrand] 没做过的题刷完了要给准话，别只说「换个筛选试试」 */
       if (QZ.cfg.order === "new" || QZ.cfg.order === "newrand") {
@@ -36436,8 +36507,14 @@
       }
       return;
     }
+    /* [paper] 全真卷：配比表在组卷时已算好，这里接过来；主观题不走下面的「模拟过滤」——
+       它们本来就该在卷面上，交卷后靠逐题自评结算（qzPaperSelfRender）。 */
+    PAPER.on = !!paperPlan;
+    PAPER.plan = paperPlan || null;
+    PAPER.pending = [];
+    PAPER.judged = {};
     /* [sim] 模拟只收能自动判分的题：自评题交卷时机器判不了，收进来分数会失真 */
-    if (qzSimOn()) {
+    if (qzSimOn() && !PAPER.on) {
       var sonly = [], sx;
       for (sx = 0; sx < list.length; sx++) if (qzSimAuto(list[sx].it)) sonly.push(list[sx]);
       if (!sonly.length) {
@@ -36641,7 +36718,7 @@
     byId("qNext").textContent = (QZ.pos === QZ.list.length - 1) ? "看小结" : "下一题";
 
     if (mode === "opt" || mode === "multi") qzRenderOpts(it);
-    else if (mode === "self") qzRenderSelf(it);
+    else if (mode === "self") { if (PAPER.on) qzRenderPaperSelf(it); else qzRenderSelf(it); }
     else byId("qFill").placeholder = "输入答案，多个空用「；」分隔";
 
     var st = QZ.done[QZ.pos];
@@ -37554,6 +37631,7 @@
     if (!qzSimOn() || QZ.sim.done) return;
     qzSimCapture();
     QZ.sim.done = true;
+    qzPaperCollect();   // [paper] 先把卷里的主观题位挑出来，小结末尾要按它画自评区
     var keep = QZ.pos, i, k, markWrote = false;
     for (i = 0; i < QZ.list.length; i++) {
       var p = QZ.sim.picks[i];
@@ -37615,11 +37693,11 @@
       total += t.score;
       d = rec.byType[t.type];
       if (!d || !d.n) {
-        items.push({ label: t.label || t.type, n: 0, right: 0, score: t.score, got: 0 });
+        items.push({ type: t.type, label: t.label || t.type, n: 0, right: 0, score: t.score, got: 0 });
         continue;
       }
       acc = d.right / d.n;
-      items.push({ label: t.label || t.type, n: d.n, right: d.right, score: t.score, got: t.score * acc });
+      items.push({ type: t.type, label: t.label || t.type, n: d.n, right: d.right, score: t.score, got: t.score * acc });
       est += t.score * acc;
       var gf = (fold && fold.byType[t.type]) ? qzNum(fold.byType[t.type]) : 0;
       estAdj += t.score * Math.max(0, d.right - gf) / d.n;
@@ -37658,6 +37736,248 @@
           ? "本次按 " + want + " 道组卷；筛出来不够 " + want + " 道就按实际数量考"
           : "本次出全卷：符合上面筛选的全部题目");
     }
+  }
+
+  /* ---------------- [paper] 全真卷：按试卷配比组一份 ----------------
+     和「模拟模式」的分工：模拟只解决「过程不判分」，卷子还是筛出来的那一堆；
+     全真卷解决「卷面长什么样」——照 examFormat 的题型与分值，每类抽够题数，凑成一张整卷。
+     主观题（简答/计算，机器判不了）照样进卷：考中只给题面、不给答案、不许当场自评；
+     交卷后在小结下面逐题给参考答案，自己点「算我对 / 算我错」，点完分数才落定。
+     全部现算，不写题库、不改判分口径、不新增存储。 */
+  /* 每类题「一道值多少分」，用来把分值换算成题数：化学 100 分卷 → 判断 10 + 选择 15 + 简答 2 + 计算 4 = 31 题，
+     与老师给的往届卷规模（判断 10 + 单选 20 + 计算 2，共 32 题）基本对齐。 */
+  var PAPER_UNIT = { "判断": 1, "选择": 2, "多选": 2, "填空": 2, "简答": 10, "计算": 10, "论述": 10, "编程": 10 };
+  function qzPaperUnit(t) { return qzNum(PAPER_UNIT[t]) || 2; }
+  /* 配比表：每类要几道、库里有多少、实际能出几道；short＝缺口（题库凑不满时如实说） */
+  function qzPaperPlan(sid) {
+    var sub = qzSubject(sid), fmt = examFormatOf(sub);
+    if (!fmt) return null;
+    var pool = qzPoolOf(sid), by = {}, i, t, o = { rows: [], total: 0, score: 0, short: 0 };
+    for (i = 0; i < pool.length; i++) {
+      t = pool[i].ex.type || "";
+      if (!by[t]) by[t] = [];
+      by[t].push(pool[i]);
+    }
+    for (i = 0; i < fmt.items.length; i++) {
+      var f = fmt.items[i] || {}, ty = f.type || "", sc = qzNum(f.score);
+      if (!sc) continue;                       // 没配分值＝这次不考这类，不进卷
+      var unit = qzPaperUnit(ty);
+      var want = Math.max(1, Math.round(sc / unit));
+      var have = (by[ty] || []).length;
+      var take = Math.min(want, have);
+      if (take < want) o.short += want - take;
+      o.rows.push({ type: ty, label: f.label || ty, score: sc, unit: unit,
+                    want: want, have: have, take: take });
+      o.total += take;
+      o.score += sc;
+    }
+    return o.total ? o : null;
+  }
+  /* 组卷：每类洗一遍再取前 take 道——每次出的卷不同，同一份卷里不会重复。
+     顺手挡掉「同一知识点里题干前 20 字雷同」的一对：它们共用一个记录键，一张卷里出两遍等于同一题考两次。 */
+  function qzPaperBuild(sid) {
+    var plan = qzPaperPlan(sid);
+    if (!plan) return null;
+    var pool = qzPoolOf(sid), list = [], seen = {}, i, j, k, tmp, row, bag, got;
+    for (i = 0; i < plan.rows.length; i++) {
+      row = plan.rows[i];
+      if (!row.take) continue;
+      bag = [];
+      for (j = 0; j < pool.length; j++) if ((pool[j].ex.type || "") === row.type) bag.push(pool[j]);
+      for (j = bag.length - 1; j > 0; j--) {
+        k = Math.floor(Math.random() * (j + 1));
+        tmp = bag[j]; bag[j] = bag[k]; bag[k] = tmp;
+      }
+      got = 0;
+      for (j = 0; j < bag.length && got < row.take; j++) {
+        if (seen[bag[j].key]) continue;
+        seen[bag[j].key] = 1;
+        list.push(bag[j]);
+        got++;
+      }
+    }
+    return { plan: plan, list: list };
+  }
+  /* 配比表的一句话说明，设置页与提示共用 */
+  function qzPaperLine(plan) {
+    var parts = [], i, row;
+    for (i = 0; i < plan.rows.length; i++) {
+      row = plan.rows[i];
+      parts.push(row.label + " " + row.take + (row.take < row.want ? "/" + row.want : ""));
+    }
+    return parts.join(" · ") + " ＝ " + plan.total + " 题 / " + plan.score + " 分";
+  }
+  function qzStartPaper() {
+    if (!QZ_READY) return;
+    var built = qzPaperBuild(SID);
+    if (!built) {
+      qzToast("本科目没配试卷格式，出不了全真卷——先用「模拟模式」整套练也行", 3400);
+      return;
+    }
+    /* 全真卷必须是模拟：过程不判分、不给解析，否则就不叫考试 */
+    QZ.sim.on = true;
+    QZ.sim.count = 0;      // 整卷，不受「题量」那档影响
+    QZ.sim.cust = false;
+    QZ.sim.done = false;
+    QZ.sim.picks = {};
+    QZ.sim.mark = {};
+    qzPaintSim();
+    qzStartRun(built.list, "全真卷 " + built.list.length + " 题 / " + built.plan.score + " 分",
+      "", "", built.plan);
+    if (built.plan.short) qzToast("题库不够：" + built.plan.short + " 道缺口，本次按实际 " + built.list.length + " 题出卷", 3600);
+  }
+  /* 考中的主观题位：只给题面与要求，不给答案——给了就不是考试了 */
+  function qzRenderPaperSelf(it) {
+    var box = byId("qOpts"), p = el("div", "qpself");
+    p.appendChild(txt("b", "", "主观题 · " + (it.type || "简答") + "（机器判不了，交卷后自评）"));
+    p.appendChild(txt("span", "", "在纸上完整作答：写公式 → 代数据 → 带单位 → 给结果。"));
+    p.appendChild(txt("span", "", "考试中不给参考答案；交卷后在小结下面逐题对答案，自己判对错。"));
+    box.appendChild(p);
+  }
+  /* 交卷后：把卷里的主观题挑出来（题位），等自评 */
+  function qzPaperCollect() {
+    PAPER.pending = [];
+    PAPER.judged = {};
+    if (!PAPER.on) return;
+    for (var i = 0; i < QZ.list.length; i++) {
+      if (QZ.list[i] && qzModeOf(QZ.list[i].it) === "self") PAPER.pending.push(i);
+    }
+  }
+  /* 自评一题：走与普通自评同一条记账路径（qzCount），落的是原有逐题记录 */
+  function qzPaperJudge(pos, right) {
+    if (PAPER.judged[pos] !== undefined) return;
+    var q = QZ.list[pos], keep = QZ.pos;
+    if (!q) return;
+    QZ.pos = pos;
+    QZ.done[pos] = { right: !!right, picked: -1, mode: "self" };
+    qzCount(!!right, q, right ? null : { wa: "", wm: "self" });
+    QZ.pos = keep;
+    PAPER.judged[pos] = !!right;
+    qzPaintScore();          // 分数与题型明细就地更新，不回滚页面（整页重画会把人甩回顶部）
+    qzPaperSelfRender();
+  }
+  /* 分数块与题型明细的重画：只改内容，不动位置 */
+  function qzPaintScore() {
+    var box = byId("qSimRes");
+    if (!box || !QZ.rec) return;
+    var sc = qzSimScore(QZ.rec, QZ.sim.fold), i, parts = [];
+    /* 题型没数据时，要分清是「这场没考到」还是「考了但还没自评」——后者不能算真 0 分 */
+    var waitType = {};
+    if (PAPER.on) {
+      for (i = 0; i < PAPER.pending.length; i++) {
+        var ppos = PAPER.pending[i];
+        if (PAPER.judged[ppos] !== undefined) continue;
+        var pq = QZ.list[ppos];
+        if (pq) waitType[pq.ex.type] = 1;
+      }
+    }
+    box.innerHTML = "";
+    box.appendChild(txt("b", "", String(sc.est)));
+    box.appendChild(txt("span", "", "/ " + sc.total + " 分（" + sc.kind + "）"));
+    if (sc.items.length) {
+      for (i = 0; i < sc.items.length; i++) {
+        var it0 = sc.items[i];
+        parts.push(it0.label + " " + Math.round(it0.got) + "/" + it0.score +
+          (it0.n ? "" : (waitType[it0.type] ? "（待自评）" : "（本次没考到）")));
+      }
+      box.appendChild(txt("div", "", parts.join(" · ")));
+    }
+    var tb = byId("qSimTable");
+    if (tb) {
+      tb.innerHTML = "";
+      var types = Object.keys(QZ.rec.byType);
+      for (i = 0; i < types.length; i++) {
+        var d = QZ.rec.byType[types[i]], tr = el("tr");
+        tr.appendChild(txt("td", "", types[i] + "（" + d.n + " 题）"));
+        tr.appendChild(txt("td", "", d.right + " / " + d.n + " 正确"));
+        tb.appendChild(tr);
+      }
+      var tr2 = el("tr");
+      tr2.appendChild(txt("td", "", "未作答"));
+      tr2.appendChild(txt("td", "", (QZ.rec.total - QZ.rec.answered) + " 题"));
+      tb.appendChild(tr2);
+    }
+  }
+  /* 自评区本身：题位 → 行（题面摘要 / 知识点 / 分值 / 参考答案折叠 / 两个判定按钮） */
+  function qzPaperSelfRender() {
+    var box = byId("qSelfBox");
+    if (!box) return;
+    box.innerHTML = "";
+    if (!PAPER.on || !PAPER.pending.length) { box.hidden = true; return; }
+    box.hidden = false;
+    var done = 0, i, pos;
+    for (i = 0; i < PAPER.pending.length; i++) if (PAPER.judged[PAPER.pending[i]] !== undefined) done++;
+    var head = el("div", "qselfhead");
+    head.appendChild(txt("h3", "", "主观题 · 对答案自评"));
+    head.appendChild(txt("span", "qselfhint",
+      "已评 " + done + " / " + PAPER.pending.length + "。简答与计算机器判不了，对照参考答案自己判；" +
+      "判完这个分数才是这场考试的真分数（判一题记一题，进原有的逐题记录）。"));
+    box.appendChild(head);
+    for (i = 0; i < PAPER.pending.length; i++) {
+      pos = PAPER.pending[i];
+      box.appendChild(qzPaperSelfRow(pos, i + 1));
+    }
+    /* 参考答案里的 \(...\) 必须排成公式，否则会露出 LaTeX 源码（与卡片、依据抽屉同一口径） */
+    if (typeof renderMath === "function") renderMath(box);
+    var left = PAPER.pending.length - done;
+    if (left) {
+      box.appendChild(txt("p", "qselftip",
+        "还有 " + left + " 道没评——不评就按「未作答」算，那部分分会是 0。"));
+    } else {
+      var sc = qzSimScore(QZ.rec, QZ.sim.fold);
+      box.appendChild(txt("p", "qselftip",
+        "全卷已判完：" + sc.est + " / " + sc.total + " 分。错的题下面小结里有「重刷错题」，直接过一遍。"));
+    }
+  }
+  function qzPaperSelfRow(pos, no) {
+    var q = QZ.list[pos], jv = PAPER.judged[pos];
+    var row = el("div", "qselfrow" + (jv === undefined ? "" : (jv ? " ok" : " bad")));
+    row.setAttribute("data-self", String(pos));
+
+    var top = el("div", "qselfq");
+    top.appendChild(txt("span", "qselfno", no + "."));
+    top.appendChild(txt("span", "qselfstem", qzClip(qzTexPlain(q.it.q || q.ex.q || ""), 70)));
+    row.appendChild(top);
+
+    var meta = el("div", "qselfmeta");
+    meta.appendChild(txt("span", "", q.kp.name + (q.kp.section ? " · " + q.kp.section : "")));
+    /* 每题分值 = 该题型卷面总分 ÷ 该题型题数（40 分是整个计算题的总分，不是这一道的） */
+    var per = 0, pi, prow;
+    if (PAPER.plan) {
+      for (pi = 0; pi < PAPER.plan.rows.length; pi++) {
+        prow = PAPER.plan.rows[pi];
+        if (prow.type === q.ex.type) { per = Math.round(prow.score / Math.max(1, prow.want)); break; }
+      }
+    }
+    meta.appendChild(txt("span", "", (q.ex.type || "") +
+      (per ? " · 本题约 " + per + " 分" : "")));
+    row.appendChild(meta);
+
+    var det = el("details", "qselfans");
+    det.appendChild(txt("summary", "", "看参考答案"));
+    var body = el("div", "qselfansbody");
+    var ans = String(q.ex.a == null ? "" : q.ex.a);
+    body.innerHTML = codeAwareHtml(ans || "（这道题没写参考答案）");
+    det.appendChild(body);
+    row.appendChild(det);
+
+    var acts = el("div", "qselfacts");
+    if (jv === undefined) {
+      var y = txt("button", "btn small primary", "算我对");
+      y.type = "button";
+      y.setAttribute("data-self-ok", String(pos));
+      y.addEventListener("click", function () { qzPaperJudge(pos, true); });
+      acts.appendChild(y);
+      var n = txt("button", "btn small", "算我错");
+      n.type = "button";
+      n.setAttribute("data-self-no", String(pos));
+      n.addEventListener("click", function () { qzPaperJudge(pos, false); });
+      acts.appendChild(n);
+    } else {
+      acts.appendChild(txt("span", "qselfdone", jv ? "已记为答对" : "已记为答错（会进错题，也能标错因）"));
+    }
+    row.appendChild(acts);
+    return row;
   }
 
   function qzToggleExpl(force) {
@@ -37835,18 +38155,11 @@
     qzSum.appendChild(txt("div", "qsumsub", subTxt));
     /* [sim] 交卷后先给分数，再给原有的正确率与错题——分数是「按题型折算」的口径 */
     if (QZ.sim.done) {
+      QZ.sim.fold = mkFold;
       var sc = qzSimScore(rec, mkFold), sbox = el("div", "qsimres");
-      sbox.appendChild(txt("b", "", String(sc.est)));
-      sbox.appendChild(txt("span", "", "/ " + sc.total + " 分（" + sc.kind + "）"));
-      if (sc.items.length) {
-        var sparts = [];
-        for (i = 0; i < sc.items.length; i++) {
-          sparts.push(sc.items[i].label + " " + Math.round(sc.items[i].got) + "/" + sc.items[i].score +
-            (sc.items[i].n ? "" : "（本次没考到）"));
-        }
-        sbox.appendChild(txt("div", "", sparts.join(" · ")));
-      }
+      sbox.id = "qSimRes";
       qzSum.appendChild(sbox);
+      qzPaintScore();   // [paper] 分数块内容统一由它画：交卷后自评改分也走它，不用整页重画
       /* [sim-mark] 分数下面紧跟一句「里面有多少分是蒙来的」：考试中标的标记在这里结算 */
       if (mkFold.total || mkLose || mkSkip || mkH) {
         var mkTxt = [], mkGAll = mkFold.total + mkLose;
@@ -37908,6 +38221,7 @@
     }
 
     var tb = el("table", "qtable");
+    tb.id = "qSimTable";   // [paper] 自评改分时按 id 就地重画题型明细
     var types = Object.keys(rec.byType);
     for (var i = 0; i < types.length; i++) {
       var d = rec.byType[types[i]];
@@ -38109,6 +38423,7 @@
     qzSum.appendChild(acts);
 
     qzShow("sum");
+    if (PAPER.on) qzPaperSelfRender();   // [paper] 主观题自评区，跟着小结一起出现
     window.scrollTo(0, 0);
   }
 
@@ -40790,6 +41105,8 @@
       qzPaintSim();
       qzRenderStat();   // [sim] 统计条里有「模拟 N 题」，开关一变就得重画
     });
+    /* [paper] 全真卷：一键组卷并直接开考（自动进模拟：不判分、不给解析） */
+    if (byId("qPaperBtn")) byId("qPaperBtn").addEventListener("click", function () { qzStartPaper(); });
     if (byId("qSimLimit")) byId("qSimLimit").addEventListener("change", function () {
       QZ.sim.limit = qzNum(this.value);
       qzPaintSim();
@@ -40863,6 +41180,9 @@
     /* 当前科目 id（SID 是闭包内变量，测试要用它确认科目隔离是否生效） */
     cur: function () { return SID; },
     buildList: qzBuildList, startRun: qzStartRun, answer: qzAnswer, checkFill: qzCheckFill,
+    /* [paper] 全真卷：plan 看配比、build 看抽出来的卷、start 直接开考、judge 自评一题、PAPER 读状态 */
+    paperPlan: qzPaperPlan, paperBuild: qzPaperBuild, startPaper: qzStartPaper,
+    paperJudge: qzPaperJudge, PAPER: PAPER, paperScore: qzPaintScore, renderQ: qzRenderQ,
     /* [multi] 多选题的自动化入口：toggleOpt 勾选/取消、submitMulti 结算、chosen 读当前勾选 */
     toggleOpt: qzToggleByIndex, submitMulti: qzSubmitMulti, chosen: qzChosen, modeOf: qzModeOf,
     next: qzNext, prev: qzPrev, summary: qzSummary, store: function () { return qzData(); }, LS: LS_QUIZ,
