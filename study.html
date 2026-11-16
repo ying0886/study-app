@@ -3,9 +3,17 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.81.0
+  APP_VERSION: 3.82.0
   DATA_VERSION: 2026-11-13
-  本次变更: （3.81.0）学习报告升级成「学习档案」：从只报数字，变成一份能直接交给 AI 当背景资料的自述（数据未动）——
+  本次变更: （3.82.0）新增「今日路线」：从「今天先做哪几件」出发，把补漏和推进合成一组（现算不落盘，数据未动）——
+             ①补漏：危险 / 薄弱 / 待复核三类里挑最多 3 个；打分＝未改正×10＋累计错次×2＋蒙对×8＋遗忘（最多 14 天、每天 0.6）＋级别权重（A3/B2/C1）；
+             ②推进：沿 path.json 的段序往下走，找三态仍是 new 的点，最多 2 个——复用 pathStateOf，不另算一套「学没学过」；
+             ③每行写清「为什么选它」：未改正几道 / 全对但几道是蒙的 / 曾错几次已改对 / 几天没碰 / 第几段还没开始；
+             ④「练」＝只练这个点（走既有 qzPracticeKp）；「开始今日路线」＝每个点各取 ≤3 道、没做过的优先，
+               合成一组连刷（qzStartRun 单组，不改考点三档口径）；
+             ⑤入口在首页「成长路径」下方；自建科目或无题库自动隐藏；退出刷题、切科目、改标记都会重算；
+             ⑥未动：题库、判分、分级、掌握度判定与分数、依据抽屉、学习档案、同步、教学层、白话层、概念地图、公式库、学习路径本身。
+  上次变更: （3.81.0）学习报告升级成「学习档案」：从只报数字，变成一份能直接交给 AI 当背景资料的自述（数据未动）——
              ①新增四块：四科概览（知识点/已掌握/待巩固/薄弱/危险/已刷/正确率，七个数一屏看全）、
                跨科薄弱 TOP10（每科先取前 4 再统一排序；每行右边「依据」直接切科目并打开该点的判定依据）、
                错因分布（五类归因，按「打了这个标的题数」算，一道题可同时标两类）、
@@ -1028,7 +1036,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.81.0">
+<meta name="app-version" content="3.82.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2454,6 +2462,41 @@
   .gwtip b{color:var(--ink);font-weight:600}
   @media print{ .growth{display:none !important} }
 
+  /* [today] 今日路线：开头说清「几个点、约几题」，每行「名字 + 补漏/推进 + 为什么选它 + 练」 */
+  .today{margin:0 0 14px;padding:12px 14px 14px;background:var(--card);
+    border:1px solid var(--line);border-radius:8px}
+  .tdhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .tdhead h2{margin:0;font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+  .tdsub{margin-left:auto;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .tdlist{list-style:none;margin:8px 0 0;padding:0}
+  .tdrow{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;
+    padding:8px 0;border-top:1px solid var(--line)}
+  .tdrow:first-child{border-top:0}
+  .tdno{font-size:11.5px;color:var(--ink3);text-align:right;font-variant-numeric:tabular-nums}
+  .tdmain{min-width:0}
+  .tdtop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .tdname{font-size:13.5px;line-height:1.5;color:var(--ink);overflow-wrap:anywhere}
+  .tdtag{flex:0 0 auto;font-size:10.5px;line-height:1.65;padding:0 6px;border-radius:3px;
+    border:1px solid var(--line2);color:var(--ink2);white-space:nowrap}
+  .tdtag-fix{border-color:var(--warn);background:var(--warnBg);color:var(--warn)}
+  .tdtag-new{border-color:var(--accent);background:var(--accentBg);color:var(--accent)}
+  .tdwhy{margin-top:2px;font-size:11.5px;line-height:1.6;color:var(--ink2);overflow-wrap:anywhere}
+  .tdbtn{flex:0 0 auto;padding:6px 12px;min-height:34px;border:1px solid var(--line2);
+    border-radius:4px;background:transparent;font:inherit;font-size:12px;
+    color:var(--ink2);cursor:pointer;white-space:nowrap}
+  .tdbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accentBg)}
+  .tdbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .tdgo{margin:10px 0 0;width:100%;min-height:40px;border:1px solid var(--accent);
+    border-radius:6px;background:var(--accent);color:var(--accentInk);
+    font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .tdgo:hover{filter:brightness(1.06)}
+  .tdgo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media (max-width:420px){
+    .tdrow{grid-template-columns:16px 1fr auto;gap:6px}
+    .tdname{font-size:13px}
+  }
+  @media print{ .today{display:none !important} }
+
   /* ---------- [data] 资料库抽屉 ---------- */
   .dnote{margin:0 0 12px;font-size:12px;line-height:1.8;color:var(--ink2)}
   .dnote b{color:var(--ink);font-weight:600}
@@ -3536,6 +3579,8 @@
   </section>
   <!-- [growth] 成长路径：当前科目所处阶段、还差多少、下一步做什么，随进度实时更新 -->
   <section class="growth" id="growth" aria-label="成长路径" hidden></section>
+  <!-- [today] 今日路线：把「补漏」和「沿路径推进」合成今天这一组，现算不落盘 -->
+  <section class="today" id="todayRoute" aria-label="今日路线" hidden></section>
   <div class="filters" id="filters"></div>
   <main id="groups"></main>
   <footer class="stats" id="stats"></footer>
@@ -28992,7 +29037,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.81.0";
+  var APP_VERSION = "3.82.0";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -30514,6 +30559,7 @@
     if (ip) ip.textContent = "已完成 " + done + " / " + list.length;
     paintGroupProgress();
     renderGrowth();   // [growth] 成长路径与进度同源，进度变了它就要跟着变
+    renderToday();    // [today] 今日路线同理：记录一变，「今天该做哪几件」就变
     // [path] 学习台节点跟着进度实时点亮（同一份 isCountedDoneOf 口径）
     if (window.__reviewPath && window.__reviewPath.paint) window.__reviewPath.paint();
 
@@ -38447,6 +38493,161 @@
     for (i = 0; i < GW_STAGES.length; i++) if (pct >= GW_STAGES[i].min) st = GW_STAGES[i];
     return st;
   }
+  /* ---------- [today] 今日路线：补漏 + 推进，两路各挑几个点，一键合成今天这一组 ---------- */
+  /* 思路借 DeepTutor 的 Mastery Path：不报「还剩多少章」，只回答「今天先做哪几件」。
+     两路：
+       补漏——危险 / 薄弱 / 待复核（含蒙对）三类，欠账越多、越久没碰越靠前；
+       推进——沿 path.json 的段序往下走，找「三态还是 new」的第一个点（pathStateOf 同一套口径）。
+     全部现算、不落盘；打分只用于排序，不显示给人看，界面上只写「为什么选它」。 */
+  var TD_FIX_MAX = 3, TD_NEW_MAX = 2, TD_PER_KP = 3;
+
+  function todayWhy(mt, days) {
+    var bits = [];
+    if (mt.open) bits.push("未改正 " + mt.open + " 道");
+    else if (mt.guess) bits.push("全对但 " + mt.guess + " 道是蒙的");
+    else if (mt.errs) bits.push("曾错 " + mt.errs + " 次，已改对");
+    else bits.push("已全对，巩固一下");
+    if (days >= 1) bits.push(Math.floor(days) + " 天没碰");
+    else bits.push("今天动过");
+    return bits.join(" · ");
+  }
+
+  function todayRoute(sid) {
+    var out = { fix: [], fresh: [], questions: 0, empty: "" }, i, j, k, mt, days, lv, sc, n;
+    var sub = subjectById(sid);
+    if (!sub || !QZ_READY) { out.empty = "本科目没有题库，今日路线用不上"; return out; }
+    var cand = [], now = nowMs(), list = qzMasteryList(sid);
+
+    /* ① 补漏 */
+    for (i = 0; i < list.length; i++) {
+      mt = list[i];
+      k = mt.tier.key;
+      if (k !== "danger" && k !== "weak" && k !== "review") continue;
+      n = qzPoolOfKp(sid, mt.kid).length;
+      if (!n) continue;
+      days = mt.last ? Math.max(0, (now - mt.last) / 86400000) : 99;
+      lv = mt.lv === "A" ? 3 : (mt.lv === "B" ? 2 : 1);
+      /* 分数＝欠账（未改正×10＋错次×2＋蒙对×8）＋遗忘（最多 14 天，每天 0.6）＋级别权重 */
+      sc = mt.open * 10 + qzNum(mt.errs) * 2 + qzNum(mt.guess) * 8 + Math.min(14, days) * 0.6 + lv;
+      cand.push({
+        kid: mt.kid, name: mt.name, section: mt.section, lv: mt.lv, n: n,
+        why: todayWhy(mt, days), score: sc, tag: "补漏"
+      });
+    }
+    cand.sort(function (a, b) { return b.score - a.score; });
+    out.fix = cand.slice(0, TD_FIX_MAX);
+
+    /* ② 推进：段序就是课程顺序，走到第一个「没动过」的点就停（凑够 2 个为止）。
+       PATH 在脚本里定义得比 renderAll 晚（首屏渲染时还是 undefined），
+       所以这里必须先探一下，否则首屏会抛「reading 'subjects'」——踩过（E51）。 */
+    var P = (typeof PATH !== "undefined" && PATH && PATH.subjects) ? PATH : null;
+    var pi = P ? pathIndexOf(sid) : -1;
+    if (pi >= 0) {
+      var p = P.subjects[pi], st = p.stages || [], gi, pts, ks, kid2, kp2, added = 0;
+      for (gi = 0; gi < st.length && added < TD_NEW_MAX; gi++) {
+        pts = st[gi].pts || [];
+        for (j = 0; j < pts.length && added < TD_NEW_MAX; j++) {
+          ks = pts[j].k || [];
+          for (k = 0; k < ks.length && added < TD_NEW_MAX; k++) {
+            kid2 = ks[k];
+            if (pathStateOf(sid, kid2) !== "new") continue;
+            if (isCountedDoneOf(sid, kid2)) continue;
+            n = qzPoolOfKp(sid, kid2).length;
+            if (!n) continue;
+            kp2 = qzKpOf(sub, kid2);
+            if (!kp2) continue;
+            out.fresh.push({
+              kid: kid2, name: kp2.name || kid2, section: kp2.section || "", lv: kp2.level || "", n: n,
+              why: "第 " + (st[gi].no || (gi + 1)) + " 段「" + (st[gi].t || "") + "」· 还没开始",
+              tag: "推进"
+            });
+            added++;
+          }
+        }
+      }
+    }
+
+    var picks = out.fix.concat(out.fresh);
+    for (i = 0; i < picks.length; i++) out.questions += Math.min(TD_PER_KP, picks[i].n);
+    if (!picks.length) out.empty = "本科目的点都推到头了，也没有欠账——去刷整卷，或者换个科目。";
+    return out;
+  }
+
+  function todayRow(p, i) {
+    var li = el("li", "tdrow");
+    li.appendChild(txt("span", "tdno", String(i + 1)));
+    var main = el("div", "tdmain");
+    var top = el("div", "tdtop");
+    top.appendChild(txt("span", "tdname", p.name));
+    top.appendChild(txt("span", "tdtag " + (p.tag === "补漏" ? "tdtag-fix" : "tdtag-new"), p.tag));
+    main.appendChild(top);
+    main.appendChild(txt("div", "tdwhy", p.why + (p.section ? " · " + p.section : "")));
+    li.appendChild(main);
+    var b = txt("button", "tdbtn", "练");
+    b.type = "button";
+    b.title = "只练这个点（" + p.n + " 道）";
+    b.setAttribute("data-today", p.kid);
+    (function (kid) {
+      b.addEventListener("click", function () { qzPracticeKp(kid); });
+    })(p.kid);
+    li.appendChild(b);
+    return li;
+  }
+
+  function renderToday() {
+    var box = byId("todayRoute");
+    if (!box) return;
+    var r = todayRoute(SID), picks = r.fix.concat(r.fresh), i;
+    if (!picks.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    box.innerHTML = "";
+
+    var head = el("div", "tdhead");
+    head.appendChild(txt("h2", "", "今日路线"));
+    head.appendChild(txt("span", "tdsub", picks.length + " 个点 · 约 " + r.questions + " 题"));
+    box.appendChild(head);
+
+    var ol = el("ol", "tdlist");
+    for (i = 0; i < picks.length; i++) ol.appendChild(todayRow(picks[i], i));
+    box.appendChild(ol);
+
+    var go = txt("button", "tdgo", "开始今日路线（" + r.questions + " 题）");
+    go.type = "button";
+    go.title = "按上面这些点各取几道（没做过的优先），合成一组连刷；不改动任何记录";
+    go.setAttribute("data-today-go", "1");
+    go.addEventListener("click", function () { todayRun(); });
+    box.appendChild(go);
+    box.setAttribute("data-fix", String(r.fix.length));
+    box.setAttribute("data-fresh", String(r.fresh.length));
+
+    /* 成长路径那句「先把目录翻一遍」是没路线时的兜底话术；既然下面已经有具体安排，就改成指路。
+       renderGrowth 每次重绘会把它写回原文，所以这里每次渲染都覆盖一次，顺序不能反。 */
+    var tip = document.querySelector("#growth .gwtip");
+    if (tip) {
+      tip.textContent = "下一步：照下面的「今日路线」走就行——" + picks.length + " 个点，约 " + r.questions + " 题。";
+    }
+  }
+
+  /* 一键开练：每个点取不超过 3 道，优先没做过的，其次还没改对的 */
+  function todayRun() {
+    var r = todayRoute(SID), picks = r.fix.concat(r.fresh), list = [], i, j, pool, take, a, b;
+    if (!picks.length) { qzToast("今天没有要练的题"); return; }
+    for (i = 0; i < picks.length; i++) {
+      pool = qzPoolOfKp(SID, picks[i].kid).slice(0);
+      pool.sort(function (x, y) {
+        var rx = qzRecOf(SID, x.key), ry = qzRecOf(SID, y.key);
+        var sx = !rx ? 0 : (rx.r === 1 ? 2 : 1), sy = !ry ? 0 : (ry.r === 1 ? 2 : 1);
+        if (sx !== sy) return sx - sy;
+        return x.it.i - y.it.i;
+      });
+      take = Math.min(TD_PER_KP, pool.length);
+      for (j = 0; j < take; j++) list.push(pool[j]);
+    }
+    if (!list.length) { qzToast("这些点暂时没有可用题目"); return; }
+    qzEnter();
+    qzStartRun(list, "今日路线", "", "");
+  }
+
   function growthOf(sid) {
     var sub = subjectById(sid);
     if (!sub) return null;
@@ -40551,6 +40752,8 @@
     report: repStats, renderReport: renderReport, openReport: openReport, closeReport: closeReport,
     /* [arc] 学习档案：Markdown 全文只从这一个口子取，自测不用猜内部变量 */
     archiveMd: repMarkdown,
+    /* [today] 今日路线：路由与开练都从这两个口子读 */
+    today: todayRoute, todayRun: todayRun, renderToday: renderToday,
     /* [ev] 判定依据：给自测一个稳定出口，别去猜内部变量 */
     evOpen: qzEvOpen, evClose: qzEvClose, evRows: qzEvRows, evRule: qzEvRule, evScore: qzEvScoreText,
     evOpenNow: function () { return !!(evDrawer && !evDrawer.hidden); },
@@ -40794,6 +40997,10 @@
       return o;
     } catch (e) { return { v: 0, subjects: [] }; }
   })();
+
+  /* [today] PATH 到这一步才有值；首屏那次 renderAll 跑在它前面，所以这里补渲染一次，
+     保证一打开就有「今日路线」，不用等用户点一下才出现。 */
+  renderToday();
 
   var pathBtn = byId("pathBtn");
   var pathPanel = byId("pathPanel");
