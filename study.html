@@ -3,9 +3,19 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.80.0
+  APP_VERSION: 3.80.1
   DATA_VERSION: 2026-11-13
-  本次变更: （3.80.0）第 2 个知识点接入图元，并把「生成 → 装进主程序」这条链打通——
+  本次变更: （3.80.1）掌握度可审计：给每个知识点一个「依据」入口，把「凭什么判成这个等级」摊开（不新增存储、不动算法）——
+             ①入口两处：设置页「掌握程度」每个分组行、以及「薄弱知识点」每行，右侧新增 button.qwjump.qwev「依据」（data-ev=kid）；
+               点徽标仍是「练这个知识点」，原行为不变（不改徽标点击语义，免得破坏既有肌肉记忆与回归用例）；
+             ②抽屉三层：判级理由（与 qzMasteryOf 的六条分支一一对应，命中哪条说哪条，不另算一套）、
+               算式实算（打底 100×对/共 − 未改正×10 − 已改对错次×3 − 蒙对×8，含截断说明）、
+               逐题证据（题号、题干、对错、作答次数与错次、最后作答时间、蒙对/迟疑/曾错标记、丢分归因五类）；
+             ③排序按信息量：未改正错题 → 蒙对 → 迟疑 → 答对 → 未做，同级按时间倒序，未做的排在最后；
+             ④每题带「重做」：只把这一道题塞进刷题（qzStartRun 单元素列表），不改考点练习的 all/wrong/ever 三档；
+             ⑤全部现算，只读 snap.quiz 的逐题记录，不写任何东西、不升 schema；Esc 走捕获阶段关闭，不会连带退出刷题；
+             ⑥未动：题库、判分、分级、掌握度判定与分数、蒙对/迟疑口径、同步、教学层、白话层、概念地图、公式库、学习路径。
+  上次变更: （3.80.0）第 2 个知识点接入图元，并把「生成 → 装进主程序」这条链打通——
              ①化学 c1s2-02「热力学第一定律与符号约定」第 1 拍新增图元：横轴取 Q（−100~100 kJ）、
                滑块调 W，曲线是 ΔU=Q+W，过零点标在 Q=−W；读数给出「此刻 ΔU」与「要 ΔU=0 时的 Q」；
                W 拖成负值时弹出「系统对外作功要记 W<0」的误判提示——这是本点最常错的地方；
@@ -1006,7 +1016,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.80.0">
+<meta name="app-version" content="3.80.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2577,6 +2587,7 @@
     .qwname{font-size:13px}
     .qwitem{gap:4px}
     .qwjump{font-size:11.5px;padding:6px 7px;min-height:32px}
+    .qwjump.qwev{padding:6px 6px}     /* [ev] 窄屏两个入口并排时再省 2px，别把知识点名挤成两行 */
     .exambar{padding:7px 10px;gap:6px 8px}
     .examlbl{display:none}          /* 窄屏省一行：题目本身就是「考试题型」 */
     .examseg{font-size:12px;padding:4px 7px}
@@ -3272,10 +3283,50 @@
   .repbar i{display:block;height:100%;background:var(--accent);border-radius:3px}
   .repempty{margin:0;font-size:12.5px;line-height:1.7;color:var(--ink2)}
 
+  /* [ev] 判定依据：上结论、中算式、下逐题证据；只用现有灰阶与语义色，不引入新色相 */
+  .evhead{margin:0 0 14px}
+  .evkpname{display:block;margin:0 0 7px;font-size:15.5px;font-weight:600;line-height:1.5;
+    color:var(--ink);overflow-wrap:anywhere}
+  .evheadrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+  .evscore{font-size:24px;font-weight:600;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+  .evscore.mute{font-size:15px;font-weight:400;color:var(--ink3)}
+  .evheadmeta{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .evsec{margin:0 0 20px}
+  .evsec h3{margin:0 0 8px;font-size:13.5px;font-weight:600;color:var(--ink)}
+  .evsechint{margin:0 0 8px;font-size:11.5px;line-height:1.6;color:var(--ink2)}
+  .evrule{margin:0;padding:10px 12px;border-left:3px solid var(--line2);border-radius:0 6px 6px 0;
+    background:var(--chip);font-size:12.5px;line-height:1.8;color:var(--ink)}
+  .evrule b{font-weight:600;color:var(--ink)}
+  .evcalc{margin:0;font-size:12.5px;line-height:1.95;color:var(--ink2);
+    font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+  .evcalc em{font-style:normal;font-weight:600;color:var(--ink)}
+  .evlist{margin:0}
+  .evq{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:start;
+    padding:10px 0;border-top:1px solid var(--line)}
+  .evq:first-child{border-top:0}
+  .evno{font-size:11.5px;line-height:1.7;color:var(--ink3);text-align:right;
+    font-variant-numeric:tabular-nums;padding-top:1px}
+  .evqmain{min-width:0}
+  .evqtext{display:block;font-size:13px;line-height:1.65;color:var(--ink);overflow-wrap:anywhere}
+  .evqtext.mute{color:var(--ink3)}
+  .evqmeta{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;margin-top:4px;
+    font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .evtag{display:inline-block;padding:0 5px;border:1px solid var(--line2);border-radius:3px;
+    font-size:11px;line-height:1.65;color:var(--ink2);white-space:nowrap}
+  .evtag.ok{border-color:var(--accent);background:var(--accentBg);color:var(--accent)}
+  .evtag.warn{border-color:var(--warn);background:var(--warnBg);color:var(--warn)}
+  .evqbtn{flex:0 0 auto;align-self:start;margin-top:1px;padding:6px 9px;min-height:32px;
+    border:1px solid var(--line2);border-radius:4px;background:transparent;
+    font:inherit;font-size:12px;color:var(--ink2);cursor:pointer;white-space:nowrap}
+  .evqbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accentBg)}
+  .evqbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
   @media (max-width:420px){
     .essline{flex-wrap:wrap;gap:2px}
     .essk{flex:0 0 100%}
     .ascwhy{flex:1 1 100%}
+    .evq{grid-template-columns:20px 1fr auto;gap:7px}
+    .evqtext{font-size:12.5px}
   }
   @media print{
     .essbtn,.lgoalrow,.lrckbtn,.essacts{display:none !important}
@@ -3669,6 +3720,17 @@
     <button class="btn small" id="repClose" type="button">关闭</button>
   </div>
   <div class="drawerBody" id="repBody"></div>
+</aside>
+
+<!-- [ev] 判定依据：把「凭什么判成这个等级」摊开成三层，全部现算、不写任何东西 -->
+<div class="drawerScrim" id="evScrim" hidden></div>
+<aside class="drawer" id="evDrawer" role="dialog" aria-modal="true" aria-labelledby="evTitle" tabindex="-1" hidden>
+  <div class="drawerHead">
+    <h2 id="evTitle">判定依据</h2>
+    <span class="drawerHint" id="evHint"></span>
+    <button class="btn small" id="evClose" type="button">关闭</button>
+  </div>
+  <div class="drawerBody" id="evBody"></div>
 </aside>
 
 <!-- [data] 资料库：导入科目/资料、导出当前科目、管理自建科目 -->
@@ -28876,7 +28938,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.80.0";
+  var APP_VERSION = "3.80.1";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -30468,6 +30530,7 @@
     applyRecallBtn();   // [recall] 切科目后按钮状态跟着变（按科目独立）
     if (!favDrawer.hidden) renderFavDrawer();
     if (everDrawer && !everDrawer.hidden) renderEverDrawer();   // [ever] 抽屉开着就按最新记录重算
+    if (typeof qzEvRefresh === "function") qzEvRefresh();       // [ev] 依据抽屉同理
     if (navDrawer && !navDrawer.hidden) renderNav();
     /* [qzkp] 整表重建后旧卡片已作废，悬浮入口一并收起（新卡片自带卡片内按钮） */
     if (typeof kpGoHide === "function") kpGoHide();
@@ -34902,6 +34965,240 @@
     return res;
   }
 
+  /* ---------- [ev] 判定依据：判级理由 / 算式实算 / 逐题证据 ---------- */
+  /* 缘起：掌握度是「score 公式 + 六条判定」推出来的，卡片上只给结论，看不到依据。
+     这里把同一份记录（snap.quiz 的逐题 rec）摊开给人看，并标出每条记录的时间。
+     三条硬约束：
+       ①不新增存储、不升 schema——只读，抽屉开合都不写任何东西；
+       ②不另算一套——判级理由照 qzMasteryOf 的分支顺序复述，分数照它的算式复算；
+         两边对不上说明代码被改坏了，自测（_tmp/ev-test.mjs）当场就能发现；
+       ③不碰徽标点击语义（点徽标仍是「练这个知识点」），入口是列表行右侧的「依据」。 */
+  var evDrawer = byId("evDrawer"), evScrim = byId("evScrim"), evBody = byId("evBody");
+  var evHint = byId("evHint"), evTitle = byId("evTitle");
+  var EV_KID = "";      // 当前抽屉看的是哪个知识点：记录一变就按它重渲染
+  var EV_SID = "";
+  var EV_LOCK = false;  // 开抽屉前 body 是否已经锁过滚动（学习路径首屏就是锁着的，别替它解锁）
+
+  /* 判级理由：与 qzMasteryOf 的六条分支一一对应（自上而下，先命中者为准） */
+  function qzEvRule(mt) {
+    var cap = Math.ceil(mt.total / 3), k = mt.tier.key;
+    if (k === "none") {
+      return "题库共 " + mt.total + " 道，一道都没做过，所以是「未开始」。";
+    }
+    if (k === "master") {
+      return "题库 " + mt.total + " 道全部做过，没有未改正的错题，也没有标过「蒙对」——三条都满足才算「已掌握」。";
+    }
+    if (k === "review") {
+      return "题库 " + mt.total + " 道全部做过、错题也都改正了，但其中 " + mt.guess +
+        " 道标了「蒙对」：算对，但没真懂，所以只到「待复核」，不到「已掌握」。";
+    }
+    if (k === "partial") {
+      return "做过的 " + mt.done + " 道全对，但还有 " + (mt.total - mt.done) +
+        " 道没做；只要还有没做的，最多只能算「待巩固」。";
+    }
+    if (k === "weak") {
+      return "还有 " + mt.open + " 道没改正，没超过题库的三分之一（" + cap + " 道），且正确率 " +
+        mt.rate + "%（≥ 50%），所以是「薄弱」而不是「危险」。";
+    }
+    var byOpen = mt.open > cap, byRate = mt.rate < 50;
+    return "判到「危险」是因为" +
+      (byOpen ? "没改正的错题 " + mt.open + " 道，超过题库三分之一（" + cap + " 道）" : "") +
+      (byOpen && byRate ? "，而且" : "") +
+      (byRate ? "正确率只有 " + mt.rate + "%，低于 50%" : "") + "。";
+  }
+
+  /* 算式实算：照 qzMasteryOf 的原式逐项展开，让人能自己核算 */
+  function qzEvScoreText(mt) {
+    var healed = Math.max(0, mt.errs - mt.open);
+    var base = 100 * (mt.total ? mt.right / mt.total : 0);
+    var raw = base - 10 * mt.open - 3 * healed - 8 * mt.guess;
+    var s = "打底 100 × " + mt.right + "/" + mt.total + " = " + Math.round(base) + " 分" +
+      "；未改正错题 " + mt.open + " × 10 = " + (10 * mt.open) +
+      "；已改对的错次 " + healed + " × 3 = " + (3 * healed) +
+      "；蒙对 " + mt.guess + " × 8 = " + (8 * mt.guess) +
+      "  →  " + Math.round(raw) + " 分";
+    if (raw < 0 || raw > 100) s += "（超出 0–100，截断后记 " + mt.score + " 分）";
+    return s;
+  }
+
+  /* 逐题证据：一条记录一行；排序按信息量，不按题号——
+     最先要看的是「还没改正的错题」，最后才是「还没做的」 */
+  function qzEvRank(r) {
+    if (!r.done) return 4;
+    if (!r.right) return 0;
+    if (r.guess) return 1;
+    if (r.hes) return 2;
+    return 3;
+  }
+
+  function qzEvRows(sid, kid) {
+    var idx = (qzIdx()[sid] || {})[kid], out = [], i, rec, key, c, whys;
+    if (!idx) return out;
+    for (i in idx) {
+      if (!has0(idx, i)) continue;
+      key = idx[i];
+      rec = qzRecOf(sid, key);
+      whys = [];
+      for (c = 0; c < WHY_CODES.length; c++) {
+        if (qzWhyOn(rec, WHY_CODES[c].k)) whys.push(WHY_CODES[c].label);
+      }
+      out.push({
+        i: Number(i), key: key, rec: rec, it: qzItem(sid, kid, Number(i)),
+        done: !!rec, right: !!(rec && rec.r === 1),
+        guess: qzGuessOn(rec), hes: qzHesOn(rec),
+        ever: !!rec && qzEverRec(rec),
+        tries: rec ? qzNum(rec.n) : 0, wrongs: rec ? qzNum(rec.w) : 0,
+        when: rec ? qzWhen(rec.t) : "", t: rec ? normT(rec.t) : 0, whys: whys
+      });
+    }
+    out.sort(function (a, b) {
+      var ra = qzEvRank(a), rb = qzEvRank(b);
+      if (ra !== rb) return ra - rb;
+      if (b.t !== a.t) return b.t - a.t;
+      return a.i - b.i;
+    });
+    return out;
+  }
+
+  function qzEvRow(r) {
+    var row = el("div", "evq");
+    row.setAttribute("data-ev-q", String(r.i));
+    row.appendChild(txt("span", "evno", String(r.i + 1)));
+
+    var main = el("div", "evqmain");
+    main.appendChild(txt("span", "evqtext" + (r.done ? "" : " mute"),
+      r.it ? qzClip(qzTexPlain(r.it.q), 46) : "（题库里已经没有这道题）"));
+
+    var meta = el("div", "evqmeta");
+    meta.appendChild(txt("span", "evtag " + (r.done ? (r.right ? "ok" : "warn") : ""),
+      r.done ? (r.right ? "对" : "错") : "未做"));
+    if (r.done) {
+      meta.appendChild(txt("span", "", "作答 " + r.tries + " 次"));
+      if (r.wrongs) meta.appendChild(txt("span", "", "错 " + r.wrongs + " 次"));
+      if (r.when) meta.appendChild(txt("span", "", "最后 " + r.when));
+      if (r.guess) meta.appendChild(txt("span", "evtag warn", "蒙对"));
+      if (r.hes) meta.appendChild(txt("span", "evtag", "迟疑"));
+      if (r.ever) meta.appendChild(txt("span", "evtag", "曾错"));
+      for (var i = 0; i < r.whys.length; i++) meta.appendChild(txt("span", "evtag", "归因·" + r.whys[i]));
+    } else {
+      meta.appendChild(txt("span", "", "还没做过"));
+    }
+    main.appendChild(meta);
+    row.appendChild(main);
+
+    var b = txt("button", "evqbtn", "重做");
+    b.type = "button";
+    b.setAttribute("data-ev-quiz", String(r.i));
+    b.title = "只重做这一道题（不改考点练习的既有口径）";
+    b.setAttribute("aria-label", "只重做第 " + (r.i + 1) + " 题");
+    (function (qi) {
+      b.addEventListener("click", function () { qzEvOnly(EV_KID, qi); });
+    })(r.i);
+    row.appendChild(b);
+    return row;
+  }
+
+  function qzEvRender(kid) {
+    if (!evBody) return;
+    var sid = SID, mt = qzMasteryOf(sid, kid);
+    EV_KID = kid; EV_SID = sid;
+    evBody.innerHTML = "";
+    if (!mt) {
+      if (evTitle) evTitle.textContent = "判定依据";
+      if (evHint) evHint.textContent = "没有记录";
+      evBody.appendChild(txt("p", "repempty", "这个知识点在当前科目里找不到记录。"));
+      return;
+    }
+    if (evTitle) evTitle.textContent = "判定依据";
+    if (evHint) evHint.textContent = mt.section || "";
+
+    var head = el("div", "evhead");
+    head.appendChild(txt("div", "evkpname", mt.name));
+    var headRow = el("div", "evheadrow");
+    headRow.appendChild(txt("span", "qmtier tone-" + mt.tier.tone, mt.tier.label));
+    headRow.appendChild(txt("span", "evscore" + (mt.done ? "" : " mute"), mt.done ? mt.score + "%" : "未作答"));
+    headRow.appendChild(txt("span", "evheadmeta",
+      "共 " + mt.total + " 题 · 已刷 " + mt.done + " · 未做 " + (mt.total - mt.done)));
+    head.appendChild(headRow);
+    evBody.appendChild(head);
+
+    var s1 = el("div", "evsec");
+    s1.appendChild(txt("h3", "", "凭什么判成这个等级"));
+    s1.appendChild(txt("p", "evrule", qzEvRule(mt)));
+    evBody.appendChild(s1);
+
+    var s2 = el("div", "evsec");
+    s2.appendChild(txt("h3", "", "掌握度怎么算出来的"));
+    s2.appendChild(txt("p", "evcalc", qzEvScoreText(mt)));
+    evBody.appendChild(s2);
+
+    var list = qzEvRows(sid, kid);
+    var s3 = el("div", "evsec");
+    s3.appendChild(txt("h3", "", "逐题证据（" + list.length + " 道）"));
+    s3.appendChild(txt("p", "evsechint",
+      "按信息量排序：没改正的错题在前，其次蒙对、迟疑、答对，没做的排最后；同一档按时间倒序。数字是题号。"));
+    var box = el("div", "evlist");
+    for (var j = 0; j < list.length; j++) box.appendChild(qzEvRow(list[j]));
+    s3.appendChild(box);
+    evBody.appendChild(s3);
+  }
+
+  function qzEvOpen(kid) {
+    if (!evDrawer || !kid) return;
+    if (!qzMasteryOf(SID, kid)) { qzToast("这里还没有可看的记录"); return; }
+    qzEvRender(kid);
+    evScrim.hidden = false;
+    evDrawer.hidden = false;
+    EV_LOCK = document.body.classList.contains("drawerOpen");
+    document.body.classList.add("drawerOpen");
+    if (byId("evClose")) byId("evClose").focus();
+  }
+
+  function qzEvClose(keepFocus) {
+    if (!evDrawer || evDrawer.hidden) return;
+    evDrawer.hidden = true;
+    if (evScrim) evScrim.hidden = true;
+    if (!EV_LOCK) document.body.classList.remove("drawerOpen");   // 首屏路径视图本来就锁着，别顺手解锁
+    if (!keepFocus && EV_KID) {
+      var back = document.querySelector('[data-ev="' + EV_KID + '"]');
+      if (back) back.focus();     // 焦点回到打开它的那颗按钮，键盘用户不迷路
+    }
+  }
+
+  /* 只重做一道题：从考点题池里取出这一条塞进刷题，别的口径一概不动 */
+  function qzEvOnly(kid, qi) {
+    if (!QZ_READY) { qzToast("本科目没有题库，不能重做"); return; }
+    if (!kid) return;
+    var pool = qzKpPoolMode(SID, kid, "all"), one = [], i;
+    for (i = 0; i < pool.length; i++) {
+      if (pool[i].it.i === qi) { one.push(pool[i]); break; }
+    }
+    if (!one.length) { qzToast("这道题已经不在题库里了"); return; }
+    qzEvClose(true);
+    qzEnter();
+    qzStartRun(one, "单题重做", kid, "all");
+  }
+
+  /* 记录变了但抽屉还开着：按最新记录重算；切了科目就关掉，别拿旧科目的小点硬套新科目 */
+  function qzEvRefresh() {
+    if (!evDrawer || evDrawer.hidden || !EV_KID) return;
+    if (EV_SID !== SID) { qzEvClose(true); return; }
+    qzEvRender(EV_KID);
+  }
+
+  if (byId("evClose")) byId("evClose").addEventListener("click", function () { qzEvClose(); });
+  if (evScrim) evScrim.addEventListener("click", function () { qzEvClose(); });
+  /* Esc 走捕获阶段：抢在刷题页 qzKey 的前面，看依据时按 Esc 不会把整场刷题退出 */
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "Escape" || e.keyCode === 27) && evDrawer && !evDrawer.hidden) {
+      e.stopImmediatePropagation();
+      qzEvClose();
+    }
+  }, true);
+  document.addEventListener("keydown", function (e) {
+    if (evDrawer && !evDrawer.hidden) trapFocusIn(evDrawer, e);
+  });
+
   /* ---------- 薄弱知识点 ---------- */
   /* 口径（与刷题设置页的统计同源，都读 rec.r/n/w）：
      错误次数 = 该知识点下各题 rec.w 之和，是「累计答错次数」，不是错题道数；
@@ -34976,6 +35273,15 @@
     jump.setAttribute("aria-label", "跳转到知识点卡片：" + w.name);
     jump.addEventListener("click", function () { qzJumpCard(w.kid); });
     li.appendChild(jump);
+
+    /* [ev] 「依据」：点开看这个等级是被哪几道题判出来的（只读，不改任何记录） */
+    var evb = txt("button", "qwjump qwev", "依据");
+    evb.type = "button";
+    evb.setAttribute("data-ev", w.kid);
+    evb.title = "看这个等级是怎么判出来的：判级理由、算式实算、逐题记录与时间";
+    evb.setAttribute("aria-label", "查看掌握度判定依据：" + w.name);
+    evb.addEventListener("click", function () { qzEvOpen(w.kid); });
+    li.appendChild(evb);
     return li;
   }
 
@@ -35256,6 +35562,15 @@
     jump.setAttribute("aria-label", "跳转到知识点卡片：" + it.name);
     jump.addEventListener("click", function () { qzJumpCard(it.kid); });
     li.appendChild(jump);
+
+    /* [ev] 「依据」：掌握程度分组里每一行都能点开看判定过程 */
+    var evb = txt("button", "qwjump qwev", "依据");
+    evb.type = "button";
+    evb.setAttribute("data-ev", it.kid);
+    evb.title = "看这个等级是怎么判出来的：判级理由、算式实算、逐题记录与时间";
+    evb.setAttribute("aria-label", "查看掌握度判定依据：" + it.name);
+    evb.addEventListener("click", function () { qzEvOpen(it.kid); });
+    li.appendChild(evb);
     return li;
   }
 
@@ -35470,7 +35785,7 @@
       (mt.done ? "；正确率 " + mt.rate + "%（按每道题最近一次作答计）" : "") +
       (mt.ever ? "；累计答错 " + mt.errs + " 次" : "") +
       (mt.guess ? "；其中 " + mt.guess + " 道标了「蒙对」——算对但没真懂" : "") +
-      "；点一下只刷这个知识点";
+      "；点一下只刷这个知识点（想看这个等级的证据：刷题 → 掌握程度 → 该行的「依据」）";
     node.setAttribute("aria-label", "掌握状态：" + mt.tier.label + "，已刷 " + mt.done + " / " +
       mt.total + " 道，点击开始刷题");
     qzPaintConflict(kid, mt);
@@ -39800,6 +40115,11 @@
     },
     lyOf: qzLyOf, targetLy: qzTargetLy, lyName: function (v) { return LY_NAME[v] || ""; },
     report: repStats, renderReport: renderReport, openReport: openReport, closeReport: closeReport,
+    /* [ev] 判定依据：给自测一个稳定出口，别去猜内部变量 */
+    evOpen: qzEvOpen, evClose: qzEvClose, evRows: qzEvRows, evRule: qzEvRule, evScore: qzEvScoreText,
+    evOpenNow: function () { return !!(evDrawer && !evDrawer.hidden); },
+    evKid: function () { return EV_KID; },
+    evOnly: qzEvOnly,
     repOpen: function () { var d = byId("repDrawer"); return !!(d && !d.hidden); },
     resume: lnResumeLast, lastKid: lnLastKid, courseMd: lnCourseMarkdown,
     practicePool: lnPracticePool,
