@@ -3,9 +3,16 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.88.2
+  APP_VERSION: 3.88.3
   DATA_VERSION: 2026-11-13
-  本次变更: （3.88.2）立绘退回 3.88.0 的方案，撤销 3.88.1 的全部加工——
+  本次变更: （3.88.3）「丢分在哪」在答对时改成「差点丢在哪」（只改文案，逻辑没动）——
+             ①问题：自评题答对后，反馈条仍问「丢分在哪」——都判自己对/答对了，再问丢分逻辑上打架；
+             ②原因：这行是 v3.71 定的，用来标「结果对、过程虚」（跳步、漏单位、算得侥幸）；
+               自评题的对错由用户自己判，判「对」不等于做得干净，所以这块保留；
+             ③改法：qzWhyBar 的标签按对错分两套——答对「差点丢在哪：」，答错仍「错在哪：」；
+               客观题答对本来就不显示这一行（if (right && !self) return），规则不变；
+             ④未动：五类归因、记录结构 rec.wh、统计口径、设置页汇总。
+  上次变更: （3.88.2）立绘退回 3.88.0 的方案，撤销 3.88.1 的全部加工——
              ①要求：退回上一版。3.88.1 为了「融入背景」给原图做了去背、涂底色、避白边裁切，
                结果浅色模式下小画片成了黑底方块、深色版仍留白边，全是不需要的加工；
              ②本版内容＝3.88.0：过场仍是那两张（浅水 / 深火），小画片仍是原来那张头肩竖图；
@@ -1118,7 +1125,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.88.2">
+<meta name="app-version" content="3.88.3">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -29549,7 +29556,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.88.2";
+  var APP_VERSION = "3.88.3";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -37935,7 +37942,9 @@
     if (right && !self) return;
     var rec = qzRecOf(QZ.sid, q.key);
     var bar = el("div", "qwhybar");
-    bar.appendChild(txt("span", "qwhylab", self ? "丢分在哪：" : "错在哪："));
+    /* 走到这里只有两种情形：答错，或自评题答对。答对还说「丢分」逻辑上打架，
+       所以答对一律写「差点丢在哪」——意思还是标过程隐患，只是不再自相矛盾 */
+    bar.appendChild(txt("span", "qwhylab", right ? "差点丢在哪：" : "错在哪："));
     for (i = 0; i < WHY_CODES.length; i++) {
       (function (cd) {
         var on = qzWhyOn(rec, cd.k);
