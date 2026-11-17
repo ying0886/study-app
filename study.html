@@ -3,9 +3,16 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.88.3
+  APP_VERSION: 3.88.4
   DATA_VERSION: 2026-11-13
-  本次变更: （3.88.3）「丢分在哪」在答对时改成「差点丢在哪」（只改文案，逻辑没动）——
+  本次变更: （3.88.4）修成长路径统计行在窄屏把「题」挤到下一行（只动排版）——
+             ①现象：390px 左右时「完成度 77%（36/47）笔记 0 条 刷题 164 / 题」，最后一个「题」单独掉行；
+             ②根因：.gwmeta 是 display:flex + flex-wrap，而「刷题 」「164」「 题」是三个独立 flex 项，
+               窄屏换行时按项拆，于是「题」被甩出去——不是中文断词问题；
+             ③改法：每组统计包一层 span.gwitem（white-space:nowrap），换成整项走行；
+               文案与顺序完全不变，题库模式下仍是不带「题」字的「题库 —」；
+             ④自测：360/390/420/480 四个宽度，量每项内部行数（应恒为 1）且不横向溢出。
+  上次变更: （3.88.3）「丢分在哪」在答对时改成「差点丢在哪」（只改文案，逻辑没动）——
              ①问题：自评题答对后，反馈条仍问「丢分在哪」——都判自己对/答对了，再问丢分逻辑上打架；
              ②原因：这行是 v3.71 定的，用来标「结果对、过程虚」（跳步、漏单位、算得侥幸）；
                自评题的对错由用户自己判，判「对」不等于做得干净，所以这块保留；
@@ -1125,7 +1132,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.88.3">
+<meta name="app-version" content="3.88.4">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2600,6 +2607,8 @@
   .gwticks span{position:absolute;top:0;bottom:0;width:1px;background:var(--bg)}
   .gwmeta{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2)}
   .gwmeta b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  /* [grow] 一项一个整体，窄屏换行只让整项走，「164 题」不会被拆成两行 */
+  .gwitem{white-space:nowrap}
   .gwfold{margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;line-height:1.8;color:var(--ink2)}
   .gwfold[hidden]{display:none}
   .gwsteps{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
@@ -29556,7 +29565,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.88.3";
+  var APP_VERSION = "3.88.4";
   var DATA_VERSION = "2026-11-13";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -39710,16 +39719,18 @@
     box.appendChild(bar);
 
     var meta = el("div", "gwmeta");
-    meta.appendChild(txt("span", "", "完成度 "));
-    var b1 = txt("b", "", Math.round(g.pct) + "%");
-    meta.appendChild(b1);
-    meta.appendChild(txt("span", "", "（" + g.done + " / " + g.total + "）"));
-    meta.appendChild(txt("span", "", "笔记 "));
-    meta.appendChild(txt("b", "", String(g.notes)));
-    meta.appendChild(txt("span", "", " 条"));
-    meta.appendChild(txt("span", "", g.hasPool ? "刷题 " : "题库 "));
-    meta.appendChild(txt("b", "", g.hasPool ? String(g.answers) : "—"));
-    if (g.hasPool) meta.appendChild(txt("span", "", " 题"));
+    /* 每组包一层 .gwitem：.gwmeta 是 flex-wrap，不包的话「刷题 / 164 / 题」是三个独立项，
+       窄屏换行时「题」会单独掉到下一行（2026-11-17 用户截图反馈） */
+    function gwItem(label, val, unit) {
+      var s = el("span", "gwitem");
+      s.appendChild(txt("span", "", label));
+      if (val !== null) s.appendChild(txt("b", "", String(val)));
+      if (unit) s.appendChild(txt("span", "", unit));
+      return s;
+    }
+    meta.appendChild(gwItem("完成度 ", Math.round(g.pct) + "%", "（" + g.done + " / " + g.total + "）"));
+    meta.appendChild(gwItem("笔记 ", g.notes, " 条"));
+    meta.appendChild(gwItem(g.hasPool ? "刷题 " : "题库 ", g.hasPool ? g.answers : "—", g.hasPool ? " 题" : ""));
     box.appendChild(meta);
 
     box.appendChild(txt("p", "gwtip", "下一步：" + g.stage.tip + (g.user ? "（自建科目暂无题库，靠勾选与笔记推进）" : "")));
