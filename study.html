@@ -3,9 +3,19 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.93.0
+  APP_VERSION: 3.94.0
   DATA_VERSION: 2026-11-20
-  本次变更: （3.93.0）「讲义通读」补上老师 PPT 的原文（计算机 35/50 节）——
+  本次变更: （3.94.0）UI 三处优化（纯界面层，数据与存储一个字节没动）——
+             ①窄屏顶栏收纳：≤560px 时「目录 / 搜索 / 我的收藏」三个低频按钮移进 ⋯ 菜单
+               （搬 DOM 节点不丢事件监听，id 不变，所有按 id 的引用照常生效），宽屏移回原位；
+               主行只留 学习台 / 刷题 / 公式库 / ⋯，390px 不再撑出 416px 横向滚动；
+               科目 tab 行可横向滑动时右缘加渐隐提示（.subjects.canscroll）；
+             ②刷题配置页重排：章节 / 题型 / 层次 / 开始刷题 常显在前，
+               顺序 / 选项 / 模拟 / 题量 / 全真卷 / 试卷 / 重置进度 收进 details.qadv 折叠，
+               开始按钮从三屏之外提到首屏；配置项取值、判分、记录逻辑全部未动；
+             ③细节：「曾错过」计数为 0 时 chip 转灰（不再是琥珀描边，点击仍弹提示）；
+               toast 从底部移到顶部，不再压住收尾页的按钮。
+  上次变更: （3.93.0）「讲义通读」补上老师 PPT 的原文（计算机 35/50 节）——
              ①为什么：要点是每个考点的摘要，背到最后还是背摘要。用户要的是「讲义原文级」——
                老师照 PPT 讲的那套话，能对着念、能背原句；
              ②素材：计算机目录下 5 份 PDF（第一章 / 第二章 ×2 / 第五讲机器学习 / 第六讲 NLP）
@@ -1205,7 +1215,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.93.0">
+<meta name="app-version" content="3.94.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1328,6 +1338,11 @@
   }
   .subjects{display:flex;align-items:center;gap:2px;overflow-x:auto;max-width:44vw;scrollbar-width:none}
   .subjects::-webkit-scrollbar{display:none}
+  /* [v3.94.0] 科目 tab 行可横向滑动时右缘渐隐，提示「往右滑还有」；由 JS 按 scrollWidth 加减 canscroll */
+  .subjects.canscroll{
+    -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 18px),rgba(0,0,0,0) 100%);
+    mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 18px),rgba(0,0,0,0) 100%);
+  }
   .tab{
     appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;
     color:var(--ink2);font:inherit;font-size:13.5px;
@@ -1758,7 +1773,7 @@
 
   /* ---------- 提示 ---------- */
   .toast{
-    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    position:fixed;left:50%;top:14px;transform:translateX(-50%);
     background:var(--ink);color:var(--bg);
     font-size:13.5px;padding:10px 16px;border-radius:6px;
     opacity:0;transition:opacity .35s ease;pointer-events:none;z-index:30;
@@ -1851,8 +1866,11 @@
   }
   .chip-ever[aria-pressed="true"]::before{background:var(--everInk)}
   .chip-ever[aria-pressed="true"] .evern{background:rgba(255,255,255,.28);color:var(--everInk)}
-  .chip-ever[data-empty="true"]{opacity:.55}
-  .chip-ever[data-empty="true"]:hover{background:transparent}
+  /* [v3.94.0] 计数为 0 时整颗转灰：语义色（琥珀）只留给真有数据的状态；点击仍弹提示 */
+  .chip-ever[data-empty="true"]{border-color:var(--line2);color:var(--ink2)}
+  .chip-ever[data-empty="true"]::before{background:var(--line2)}
+  .chip-ever[data-empty="true"] .evern{background:var(--chip);color:var(--ink2)}
+  .chip-ever[data-empty="true"]:hover{background:transparent;border-color:var(--line2)}
   /* 紧跟其后的「题目集」入口：平时是低调文字链，chip 选中后升级成实底胶囊 */
   .everlink{
     display:inline-flex;align-items:center;gap:4px;
@@ -2012,7 +2030,7 @@
     .tab{font-size:12.5px;padding:6px 6px}   /* v3.12.0：三科目（含「计算机与人工智能」长名）在 390px 下不再撑出横向滚动 */
     .topbar{gap:10px}
     .topbar h1,.btn{white-space:nowrap}
-    .acts{gap:6px}
+    .acts{gap:6px;flex-wrap:wrap;justify-content:flex-end}   /* v3.94.0：兜底换行，低频按钮已被 JS 收进 ⋯ 菜单 */
     .acts .btn{padding:0 10px}
     /* P4.1：竖屏字段改为上下结构，释放左侧 84px 固定标签的空间 */
     .field{flex-direction:column;gap:4px;padding:10px 0}
@@ -2380,6 +2398,18 @@
   .qhint{margin:0 0 16px;font-size:13px;color:var(--ink2)}
   .qrow{display:flex;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
   .qlabel{font-size:12.5px;color:var(--ink2);flex:0 0 40px}
+  /* [v3.94.0] 低频配置折叠：顺序/模拟/全真卷/重置 收进 details，开始按钮提到首屏 */
+  .qadv{margin:4px 0 14px;padding:2px 12px 6px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  .qadv>summary{
+    display:flex;align-items:center;min-height:44px;margin:0 -12px;padding:0 14px;cursor:pointer;
+    font-size:13px;color:var(--ink2);list-style:none;user-select:none;
+  }
+  .qadv>summary::-webkit-details-marker{display:none}
+  .qadv>summary::after{content:"▸";margin-left:auto;color:var(--ink2);transition:transform .15s ease}
+  .qadv[open]>summary::after{transform:rotate(90deg)}
+  .qadv>summary:hover{color:var(--ink)}
+  .qadv>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .qadv .qbuttons{margin-top:6px;padding-top:2px;border-top:1px solid var(--line)}
   .qsel{
     min-height:42px;padding:0 10px;flex:1 1 240px;min-width:0;max-width:100%;
     background:var(--card);color:var(--ink);border:1px solid var(--line2);
@@ -4261,6 +4291,12 @@
           <option value="3">边界层</option>
         </select>
       </div>
+      <!-- [v3.94.0] 低频配置收进 details.qadv：默认只露 章节/题型/层次/开始，其余折叠；配置逻辑未动 -->
+      <div class="qrow qbuttons">
+        <button class="btn" id="qBegin" type="button">开始刷题</button>
+      </div>
+      <details class="qadv" id="qAdv">
+        <summary>更多设置：顺序 · 模拟 · 全真卷 · 重置进度</summary>
       <div class="qrow">
         <span class="qlabel">顺序</span>
         <select class="qsel" id="qOrderSel">
@@ -4324,8 +4360,9 @@
         <span class="qswhint" id="reHint"></span>
       </div>
       <div class="qrow qbuttons">
-        <button class="btn" id="qBegin" type="button">开始刷题</button>        <button class="btn small" id="qReset" type="button">重置本科目进度</button>
+        <button class="btn small" id="qReset" type="button">重置本科目进度</button>
       </div>
+      </details>
       <!-- [calib] 元认知校准：开始前选预估档，小结对比预估与实际，历史按科目独立存快照 -->
       <div class="qweak" id="qCalib"></div>
       <!-- [pred] 期末分数估算：按题型分值加权，与掌握程度同源、按科目独立计算 -->
@@ -31284,7 +31321,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.93.0";
+  var APP_VERSION = "3.94.0";
   var DATA_VERSION = "2026-11-20";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -31857,6 +31894,40 @@
     byId(id).addEventListener("click", closeMore);
   });
 
+  /* [v3.94.0] 窄屏顶栏收纳：≤560px 时把「目录 / 搜索 / 我的收藏」移进 ⋯ 菜单，宽屏移回原位。
+     appendChild / insertBefore 搬节点不丢事件监听，id 不变——
+     按 id 的引用（开抽屉、body.mode-formula 的隐藏规则）与行为全部照常。
+     菜单里插到 themeBtn 之前，保持 目录→搜索→我的收藏 在菜单顶部；恢复时插回 ⋯ 按钮之前。 */
+  var compactMq = window.matchMedia ? window.matchMedia("(max-width:560px)") : null;
+  function compactActs() {
+    var acts = document.querySelector(".acts");
+    if (!acts || !moreMenu) return;
+    var themeBtn = byId("themeBtn");
+    ["tocBtn", "searchBtn", "favBtn"].forEach(function (id) {
+      var b = byId(id);
+      if (!b) return;
+      if (compactMq && compactMq.matches) {
+        if (b.parentNode !== moreMenu) moreMenu.insertBefore(b, themeBtn);
+      } else {
+        if (b.parentNode !== acts) acts.insertBefore(b, moreBtn);
+      }
+    });
+    closeMore();   // 节点搬家时菜单若开着会错位，统一收起
+    updateSubjectsHint();
+  }
+  /* 科目 tab 行装不下时右缘渐隐提示可滑动 */
+  function updateSubjectsHint() {
+    if (!subjectsBox) return;
+    if (subjectsBox.scrollWidth > subjectsBox.clientWidth + 2) subjectsBox.classList.add("canscroll");
+    else subjectsBox.classList.remove("canscroll");
+  }
+  if (compactMq) {
+    if (compactMq.addEventListener) compactMq.addEventListener("change", compactActs);
+    else if (compactMq.addListener) compactMq.addListener(compactActs);
+  }
+  window.addEventListener("resize", function () { updateSubjectsHint(); });
+  compactActs();
+
   /* ---------------- 科目切换器 ---------------- */
   var subjectsBox = byId("subjects");
   var ovBtn = byId("ovBtn");
@@ -31983,6 +32054,7 @@
       });
       subjectsBox.appendChild(b);
     });
+    updateSubjectsHint();   // [v3.94.0] tab 总宽超出容器时右缘渐隐
   }
 
   function renderOverview() {
