@@ -3,9 +3,27 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.91.1
+  APP_VERSION: 3.92.0
   DATA_VERSION: 2026-11-19
-  本次变更: （3.91.1）高数期中卷按官方答案卷校对（只改数据，不动 UI）——
+  本次变更: （3.92.0）新增「讲义通读」——给「只练会那几道题不算会」补一条读讲义的通道——
+             ①问题：计算机 142 个点里有 116 个（B 92 / C 24）没有「从零学」，只有卡片正文＋题库；
+               题库那几道题练对了，记住的是题面不是讲义。思政那类科目平时接触得到，计算机接触不到，
+               所以需要一条「按讲义读熟」的路，而不是再加题；
+             ②做法：按 section 一节一屏（计算机 50 节 / 142 点）。本节每个点默认只露名字，
+               点「先自己说一遍」写一句（提示已给出本条有几个要点），再「对一下答案」展开
+               要点（content 按句切）＋最容易记错（trap 按①②③拆）＋最低拿分动作＋出处；
+               当场判「讲得出 / 还没讲出」，判完本节进度条、下拉里的分数、页脚提示立刻跟着变；
+             ③存储：进度落在既有的 snap.teach[sid][kid]，只加 lk（1 讲得出 / 0 还没讲出）与 lt（时刻）。
+               mergeTeachMap 按「更晚的 lt 说了算」合并（lk 不是单调量，不能取 max）、
+               sameTeach 比 lk/lt、teachOne 保留 lk=0、lnSaveProg 整条重写时一并带过去；
+               不新增存储树、不升 schema（仍是 2）；
+             ④入口：⋯ 菜单「从零学」下新增「讲义通读」，一开就落在第一个没全讲通的节；
+               另有「只看没讲的」「上一节/下一节」「下拉选节」，页脚给「还差 N 个 / 下一节」；
+             ⑤今日路线：补漏、推进之外多一条「读讲义」——取本科目第一个没全讲通的节，
+               虚线框单列、不计题数、不进「开始今日路线」的题单；只有它没有题时路线不再整块隐藏；
+             ⑥不碰：判分、掌握度、三态、复习进度、刷题记录（实测一个字节没动）、题库、分级、同步契约；
+             ⑦自测 _tmp/lect-test.mjs（63 条：分节/节序/自述/要点/判定/持久化/今日路线/390px）。
+  上次变更: （3.91.1）高数期中卷按官方答案卷校对（只改数据，不动 UI）——
              ①来源升级：拿到长安大学数学竞赛协会的《2026—2027 学年第一学期高等数学 II 期中
                试卷答案解析》9 页，逐题比对 24 题，23 题答案字母与自解一致；
              ②第 9 题（y=f(1/x) 求二阶导）选项顺序按卷面重排——原录入把正确表达式放在 B 位，
@@ -1168,7 +1186,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.91.1">
+<meta name="app-version" content="3.92.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -2684,6 +2702,14 @@
     font:inherit;font-size:13px;font-weight:600;cursor:pointer}
   .tdgo:hover{filter:brightness(1.06)}
   .tdgo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* [lect] 路线里的「读讲义」：与「练」分开，虚线框表示这是另一类任务，不计题数 */
+  .tdread{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;
+    padding:10px 12px;border:1px dashed var(--line2);border-radius:7px}
+  .tdread .rdtag{flex:0 0 auto;font-size:10.5px;line-height:1.65;padding:0 6px;border-radius:3px;
+    border:1px solid var(--accent);color:var(--accent);white-space:nowrap}
+  .tdread .rdmain{flex:1 1 140px;min-width:0}
+  .tdread .rdname{font-size:13px;line-height:1.55;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+  .tdread .rdwhy{margin-top:2px;font-size:11.5px;line-height:1.6;color:var(--ink2)}
   @media (max-width:420px){
     .tdrow{grid-template-columns:16px 1fr auto;gap:6px}
     .tdname{font-size:13px}
@@ -3371,6 +3397,64 @@
     font:inherit;font-size:13.5px;line-height:1.7;resize:vertical}
   .lrecall textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .lrecall .lrecallacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+  /* ---------- [lect] 讲义通读（v3.92.0）：按节读、先自述再对答案、逐点标「讲得出」 ----------
+     与「从零学」分工：从零学是深讲（只有 101 条 A 级），讲义通读是全量通读（每点都有）。
+     进度复用 snap.teach 的 lk / lt 子键，不新增存储树、不升 schema。 */
+  body.mode-lect .wrap{display:none}
+  body.mode-lect #tocBtn,
+  body.mode-lect #searchBtn,
+  body.mode-lect #favBtn,
+  body.mode-lect #ovBtn,
+  body.mode-lect #mapBtn,
+  body.mode-lect .kpgowrap{display:none !important}
+
+  .lect{padding:18px 16px 72px}
+  .lctwrap{max-width:880px;margin:0 auto}
+  .lcthead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+  .lctsec{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .lctname{flex:1 1 180px;min-width:0;font-size:15px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+  .lctbar{height:3px;background:var(--barBg);border-radius:2px;overflow:hidden;margin:0 0 11px}
+  .lctbar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .25s ease}
+  .lctnav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .lctpick{font:inherit;font-size:12.5px;padding:5px 6px;border:1px solid var(--line2);border-radius:6px;
+    background:var(--card);color:var(--ink);max-width:17em}
+  .lctpick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .lctnum{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;text-align:right}
+
+  .lctkp{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:13px 14px;margin:0 0 10px}
+  .lctkp[data-k="1"]{border-color:var(--accent)}
+  .lctkptop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .lctno{font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;min-width:1.7em}
+  .lctnm{flex:1 1 160px;min-width:0;font-size:14px;font-weight:600;line-height:1.6;color:var(--ink);overflow-wrap:anywhere}
+  .lctst{font-size:11px;color:var(--ink3);border:1px solid var(--line2);border-radius:10px;
+    padding:1px 7px;white-space:nowrap;flex:0 0 auto}
+  .lctkp[data-k="1"] .lctst{color:var(--accent);border-color:var(--accent)}
+  .lctkp[data-k="-1"] .lctst{color:var(--warn);border-color:var(--warn)}
+
+  .lctsay{margin:11px 0 0;padding:11px 12px;border-radius:7px;background:var(--chip)}
+  .lctsay>p{margin:0 0 8px;font-size:12.5px;line-height:1.75;color:var(--ink2)}
+  .lctsay textarea{display:block;width:100%;box-sizing:border-box;min-height:58px;padding:9px 10px;
+    border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);
+    font:inherit;font-size:13.5px;line-height:1.75;resize:vertical}
+  .lctsay textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .lctsay .lctacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+
+  .lctrev{margin:11px 0 0;padding:12px 13px;border-radius:7px;background:var(--chip);
+    border-left:3px solid var(--accent);animation:lnIn .18s ease both}
+  .lctlb{margin:11px 0 4px;font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--ink2)}
+  .lctlb:first-child{margin-top:0}
+  .lctlb.warn{color:var(--warn)}
+  .lctul{margin:0;padding-left:1.2em}
+  .lctul li{margin:.3em 0;font-size:13.5px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+  .lctp{margin:.3em 0;font-size:13.5px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
+  .lctjudge{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line2)}
+  .lctjudge .btn.on{border-color:var(--accent);color:var(--accent)}
+  .lctfoot{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0 0;padding:12px 14px;
+    border:1px dashed var(--line2);border-radius:8px}
+  .lctfoot .lfp{flex:1 1 170px;min-width:0;font-size:12.5px;line-height:1.75;color:var(--ink2)}
+  .lctfoot .lfp b{color:var(--ink);font-weight:600}
+  @media print{.lect{display:none !important}}
 
   .lblk{margin:10px 0 0;padding:11px 13px;border-radius:8px;background:var(--chip);
     border-left:3px solid var(--accent);font-size:13.5px;line-height:1.85;color:var(--ink);overflow-wrap:anywhere}
@@ -4075,6 +4159,7 @@
       <button class="btn" id="dataBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="dataDrawer">资料</button>
       <button class="btn" id="pathBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="pathPanel">学习路径</button>
       <button class="btn" id="learnBtn" type="button" role="menuitem">从零学</button>
+      <button class="btn" id="lectBtn" type="button" role="menuitem" title="按讲义章节通读：先自己说，再对答案，逐点标讲得出">讲义通读</button>
       <button class="btn" id="resumeBtn" type="button" role="menuitem">继续上次</button>
       <button class="btn" id="reportBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="repDrawer">学习报告</button>
       <button class="btn" id="syncBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncDrawer"><span class="dot" id="syncDot"></span>同步</button>
@@ -4287,6 +4372,28 @@
     <div class="lbar" role="progressbar" aria-label="本课进度" aria-valuemin="0" aria-valuemax="100"><i id="lnBar"></i></div>
     <div id="lnBody"></div>
     <div class="lacts" id="lnActs"></div>
+  </div>
+</section>
+
+<!-- [lect] 讲义通读：按节一屏，先自己说、再对答案，逐点标「讲得出 / 还没讲出」。
+     与「从零学」的区别：从零学是深讲（只有 A 级点有讲稿），这里是全量通读（每点都能读）。 -->
+<section class="lect" id="lectView" aria-label="讲义通读" hidden>
+  <div class="lctwrap">
+    <div class="lcthead">
+      <span class="lctsec" id="lctSec"></span>
+      <span class="lctname" id="lctName">讲义通读</span>
+      <button class="btn small" id="lctQuit" type="button">退出</button>
+    </div>
+    <div class="lctbar" role="progressbar" aria-label="本节进度" aria-valuemin="0" aria-valuemax="100"><i id="lctBar"></i></div>
+    <div class="lctnav">
+      <button class="chip" id="lctPrev" type="button">上一节</button>
+      <select class="lctpick" id="lctPick" aria-label="选择章节"></select>
+      <button class="chip" id="lctNext" type="button">下一节</button>
+      <button class="chip" id="lctTodo" type="button" aria-pressed="false" title="只列还没讲通的点，讲完一屏就到底">只看没讲的</button>
+      <span class="lctnum" id="lctNum"></span>
+    </div>
+    <div id="lctBody"></div>
+    <div class="lctfoot" id="lctFoot" hidden></div>
   </div>
 </section>
 
@@ -31137,7 +31244,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.91.1";
+  var APP_VERSION = "3.92.0";
   var DATA_VERSION = "2026-11-19";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -33695,7 +33802,7 @@
      p 只进不退（取 max），同 p 取更晚的 t；两个操作都幂等、可交换、可结合，
      所以「一台看完第 1 拍、另一台看到第 3 拍」合并后停在 3，不会被旧档拉回去。 */
   function mergeTeachMap(L, R) {
-    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b;
+    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b, blt, alt;
     L = L || {}; R = R || {};
     for (sid in L) if (has0(L, sid)) sids[sid] = 1;
     for (sid in R) if (has0(R, sid)) sids[sid] = 1;
@@ -33715,6 +33822,12 @@
         if ((b.rt || 0) > (a.rt || 0)) a.rt = b.rt;
         a.lv = Math.min(a.lv || 0, b.lv || 0);
         if (!a.lv) delete a.lv;
+        /* [lect] 讲义通读的 lk 不是单调量（「讲得出」可以改回「还没讲出」），
+           所以不能取 max：按「更晚那次标记说了算」，同一毫秒取大的。
+           两端比较的仍是一个确定量（lt），同样幂等、可交换。 */
+        blt = normT(b.lt); alt = normT(a.lt);
+        if (blt > alt) { a.lk = qzNum(b.lk); a.lt = blt; }
+        else if (blt && blt === alt) a.lk = Math.max(qzNum(a.lk), qzNum(b.lk));
       }
       out[sid] = m;
     }
@@ -33728,6 +33841,9 @@
     x = qzNum(o.rb); if (x) out.rb = x;
     x = normT(o.rt); if (x) out.rt = x;
     x = qzNum(o.lv); if (x) out.lv = x;
+    /* [lect] lk=0 要留：它表示「点开对过答案、确认还没讲出」，和「没读过」不是一回事 */
+    if (o.lk !== undefined) out.lk = qzNum(o.lk);
+    x = normT(o.lt); if (x) out.lt = x;
     return out;
   }
   function sameTeach(A, B) {
@@ -33745,6 +33861,9 @@
         if (qzNum(x[kid].rb) !== qzNum(y[kid].rb)) return false;
         if (normT(x[kid].rt) !== normT(y[kid].rt)) return false;
         if (qzNum(x[kid].lv) !== qzNum(y[kid].lv)) return false;
+        /* [lect] 讲义标记同理：不比 lk 的话，一端讲通了、另一端永远停在「未讲」 */
+        if (qzNum(x[kid].lk) !== qzNum(y[kid].lk)) return false;
+        if (normT(x[kid].lt) !== normT(y[kid].lt)) return false;
       }
     }
     for (sid in B) if (has0(B, sid)) {
@@ -41100,7 +41219,7 @@
   }
 
   function todayRoute(sid) {
-    var out = { fix: [], fresh: [], questions: 0, empty: "" }, i, j, k, mt, days, lv, sc, n;
+    var out = { fix: [], fresh: [], read: null, questions: 0, empty: "" }, i, j, k, mt, days, lv, sc, n;
     var sub = subjectById(sid);
     if (!sub || !QZ_READY) { out.empty = "本科目没有题库，今日路线用不上"; return out; }
     var cand = [], now = nowMs(), list = qzMasteryList(sid);
@@ -41154,6 +41273,19 @@
       }
     }
 
+    /* ③ 读讲义：本科目里第一个还没「全讲通」的节。
+       它不折成题、也不进 todayRun 的题单——读和练是两种任务，硬凑成一组两头都不像。 */
+    if (typeof lecSecs === "function") {
+      var secs0 = lecSecs(sid), si0, gd0;
+      for (si0 = 0; si0 < secs0.length; si0++) {
+        gd0 = lecGotOf(sid, secs0[si0].kids);
+        if (gd0 < secs0[si0].kids.length) {
+          out.read = { si: si0, sec: secs0[si0].sec, n: secs0[si0].kids.length, got: gd0 };
+          break;
+        }
+      }
+    }
+
     var picks = out.fix.concat(out.fresh);
     for (i = 0; i < picks.length; i++) out.questions += Math.min(TD_PER_KP, picks[i].n);
     if (!picks.length) out.empty = "本科目的点都推到头了，也没有欠账——去刷整卷，或者换个科目。";
@@ -41185,25 +41317,54 @@
     var box = byId("todayRoute");
     if (!box) return;
     var r = todayRoute(SID), picks = r.fix.concat(r.fresh), i;
-    if (!picks.length) { box.hidden = true; box.innerHTML = ""; return; }
+    /* 没有要练的题、但有讲义可读时不能整块藏掉——那正好是「今天就去读一节」的日子 */
+    if (!picks.length && !r.read) { box.hidden = true; box.innerHTML = ""; return; }
     box.hidden = false;
     box.innerHTML = "";
 
+    var sub = picks.length ? (picks.length + " 个点 · 约 " + r.questions + " 题") : "今天没有要补的题";
+    if (r.read) sub += " · 读 1 节";
+
     var head = el("div", "tdhead");
     head.appendChild(txt("h2", "", "今日路线"));
-    head.appendChild(txt("span", "tdsub", picks.length + " 个点 · 约 " + r.questions + " 题"));
+    head.appendChild(txt("span", "tdsub", sub));
     box.appendChild(head);
 
-    var ol = el("ol", "tdlist");
-    for (i = 0; i < picks.length; i++) ol.appendChild(todayRow(picks[i], i));
-    box.appendChild(ol);
+    if (picks.length) {
+      var ol = el("ol", "tdlist");
+      for (i = 0; i < picks.length; i++) ol.appendChild(todayRow(picks[i], i));
+      box.appendChild(ol);
+    }
 
-    var go = txt("button", "tdgo", "开始今日路线（" + r.questions + " 题）");
-    go.type = "button";
-    go.title = "按上面这些点各取几道（没做过的优先），合成一组连刷；不改动任何记录";
-    go.setAttribute("data-today-go", "1");
-    go.addEventListener("click", function () { todayRun(); });
-    box.appendChild(go);
+    /* [lect] 读讲义：与上面「练」分开列，虚线框 + 单独的「去读」 */
+    if (r.read) {
+      var rd = el("div", "tdread");
+      rd.appendChild(txt("span", "rdtag", "读讲义"));
+      var dm = el("div", "rdmain");
+      dm.appendChild(txt("div", "rdname", r.read.sec + " · 全 " + r.read.n + " 个点"));
+      dm.appendChild(txt("div", "rdwhy", r.read.got
+        ? "已经讲通 " + r.read.got + " 个，还差 " + (r.read.n - r.read.got) + " 个"
+        : "这一节还没开始读，先通读一遍再做题"));
+      rd.appendChild(dm);
+      var rb = txt("button", "tdbtn", "去读");
+      rb.type = "button";
+      rb.title = "按讲义通读这一节：先自己说，再对答案；不判分、不进刷题记录";
+      rb.setAttribute("data-read-sec", String(r.read.si));
+      (function (si) {
+        rb.addEventListener("click", function () { lecOpen(si); });
+      })(r.read.si);
+      rd.appendChild(rb);
+      box.appendChild(rd);
+    }
+
+    if (picks.length) {
+      var go = txt("button", "tdgo", "开始今日路线（" + r.questions + " 题）");
+      go.type = "button";
+      go.title = "按上面这些点各取几道（没做过的优先），合成一组连刷；不改动任何记录";
+      go.setAttribute("data-today-go", "1");
+      go.addEventListener("click", function () { todayRun(); });
+      box.appendChild(go);
+    }
     box.setAttribute("data-fix", String(r.fix.length));
     box.setAttribute("data-fresh", String(r.fresh.length));
 
@@ -41211,7 +41372,9 @@
        renderGrowth 每次重绘会把它写回原文，所以这里每次渲染都覆盖一次，顺序不能反。 */
     var tip = document.querySelector("#growth .gwtip");
     if (tip) {
-      tip.textContent = "下一步：照下面的「今日路线」走就行——" + picks.length + " 个点，约 " + r.questions + " 题。";
+      var tail = picks.length ? (picks.length + " 个点，约 " + r.questions + " 题") : "";
+      if (r.read) tail += (tail ? "；再读一节 " : "") + "讲义 " + r.read.sec;
+      tip.textContent = "下一步：照下面的「今日路线」走就行——" + tail + "。";
     }
   }
 
@@ -41659,6 +41822,10 @@
       if (old.rb !== undefined) rec.rb = qzNum(old.rb);
       if (old.rt !== undefined) rec.rt = normT(old.rt);
       if (old.lv !== undefined) rec.lv = qzNum(old.lv);
+      /* [lect] 讲义通读标记与从零学共用这条记录：整条重写时必须带过去，
+         否则「先讲通、再回来从零学」会把讲义标记抹掉。 */
+      if (old.lk !== undefined) rec.lk = qzNum(old.lk);
+      if (old.lt !== undefined) rec.lt = normT(old.lt);
     }
     m[kid] = rec;
     commitSnap(t);
@@ -42267,6 +42434,423 @@
     term: kpTermHtml, fb: buildPlainFb,
     count: plainCount, mark: plainMark, list: qzPlainList, render: qzRenderPlain,
     has: function (kid) { var k = findPoint(kid); return !!(k && k.brief); }
+  };
+
+  /* ================= [lect] 讲义通读（v3.92.0） =================
+     为什么要它：计算机那类科目要背的东西比思政多，平时又接触不到，
+     只把题库里那几道题练对，记住的是题面、不是讲义。这里给一条按节通读的路：
+     一节一屏 → 每点先合上讲义自己说一句 → 再展开对答案 → 当场判「讲得出 / 还没讲出」。
+     口径（三条，改之前先看）：
+       ①不判分、不写 snap.quiz、不碰掌握度与三态——它量的是「读没读熟」，不是「会不会做题」；
+       ②进度落在既有的 snap.teach[sid][kid] 上，只加两个子键 lk（1 讲得出 / 0 还没讲出）与 lt（时刻），
+         与从零学共用同一个 map：lnSaveProg 与快照合并都已同步保留这两个键，不再另起一棵存储树；
+       ③要点全部由 content 现切，不新增内容文件；content 为空的点照实说「没写正文」。 */
+  var LEC = { on: false, sid: null, secs: [], si: 0, todo: false, open: {}, memo: {} };
+  var lectView = byId("lectView");
+  var lctBodyEl = byId("lctBody");
+
+  /* ---------- 分节 ---------- */
+  /* section 形如 "§2.4"，字符串排序会把 §2.10 排到 §2.2 前面，所以取数字比 */
+  function lecSecNum(s) {
+    var m = /(\d+)\D+(\d+)/.exec(String(s || ""));
+    if (!m) return [9999, 9999];
+    return [qzNum(m[1]), qzNum(m[2])];
+  }
+  function lecSecs(sid) {
+    var sub = subjectById(sid), list = (sub && sub.knowledgePoints) || [], map = {}, order = [], i, k, s, a, b, out = [];
+    for (i = 0; i < list.length; i++) {
+      k = list[i]; s = k.section || "未分节";
+      if (!map[s]) { map[s] = []; order.push(s); }
+      map[s].push(k);
+    }
+    order.sort(function (x, y) {
+      var px = lecSecNum(x), py = lecSecNum(y);
+      if (px[0] !== py[0]) return px[0] - py[0];
+      if (px[1] !== py[1]) return px[1] - py[1];
+      return x < y ? -1 : (x > y ? 1 : 0);
+    });
+    for (i = 0; i < order.length; i++) out.push({ sec: order[i], kids: map[order[i]] });
+    return out;
+  }
+  function lecAllKids(sid) {
+    var secs = lecSecs(sid), out = [], i, j;
+    for (i = 0; i < secs.length; i++) for (j = 0; j < secs[i].kids.length; j++) out.push(secs[i].kids[j]);
+    return out;
+  }
+  function lecChapOf(sec) {
+    var n = lecSecNum(sec);
+    return n[0] === 9999 ? "" : "第 " + n[0] + " 章";
+  }
+
+  /* ---------- 进度：读 snap.teach 的 lk / lt ---------- */
+  function lecState(sid, kid) {
+    var m = lnData()[sid], r = m && m[kid];
+    if (!r) return 0;
+    if (qzNum(r.lk) === 1) return 1;
+    if (r.lt !== undefined && normT(r.lt)) return -1;
+    return 0;
+  }
+  function lecKnown(sid, kid) { return lecState(sid, kid) === 1; }
+  function lecGotOf(sid, kids) {
+    var i, n = 0;
+    for (i = 0; i < kids.length; i++) if (lecKnown(sid, kids[i].id)) n++;
+    return n;
+  }
+  function lecStText(st) {
+    if (st === 1) return "讲得出";
+    if (st === -1) return "还没讲出";
+    return "未讲";
+  }
+  /* 写进度：只动 lk / lt，把从零学留下的 p / rc / rb / rt / lv 原样带过去 */
+  function lecMark(kid, ok) {
+    var sid = LEC.sid || SID, d = lnData(), m = d[sid], t = nowMs(), old, rec;
+    if (!m) { m = {}; d[sid] = m; }
+    old = m[kid] || null;
+    rec = { p: old ? qzNum(old.p) : 0, t: (old && old.t) ? normT(old.t) : t };
+    if (old) {
+      if (old.rc !== undefined) rec.rc = qzNum(old.rc);
+      if (old.rb !== undefined) rec.rb = qzNum(old.rb);
+      if (old.rt !== undefined) rec.rt = normT(old.rt);
+      if (old.lv !== undefined) rec.lv = qzNum(old.lv);
+    }
+    rec.lk = ok ? 1 : 0;
+    rec.lt = t;
+    m[kid] = rec;
+    commitSnap(t);
+    if (typeof syncMarkDirty === "function") syncMarkDirty();
+  }
+
+  /* ---------- 内容：正文切要点、trap 切条目 ---------- */
+  function lecBullets(k) {
+    var t = String((k && k.content) || ""), parts, out = [], i, s, p2, o2, j, s2;
+    if (!t) return out;
+    parts = t.split("。");
+    for (i = 0; i < parts.length; i++) {
+      s = parts[i].replace(/^\s+|\s+$/g, "");
+      if (s) out.push(s + "。");
+    }
+    /* 只有一句又特别长：再按分号切一层，免得一屏一个大段落没法对 */
+    if (out.length === 1 && out[0].length > 90) {
+      p2 = out[0].split(/[；;]/);
+      o2 = [];
+      for (j = 0; j < p2.length; j++) {
+        s2 = p2[j].replace(/^\s+|\s+$/g, "");
+        if (s2) o2.push(s2 + (j === p2.length - 1 ? "。" : "；"));
+      }
+      if (o2.length > 1) return o2;
+    }
+    return out;
+  }
+  function lecMis(k) {
+    var t = String((k && k.trap) || ""), out = [], i, parts, s;
+    if (!t) return out;
+    parts = t.split(/[①②③④⑤⑥⑦⑧⑨]/);
+    for (i = 0; i < parts.length; i++) {
+      s = parts[i].replace(/^[；;、,，\s]+/, "").replace(/\s+$/, "");
+      if (s) out.push(s);
+    }
+    if (out.length < 2) {
+      out = [];
+      parts = t.split(/[；;]/);
+      for (i = 0; i < parts.length; i++) {
+        s = parts[i].replace(/^\s+|\s+$/g, "");
+        if (s) out.push(s);
+      }
+    }
+    return out.slice(0, 5);
+  }
+
+  /* ---------- 渲染 ---------- */
+  function lecClear(d) {
+    while (d.childNodes.length > 1) d.removeChild(d.lastChild);
+  }
+  function lecSayInto(d, k) {
+    lecClear(d);
+    var box = el("div", "lctsay"), n = lecBullets(k).length;
+    box.appendChild(txt("p", "", n
+      ? "合上讲义，把这条讲成 " + n + " 句话：是什么、分几条、怎么判。说全了再对答案。"
+      : "合上讲义，把这条讲一遍：是什么、怎么判。说完再对答案。"));
+    var ta = el("textarea");
+    ta.placeholder = "先说，再看（写多写少都行，不判分）";
+    ta.value = LEC.memo[k.id] || "";
+    ta.addEventListener("input", function () { LEC.memo[k.id] = ta.value; });
+    box.appendChild(ta);
+    var acts = el("div", "lctacts");
+    var ok = txt("button", "btn small", "对一下答案");
+    ok.type = "button";
+    ok.setAttribute("data-lec-ok", "1");
+    ok.addEventListener("click", function () { LEC.open[k.id] = 2; lecRevealInto(d, k); });
+    acts.appendChild(ok);
+    var sk = txt("button", "btn small", "直接看");
+    sk.type = "button";
+    sk.addEventListener("click", function () { LEC.open[k.id] = 2; lecRevealInto(d, k); });
+    acts.appendChild(sk);
+    box.appendChild(acts);
+    d.appendChild(box);
+  }
+  function lecRevealInto(d, k) {
+    lecClear(d);
+    var box = el("div", "lctrev"), i, bl = lecBullets(k), mis = lecMis(k), ul, ol;
+    if (bl.length) {
+      box.appendChild(txt("div", "lctlb", "讲义要点"));
+      ol = el("ol", "lctul");
+      for (i = 0; i < bl.length; i++) ol.appendChild(txt("li", "", bl[i]));
+      box.appendChild(ol);
+    } else {
+      box.appendChild(txt("p", "lctp", "这条没写讲义正文，先看下面的易错点与动作。"));
+    }
+    if (mis.length) {
+      box.appendChild(txt("div", "lctlb warn", "最容易记错"));
+      ul = el("ul", "lctul");
+      for (i = 0; i < mis.length; i++) ul.appendChild(txt("li", "", mis[i]));
+      box.appendChild(ul);
+    }
+    if (k.action) {
+      box.appendChild(txt("div", "lctlb", "最低拿分动作"));
+      box.appendChild(txt("p", "lctp", String(k.action)));
+    }
+    box.appendChild(txt("div", "lctlb", "出处"));
+    box.appendChild(txt("p", "lctp", "讲义 " + (k.section || "—") + (k.source ? " · " + k.source : "")));
+
+    var jd = el("div", "lctjudge");
+    var bOk = txt("button", "btn small", "讲得出");
+    bOk.type = "button";
+    bOk.setAttribute("data-lec-judge", "1");
+    bOk.addEventListener("click", function () { lecJudge(d, k, 1); });
+    jd.appendChild(bOk);
+    var bNo = txt("button", "btn small", "还没讲出");
+    bNo.type = "button";
+    bNo.setAttribute("data-lec-judge", "0");
+    bNo.addEventListener("click", function () { lecJudge(d, k, 0); });
+    jd.appendChild(bNo);
+    var n = (typeof QZ_READY !== "undefined" && QZ_READY && k.id) ? qzPoolOfKp(LEC.sid, k.id).length : 0;
+    if (n) {
+      var bd = txt("button", "btn small", "练这个点 " + n + " 道");
+      bd.type = "button";
+      bd.addEventListener("click", function () { lecClose(); qzPracticeKp(k.id); });
+      jd.appendChild(bd);
+    }
+    box.appendChild(jd);
+    d.appendChild(box);
+  }
+  function lecKpBox(k, idx) {
+    var st = lecState(LEC.sid, k.id);
+    var d = el("div", "lctkp");
+    d.setAttribute("data-kid", k.id);
+    d.setAttribute("data-k", String(st));
+
+    var top = el("div", "lctkptop");
+    top.appendChild(txt("span", "lctno", String(idx + 1)));
+    top.appendChild(txt("span", "lctnm", k.name || k.id));
+    if (k.level) top.appendChild(txt("span", "badge lv", k.level));
+    top.appendChild(txt("span", "lctst", lecStText(st)));
+    d.appendChild(top);
+
+    if (LEC.open[k.id] === 2) lecRevealInto(d, k);
+    else if (LEC.open[k.id] === 1) lecSayInto(d, k);
+    else {
+      var acts = el("div", "lctacts");
+      acts.style.display = "flex";
+      acts.style.gap = "8px";
+      acts.style.marginTop = "11px";
+      var b = txt("button", "btn small", "先自己说一遍");
+      b.type = "button";
+      b.addEventListener("click", function () { LEC.open[k.id] = 1; lecSayInto(d, k); });
+      acts.appendChild(b);
+      d.appendChild(acts);
+    }
+    return d;
+  }
+  function lecPaint() {
+    var s = LEC.secs[LEC.si];
+    if (!s) return;
+    var got = lecGotOf(LEC.sid, s.kids), all = lecAllKids(LEC.sid), ag = lecGotOf(LEC.sid, all);
+    var bar = byId("lctBar");
+    if (bar) bar.style.width = s.kids.length ? (got / s.kids.length * 100).toFixed(1) + "%" : "0%";
+    var num = byId("lctNum");
+    if (num) num.textContent = "本节 " + got + "/" + s.kids.length + " 讲通 · 全科 " + ag + "/" + all.length;
+    lecFootPaint();
+  }
+  /* 页脚：把「这一节讲完了没有」和「下一节」放在手边，读完不用回头找顶栏 */
+  function lecFootPaint() {
+    var box = byId("lctFoot"), s = LEC.secs[LEC.si], got, left, p, b;
+    if (!box) return;
+    box.innerHTML = "";
+    if (!s) { box.hidden = true; return; }
+    box.hidden = false;
+    got = lecGotOf(LEC.sid, s.kids);
+    left = s.kids.length - got;
+    p = el("div", "lfp");
+    if (!left) {
+      p.appendChild(txt("b", "", "这一节全讲通了。"));
+      p.appendChild(document.createTextNode(" 去下一节，或者回头把自己讲不牢的那几条再念一遍。"));
+    } else {
+      p.appendChild(txt("b", "", "还差 " + left + " 个没讲通。"));
+      p.appendChild(document.createTextNode(" 讲不出的先如实记着，下一轮它们排在最前面。"));
+    }
+    box.appendChild(p);
+    if (LEC.si < LEC.secs.length - 1) {
+      b = txt("button", left ? "btn small" : "btn", "下一节 →");
+      b.type = "button";
+      b.setAttribute("data-lec-next", "1");
+      b.addEventListener("click", function () {
+        LEC.si++; LEC.open = {}; lecRender(); window.scrollTo(0, 0);
+      });
+      box.appendChild(b);
+    }
+  }
+  function lecPickBuild() {
+    var sel = byId("lctPick"), i, s, opt;
+    if (!sel) return;
+    sel.innerHTML = "";
+    for (i = 0; i < LEC.secs.length; i++) {
+      s = LEC.secs[i];
+      opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = s.sec + "　" + lecGotOf(LEC.sid, s.kids) + "/" + s.kids.length;
+      sel.appendChild(opt);
+    }
+    sel.value = String(LEC.si);
+  }
+  function lecRender() {
+    var s = LEC.secs[LEC.si];
+    if (!s) { if (lctBodyEl) lctBodyEl.innerHTML = ""; return; }
+    byId("lctSec").textContent = s.sec;
+    byId("lctName").textContent = (lecChapOf(s.sec) ? lecChapOf(s.sec) + " · " : "") + s.kids.length + " 个点";
+    var show = [], i;
+    for (i = 0; i < s.kids.length; i++) {
+      if (LEC.todo && lecKnown(LEC.sid, s.kids[i].id)) continue;
+      show.push(s.kids[i]);
+    }
+    lctBodyEl.innerHTML = "";
+    if (!show.length) {
+      lctBodyEl.appendChild(txt("p", "empty",
+        LEC.todo ? "这一节全讲通了，去下一节；关掉「只看没讲的」可以逐条回看。" : "本节暂无知识点。"));
+    } else {
+      for (i = 0; i < show.length; i++) lctBodyEl.appendChild(lecKpBox(show[i], i));
+    }
+    var pv = byId("lctPrev"), nx = byId("lctNext");
+    pv.disabled = LEC.si <= 0;
+    nx.disabled = LEC.si >= LEC.secs.length - 1;
+    byId("lctTodo").setAttribute("aria-pressed", LEC.todo ? "true" : "false");
+    var sel = byId("lctPick");
+    if (sel) sel.value = String(LEC.si);
+    lecPaint();
+  }
+  function lecJudge(d, k, ok) {
+    lecMark(k.id, ok);
+    d.setAttribute("data-k", String(ok ? 1 : -1));
+    var st = d.querySelector(".lctst");
+    if (st) st.textContent = lecStText(ok ? 1 : -1);
+    var jd = d.querySelector(".lctjudge");
+    if (jd) {
+      var bs = jd.querySelectorAll("[data-lec-judge]"), i;
+      for (i = 0; i < bs.length; i++) {
+        bs[i].className = bs[i].getAttribute("data-lec-judge") === "1"
+          ? ("btn small" + (ok ? " on" : "")) : "btn small";
+      }
+    }
+    lecPaint();
+    lecPickRefresh();
+    /* 只看没讲的：讲通了这一条就该消失，留 260ms 让按钮状态先闪一下，别像凭空蒸发 */
+    if (ok && LEC.todo) setTimeout(function () { if (LEC.on) lecRender(); }, 260);
+  }
+  function lecPickRefresh() {
+    var sel = byId("lctPick");
+    if (!sel || !sel.options) return;
+    for (var i = 0; i < LEC.secs.length && i < sel.options.length; i++) {
+      sel.options[i].textContent = LEC.secs[i].sec + "　" + lecGotOf(LEC.sid, LEC.secs[i].kids) + "/" + LEC.secs[i].kids.length;
+    }
+  }
+
+  /* ---------- 开关 ---------- */
+  function lecOpen(idx) {
+    var secs = lecSecs(SID);
+    if (!secs.length) { qzToast("这一科还没有知识点"); return; }
+    if (QZ.on) qzExit();
+    if (LN.on) lnClose();
+    LEC.on = true; LEC.sid = SID; LEC.secs = secs;
+    LEC.si = Math.max(0, Math.min(qzNum(idx), secs.length - 1));
+    LEC.open = {}; LEC.memo = {};
+    document.body.className = document.body.className.replace(/\s*mode-(quiz|learn|lect)/g, "") + " mode-lect";
+    if (qzView) qzView.hidden = true;
+    if (learnView) learnView.hidden = true;
+    if (lectView) lectView.hidden = false;
+    closeMore(); closeNav(true); closeFav(true);
+    if (typeof closeOverview === "function") closeOverview();
+    if (pathPanel && !pathPanel.hidden) pathShut(true);
+    lecPickBuild();
+    lecRender();
+    window.scrollTo(0, 0);
+  }
+  function lecClose() {
+    if (!LEC.on) return;
+    LEC.on = false;
+    document.body.className = document.body.className.replace(/\s*mode-lect/g, "");
+    if (lectView) lectView.hidden = true;
+    if (typeof renderToday === "function") renderToday();
+  }
+  function lecOpenByKid(kid) {
+    var secs = lecSecs(SID), i, j;
+    for (i = 0; i < secs.length; i++) {
+      for (j = 0; j < secs[i].kids.length; j++) {
+        if (secs[i].kids[j].id === kid) { lecOpen(i); return; }
+      }
+    }
+    lecOpen(0);
+  }
+  /* 入口：接着上次没讲通的那一节往下走 */
+  function lecEntryIdx(sid) {
+    var secs = lecSecs(sid), i;
+    for (i = 0; i < secs.length; i++) if (lecGotOf(sid, secs[i].kids) < secs[i].kids.length) return i;
+    return 0;
+  }
+  function lecOpenEntry() { lecOpen(lecEntryIdx(SID)); }
+
+  var lectMenuBtn = byId("lectBtn");
+  if (lectMenuBtn) lectMenuBtn.addEventListener("click", function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    closeMore();
+    lecOpenEntry();
+  });
+  var lctQuitBtn = byId("lctQuit");
+  if (lctQuitBtn) lctQuitBtn.addEventListener("click", lecClose);
+  var lctPrevBtn = byId("lctPrev");
+  if (lctPrevBtn) lctPrevBtn.addEventListener("click", function () {
+    if (LEC.si > 0) { LEC.si--; LEC.open = {}; lecRender(); window.scrollTo(0, 0); }
+  });
+  var lctNextBtn = byId("lctNext");
+  if (lctNextBtn) lctNextBtn.addEventListener("click", function () {
+    if (LEC.si < LEC.secs.length - 1) { LEC.si++; LEC.open = {}; lecRender(); window.scrollTo(0, 0); }
+  });
+  var lctPickEl = byId("lctPick");
+  if (lctPickEl) lctPickEl.addEventListener("change", function () {
+    LEC.si = qzNum(lctPickEl.value); LEC.open = {}; lecRender(); window.scrollTo(0, 0);
+  });
+  var lctTodoBtn = byId("lctTodo");
+  if (lctTodoBtn) lctTodoBtn.addEventListener("click", function () {
+    LEC.todo = !LEC.todo; lecRender();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (!LEC.on) return;
+    if (document.body.classList.contains("drawerOpen")) return;
+    var t = e.target || {}, tag = t.tagName ? String(t.tagName).toUpperCase() : "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable) return;
+    var k = e.key || "";
+    if (k === "Escape" || k === "Esc") { e.preventDefault(); lecClose(); return; }
+    if (k === "ArrowRight") { if (lctNextBtn && !lctNextBtn.disabled) { e.preventDefault(); lctNextBtn.click(); } }
+    if (k === "ArrowLeft") { if (lctPrevBtn && !lctPrevBtn.disabled) { e.preventDefault(); lctPrevBtn.click(); } }
+  });
+  /* 调试出口：自测只读这些，不参与业务 */
+  window.__reviewLect = {
+    open: lecOpen, openKid: lecOpenByKid, close: lecClose, entry: lecEntryIdx,
+    secs: function (sid) {
+      var s = lecSecs(sid || SID), out = [], i;
+      for (i = 0; i < s.length; i++) out.push({ sec: s[i].sec, n: s[i].kids.length, got: lecGotOf(sid || SID, s[i].kids) });
+      return out;
+    },
+    state: function () { return { on: LEC.on, sid: LEC.sid, si: LEC.si, total: LEC.secs.length, todo: LEC.todo }; },
+    st: lecState, mark: lecMark, bullets: lecBullets, mis: lecMis
   };
 
   /* ================= [v3.61] 费曼闭环：说 / 结 / 测 / 联 =================
