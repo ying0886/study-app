@@ -3,9 +3,20 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.94.0
+  APP_VERSION: 3.95.0
   DATA_VERSION: 2026-11-20
-  本次变更: （3.94.0）UI 三处优化（纯界面层，数据与存储一个字节没动）——
+  本次变更: （3.95.0）从 GitHub 同类项目借了三处小灵感（Skola 的「把已会的退后」、
+             打卡类应用的连续天数激励），全是展示层——
+             ①今日路线标题行加「连续 N 天 · 今日已练 X 题」：从既有记录现算
+               （刷题 wt ＋ 从零学 t ＋ 讲义通读 lt，全科目），日界本地时区；
+               今天没动过但从昨天往回有活动不算断签（今天没过完）；
+               不落盘、不新增存储、不升 schema；今日路线的结构与安排语义未动；
+             ②已掌握的卡片左彩条转灰（原来仍带 A/B/C 级别色）：
+               级别色只留给还没会的卡，扫一眼就知道该练哪里；
+             ③桌面 hover 时卡片加 1px 内描边提示可展开（done 卡不加，@media(hover:hover) 门控，
+               触屏不受影响）；
+             ④未动：题库、判分、掌握度、路径、同步契约、皮肤四组合。
+  上次变更: （3.94.0）UI 三处优化（纯界面层，数据与存储一个字节没动）——
              ①窄屏顶栏收纳：≤560px 时「目录 / 搜索 / 我的收藏」三个低频按钮移进 ⋯ 菜单
                （搬 DOM 节点不丢事件监听，id 不变，所有按 id 的引用照常生效），宽屏移回原位；
                主行只留 学习台 / 刷题 / 公式库 / ⋯，390px 不再撑出 416px 横向滚动；
@@ -1215,7 +1226,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.94.0">
+<meta name="app-version" content="3.95.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1629,6 +1640,13 @@
   /* 已掌握样式（不隐藏，只降噪） */
   .card.done .nm{color:var(--ink2);font-weight:500}
   .card.done{opacity:.72}
+  /* [v3.95.0] 已掌握的卡左彩条一并退灰：级别色只留给还没会的，扫一眼就知道练哪里 */
+  .card.done{border-left-color:var(--line2)}
+  /* [v3.95.0] 桌面 hover 内描边：轻提示「这张可以点开」，不挪版面、不加装饰色 */
+  @media (hover:hover){
+    .card:hover{box-shadow:inset 0 0 0 1px var(--line2)}
+    .card.done:hover{box-shadow:none}
+  }
 
   /* 展开内容 */
   .body{padding:2px 0 14px;border-top:1px solid var(--line);margin-top:2px}
@@ -31321,7 +31339,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.94.0";
+  var APP_VERSION = "3.95.0";
   var DATA_VERSION = "2026-11-20";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -41425,6 +41443,45 @@
     return li;
   }
 
+  /* [v3.95.0] 连续学习天数 + 今日已练题数：从既有记录现算（刷题 wt / 教学与讲义进度 t·lt），
+     不落盘、不新增存储、不升 schema。日界按本地时区。
+     「连续」的口径：今天动过 → 从今天往回数；今天还没动 → 从昨天往回数（今天没过完不算断签）；
+     两头都没有 → 0。 */
+  function dayKey(off) {
+    var d = new Date(); d.setDate(d.getDate() - off);
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+  function studyStreak() {
+    var seen = {}, todayN = 0, tk = dayKey(0), sid, k, mp, key, rec;
+    function mark(ms) {
+      var t = normT(ms);
+      if (!t) return;
+      var d = new Date(t);
+      seen[d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()] = true;
+      if (tk === d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()) todayN++;
+    }
+    var quiz = (SNAP && SNAP.quiz) || {};
+    for (sid in quiz) {
+      mp = quiz[sid] || {};
+      for (key in mp) {
+        rec = mp[key];
+        if (rec) mark(rec.wt);
+      }
+    }
+    var teach = (SNAP && SNAP.teach) || {};
+    for (sid in teach) {
+      mp = teach[sid] || {};
+      for (key in mp) {
+        rec = mp[key];
+        if (rec) { mark(rec.t); mark(rec.lt); }
+      }
+    }
+    if (todayN && !seen[tk]) seen[tk] = true;   // 保险：有今日活动但 mark 漏记时兜底
+    var start = seen[tk] ? 0 : (seen[dayKey(1)] ? 1 : -1), streak = 0;
+    if (start >= 0) while (seen[dayKey(start + streak)]) streak++;
+    return { streak: streak, today: todayN };
+  }
+
   function renderToday() {
     var box = byId("todayRoute");
     if (!box) return;
@@ -41436,6 +41493,9 @@
 
     var sub = picks.length ? (picks.length + " 个点 · 约 " + r.questions + " 题") : "今天没有要补的题";
     if (r.read) sub += " · 读 1 节";
+    /* [v3.95.0] 连续天数与今日题数：现算的激励行，不动上面的安排语义 */
+    var st = studyStreak();
+    if (st.streak > 0) sub = "连续 " + st.streak + " 天 · 今日已练 " + st.today + " 题 · " + sub;
 
     var head = el("div", "tdhead");
     head.appendChild(txt("h2", "", "今日路线"));
