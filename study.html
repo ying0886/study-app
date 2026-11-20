@@ -3,9 +3,23 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.95.0
+  APP_VERSION: 3.95.1
   DATA_VERSION: 2026-11-20
-  本次变更: （3.95.0）从 GitHub 同类项目借了三处小灵感（Skola 的「把已会的退后」、
+  本次变更: （3.95.1）全面排查与修复，数据/结构/schema 一律不动，只改逻辑与显示：
+              ①讲义标记不再被「从零学」抹掉：lnSaveRecall / lnSetLv 整条重写 teach 记录时
+                漏了 lk / lt，先讲义标「讲得出」再选自评档或做复述，标记就没了；
+              ②同步合并保住单边自评档：mergeTeachMap 对 lv 取 min(0, x) 会把「这台评了、
+                那台没评」合并成未评，改为两边都评过才取更保守的那档；
+              ③「今日已练 N 题」口径修正：原来数 rec.wt（最近一次错答时刻），答对的题永远
+                不计，teach 的 t 与 lt 还会各算一次；现在只数作答记录，teach 只参与连续天数；
+              ④真题卷抽屉的题数提示写到了设置页：两处 span 都叫 reHint，byId 只取第一个，
+                抽屉那个改名 reHintD，设置页保持自己的说明文案；
+              ⑤成长卡重绘不再吞掉今日路线的指路话：文案存 TODAY_TIP，renderGrowth 复用；
+              ⑥自建科目导入后 kpMap 缓存失效，精华卡/导出 Markdown/「我最卡的点」能查到新点；
+              ⑦今日路线题池按知识点分一次组，不再对每个候选点重建整个题库（结果等价）；
+              ⑧深色下选中「曾错过」筛选几乎看不见字：空态规则的 color 盖掉了选中态，
+                金底配 ink2 灰字实测对比度 1.09，加 :not([aria-pressed="true"]) 隔离后 7.43。
+  上次变更: （3.95.0）从 GitHub 同类项目借了三处小灵感（Skola 的「把已会的退后」、
              打卡类应用的连续天数激励），全是展示层——
              ①今日路线标题行加「连续 N 天 · 今日已练 X 题」：从既有记录现算
                （刷题 wt ＋ 从零学 t ＋ 讲义通读 lt，全科目），日界本地时区；
@@ -1226,7 +1240,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.95.0">
+<meta name="app-version" content="3.95.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1885,10 +1899,13 @@
   .chip-ever[aria-pressed="true"]::before{background:var(--everInk)}
   .chip-ever[aria-pressed="true"] .evern{background:rgba(255,255,255,.28);color:var(--everInk)}
   /* [v3.94.0] 计数为 0 时整颗转灰：语义色（琥珀）只留给真有数据的状态；点击仍弹提示 */
-  .chip-ever[data-empty="true"]{border-color:var(--line2);color:var(--ink2)}
-  .chip-ever[data-empty="true"]::before{background:var(--line2)}
-  .chip-ever[data-empty="true"] .evern{background:var(--chip);color:var(--ink2)}
-  .chip-ever[data-empty="true"]:hover{background:transparent;border-color:var(--line2)}
+  /* [v3.95.1] 空态只改「未选中」的样子。原来这条与 .chip-ever[aria-pressed="true"] 特异度相同、
+     位置在后，于是选中态的金底被配上 var(--ink2) 灰字——深色下实测对比度 1.09，等于看不见字。
+     真实可达路径：选中「曾错过」过滤 → 把错题刷完或重置进度 → 计数归零、data-empty 变 true。 */
+  .chip-ever[data-empty="true"]:not([aria-pressed="true"]){border-color:var(--line2);color:var(--ink2)}
+  .chip-ever[data-empty="true"]:not([aria-pressed="true"])::before{background:var(--line2)}
+  .chip-ever[data-empty="true"]:not([aria-pressed="true"]) .evern{background:var(--chip);color:var(--ink2)}
+  .chip-ever[data-empty="true"]:not([aria-pressed="true"]):hover{background:transparent;border-color:var(--line2)}
   /* 紧跟其后的「题目集」入口：平时是低调文字链，chip 选中后升级成实底胶囊 */
   .everlink{
     display:inline-flex;align-items:center;gap:4px;
@@ -4580,7 +4597,7 @@
 <aside class="drawer" id="reDrawer" role="dialog" aria-modal="true" aria-labelledby="reTitle" tabindex="-1" hidden>
   <div class="drawerHead">
     <h2 id="reTitle">试卷 · 真题与练习</h2>
-    <span class="drawerHint" id="reHint"></span>
+    <span class="drawerHint" id="reHintD"></span>
     <button class="btn small" id="reClose" type="button">关闭</button>
   </div>
   <div class="drawerBody" id="reBody"></div>
@@ -31339,7 +31356,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.95.0";
+  var APP_VERSION = "3.95.1";
   var DATA_VERSION = "2026-11-20";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -33932,7 +33949,7 @@
      p 只进不退（取 max），同 p 取更晚的 t；两个操作都幂等、可交换、可结合，
      所以「一台看完第 1 拍、另一台看到第 3 拍」合并后停在 3，不会被旧档拉回去。 */
   function mergeTeachMap(L, R) {
-    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b, blt, alt;
+    var out = {}, sids = {}, sid, kid, m, lm, rm, a, b, blt, alt, alv, blv;
     L = L || {}; R = R || {};
     for (sid in L) if (has0(L, sid)) sids[sid] = 1;
     for (sid in R) if (has0(R, sid)) sids[sid] = 1;
@@ -33950,7 +33967,11 @@
         if ((b.rc || 0) > (a.rc || 0)) a.rc = b.rc;
         if ((b.rb || 0) > (a.rb || 0)) a.rb = b.rb;
         if ((b.rt || 0) > (a.rt || 0)) a.rt = b.rt;
-        a.lv = Math.min(a.lv || 0, b.lv || 0);
+        /* lv 的 0＝「还没自评」，不是一个档位。原来直接 Math.min(a.lv||0, b.lv||0)，
+           于是「这台评了 🔴、那台没评」合并成 0 并把键删掉——已评的档位同步一次就没了。
+           正确口径：两边都评过才取更保守的那档，只有一边评过就留它。 */
+        alv = qzNum(a.lv); blv = qzNum(b.lv);
+        a.lv = (alv && blv) ? Math.min(alv, blv) : (alv || blv);
         if (!a.lv) delete a.lv;
         /* [lect] 讲义通读的 lk 不是单调量（「讲得出」可以改回「还没讲出」），
            所以不能取 max：按「更晚那次标记说了算」，同一毫秒取大的。
@@ -38748,7 +38769,7 @@
     if (!RE_LOCK) document.body.classList.remove("drawerOpen");
   }
   function reRender() {
-    var box = byId("reBody"), title = byId("reTitle"), hint = byId("reHint");
+    var box = byId("reBody"), title = byId("reTitle"), hint = byId("reHintD");
     if (!box) return;
     var ps = rePapers();
     var p = reFind(RE_CUR) || ps[0];
@@ -41156,6 +41177,9 @@
     QZ.sid = null;        // 题库索引按科目重建，切过科目后必须失效
     QZIDX = null;
     QZITEM = null;
+    /* [v3.95.1] kpMap 是「全科目 kid → 知识点」的缓存，自建科目导入/删除后必须失效，
+       否则精华卡、导出 Markdown、「我最卡的点」在新增点上全都查不到（findPointIn 返回 null） */
+    KPMAP = null;
   }
   function subjectById(sid) {
     for (var i = 0; i < DATA.subjects.length; i++) if (DATA.subjects[i].id === sid) return DATA.subjects[i];
@@ -41336,6 +41360,12 @@
        推进——沿 path.json 的段序往下走，找「三态还是 new」的第一个点（pathStateOf 同一套口径）。
      全部现算、不落盘；打分只用于排序，不显示给人看，界面上只写「为什么选它」。 */
   var TD_FIX_MAX = 3, TD_NEW_MAX = 2, TD_PER_KP = 3;
+  /* 今日路线算出的「指路话」，由 renderToday 写、renderGrowth 复用（成长卡重绘后要再写一次） */
+  var TODAY_TIP = "";
+  function paintGrowthTip() {
+    var tip = document.querySelector("#growth .gwtip");
+    if (tip && TODAY_TIP) tip.textContent = "下一步：照下面的「今日路线」走就行——" + TODAY_TIP + "。";
+  }
 
   function todayWhy(mt, days) {
     var bits = [];
@@ -41353,13 +41383,21 @@
     var sub = subjectById(sid);
     if (!sub || !QZ_READY) { out.empty = "本科目没有题库，今日路线用不上"; return out; }
     var cand = [], now = nowMs(), list = qzMasteryList(sid);
+    /* 题池按知识点分一次组：原来每个候选点都调一次 qzPoolOfKp，等于把整个题库连同
+       「题目 → 知识点」的线性查找重建 N 遍；这里只建一次，结果与 qzPoolOfKp 完全等价。 */
+    var byKp = {}, poolAll = qzPoolOf(sid), pid;
+    for (i = 0; i < poolAll.length; i++) {
+      pid = poolAll[i].kp.id;
+      if (!byKp[pid]) byKp[pid] = [];
+      byKp[pid].push(poolAll[i]);
+    }
 
     /* ① 补漏 */
     for (i = 0; i < list.length; i++) {
       mt = list[i];
       k = mt.tier.key;
       if (k !== "danger" && k !== "weak" && k !== "review") continue;
-      n = qzPoolOfKp(sid, mt.kid).length;
+      n = (byKp[mt.kid] || []).length;
       if (!n) continue;
       days = mt.last ? Math.max(0, (now - mt.last) / 86400000) : 99;
       lv = mt.lv === "A" ? 3 : (mt.lv === "B" ? 2 : 1);
@@ -41388,7 +41426,7 @@
             kid2 = ks[k];
             if (pathStateOf(sid, kid2) !== "new") continue;
             if (isCountedDoneOf(sid, kid2)) continue;
-            n = qzPoolOfKp(sid, kid2).length;
+            n = (byKp[kid2] || []).length;
             if (!n) continue;
             kp2 = qzKpOf(sub, kid2);
             if (!kp2) continue;
@@ -41451,29 +41489,46 @@
     var d = new Date(); d.setDate(d.getDate() - off);
     return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
   }
+  /* 与 dayKey 同一套「年-月-日」口径（月份不补零，只用于内部比较） */
+  function dayKeyOf(ms) {
+    var t = normT(ms);
+    if (!t) return "";
+    var d = new Date(t);
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
   function studyStreak() {
-    var seen = {}, todayN = 0, tk = dayKey(0), sid, k, mp, key, rec;
+    var seen = {}, todayN = 0, tk = dayKey(0), sid, k, mp, key, rec, dk;
     function mark(ms) {
-      var t = normT(ms);
-      if (!t) return;
-      var d = new Date(t);
-      seen[d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()] = true;
-      if (tk === d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate()) todayN++;
+      dk = dayKeyOf(ms);
+      if (dk) seen[dk] = true;
+      return dk;
     }
+    /* [v3.95.1] 题数只数「作答记录」：一道题一条记录，t 是它最近一次作答的时刻。
+       原来数的是 rec.wt（最近一次**错答**的时刻），答对过的题一条都不计；
+       而且 teach 记录的 t 与 lt 各算一次，同一个点被数成两题。
+       现在：quiz 记录按条计，teach 记录只参与连续天数、不产生题数。 */
     var quiz = (SNAP && SNAP.quiz) || {};
     for (sid in quiz) {
+      if (!has0(quiz, sid)) continue;
       mp = quiz[sid] || {};
       for (key in mp) {
+        if (!has0(mp, key)) continue;
         rec = mp[key];
-        if (rec) mark(rec.wt);
+        if (!rec) continue;
+        dk = mark(rec.t);
+        if (dk && dk === tk) todayN++;
       }
     }
     var teach = (SNAP && SNAP.teach) || {};
     for (sid in teach) {
+      if (!has0(teach, sid)) continue;
       mp = teach[sid] || {};
       for (key in mp) {
+        if (!has0(mp, key)) continue;
         rec = mp[key];
-        if (rec) { mark(rec.t); mark(rec.lt); }
+        if (!rec) continue;
+        mark(rec.t);
+        mark(rec.lt);
       }
     }
     if (todayN && !seen[tk]) seen[tk] = true;   // 保险：有今日活动但 mark 漏记时兜底
@@ -41541,13 +41596,12 @@
     box.setAttribute("data-fresh", String(r.fresh.length));
 
     /* 成长路径那句「先把目录翻一遍」是没路线时的兜底话术；既然下面已经有具体安排，就改成指路。
-       renderGrowth 每次重绘会把它写回原文，所以这里每次渲染都覆盖一次，顺序不能反。 */
-    var tip = document.querySelector("#growth .gwtip");
-    if (tip) {
-      var tail = picks.length ? (picks.length + " 个点，约 " + r.questions + " 题") : "";
-      if (r.read) tail += (tail ? "；再读一节 " : "") + "讲义 " + r.read.sec;
-      tip.textContent = "下一步：照下面的「今日路线」走就行——" + tail + "。";
-    }
+       文案存进 TODAY_TIP 而不是直接写 DOM：renderGrowth 每次重绘（展开/收起阶段说明）都会把
+       .gwtip 写回原文，两处共用同一个来源才不会一点展开就丢。 */
+    var tail = picks.length ? (picks.length + " 个点，约 " + r.questions + " 题") : "";
+    if (r.read) tail += (tail ? "；再读一节 " : "") + "讲义 " + r.read.sec;
+    TODAY_TIP = tail;
+    paintGrowthTip();
   }
 
   /* 一键开练：每个点取不超过 3 道，优先没做过的，其次还没改对的 */
@@ -41660,6 +41714,8 @@
     box.setAttribute("data-open", GW_OPEN ? "1" : "0");
     box.style.cursor = "pointer";
     box.title = (GW_OPEN ? "点一下收起" : "点一下展开") + "阶段说明";
+    /* 重绘把 .gwtip 写回了阶段建议，今日路线那句指路要补回来（否则点一下展开就没了） */
+    paintGrowthTip();
   }
   /* 点击只绑一次：绑在渲染函数里会随每次重绘累积监听器，点一下被触发多次、
      折叠状态来回翻转（实测就是这个坑），所以放到模块级一次绑好。 */
@@ -43136,6 +43192,10 @@
       rt: t
     };
     if (old.lv !== undefined) rec.lv = qzNum(old.lv);
+    /* [lect] 讲义通读的 lk / lt 与复述共用同一条 teach 记录：整条重写时漏了它们，
+       「讲义里标了讲得出」的点只要再做一次复述，就会被抹回「未讲」。 */
+    if (old.lk !== undefined) rec.lk = qzNum(old.lk);
+    if (old.lt !== undefined) rec.lt = normT(old.lt);
     m[kid] = rec;
     commitSnap(t);
     syncMarkDirty();
@@ -43473,6 +43533,9 @@
     if (old.rc !== undefined) rec.rc = qzNum(old.rc);
     if (old.rb !== undefined) rec.rb = qzNum(old.rb);
     if (old.rt !== undefined) rec.rt = normT(old.rt);
+    /* [lect] 与 lnSaveRecall 同一个理由：讲义标记必须原样带过去 */
+    if (old.lk !== undefined) rec.lk = qzNum(old.lk);
+    if (old.lt !== undefined) rec.lt = normT(old.lt);
     m[kid] = rec;
     commitSnap(t);
     syncMarkDirty();
@@ -45176,7 +45239,8 @@
   }
 
   function fChip(label, val, cur, group) {
-    return '<button class="chip" type="button" data-fg="' + group + '" data-fv="' + escText(val) + '"' +
+    /* 值会进 data-fv 属性，用 pathEsc（转义引号）；escText 只管文本节点，不转义引号 */
+    return '<button class="chip" type="button" data-fg="' + group + '" data-fv="' + pathEsc(val) + '"' +
       (cur === val ? ' aria-pressed="true"' : '') + '>' + escText(label) + '</button>';
   }
 
