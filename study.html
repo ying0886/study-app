@@ -3,9 +3,15 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.97.0
+  APP_VERSION: 3.97.1
   DATA_VERSION: 2026-11-21
-  本次变更: （3.97.0）化学补「题里没有的细碎考点」24 道，并把教材两页的细则写进知识点——
+  本次变更: （3.97.1）刷题「顺序」的默认值跟着进度走，不用每次手动切——
+            ①本科目还有没做过的题 → 默认「随机刷没做过的」；
+            ②全部题都做过了 → 默认「先练最不熟的（按掌握度）」；
+            ③只改默认值：一旦你手动选过顺序，就按你的来（记在 QZ.cfg.touchedSid，
+              换科目或重开页面才回到该科目的默认）；不写存储、不进快照、不动题库与判分；
+            ④自测 _tmp/orderdef-test.mjs 全过；check.mjs 全过。
+  上次变更: （3.97.0）化学补「题里没有的细碎考点」24 道，并把教材两页的细则写进知识点——
             ①覆盖 §2.6 配位命名全链（混合配体四条排序、SCN⁻/NCS⁻/NO₂⁻/ONO⁻ 译名、黄血盐、
               多齿齿数、由外界电荷反推氧化数）；§3.4 差异充气（浓差）腐蚀的液滴实验与氧浓差
               电池阴阳极；镀锌/镀锡破损差异、外加电流接负极；§3.1 氧化数特例（H₂O₂/OF₂/NaH）、
@@ -1263,7 +1269,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.97.0">
+<meta name="app-version" content="3.97.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -31535,7 +31541,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.97.0";
+  var APP_VERSION = "3.97.1";
   var DATA_VERSION = "2026-11-20";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -37064,7 +37070,8 @@
     streakBest: 0,    // 本组最长连对
     qTs: 0,           // 本题开始作答的时刻（算单题用时）
     mt0: null,        // 开组时各考点的掌握档快照，收尾比「这次改写了什么」
-    cfg: { sec: "全部", type: "全部", order: "seq", ly: 0 }
+    /* [orderdef] touchedSid：用户在哪一科手动选过顺序。不等于当前科目时，顺序走「按进度自动」的默认 */
+    cfg: { sec: "全部", type: "全部", order: "seq", ly: 0, touchedSid: "" }
   };
   /* [paper] 全真卷的运行时状态：只在内存里，不落快照、不进 schema。
      on＝本组是「按试卷配比」出的整卷；plan＝组卷前算好的配比表；
@@ -37112,6 +37119,15 @@
     var m = qzData()[sid];
     return (m && m[key]) ? m[key] : null;
   }
+  /* [orderdef] 默认顺序跟着进度走：本科目还有没做过的题 →「随机刷没做过的」；
+     全都做过了 →「先练最不熟的」。只算默认值，不写任何存储——刷新即重算。 */
+  function qzAllDoneOf(sid) {
+    var pool = qzPoolOf(sid), i;
+    if (!pool.length) return true;
+    for (i = 0; i < pool.length; i++) if (!qzRecOf(sid, pool[i].key)) return false;
+    return true;
+  }
+  function qzDefaultOrderOf(sid) { return qzAllDoneOf(sid) ? "mastery" : "newrand"; }
   /* [quiz] 写一条作答记录。wrong 只在答错时传入：{wa 作答内容, wm 类型}；
      答对时保留上一次的错答（供「曾答错」回顾），不清空。 */
   function qzSaveRec(sid, key, right, wrong) {
@@ -38857,6 +38873,8 @@
     }
 
     var orderSel = byId("qOrderSel");
+    /* [orderdef] 没手动选过顺序、或换了科目 → 按进度定默认：没刷完＝随机刷没做过的，刷完＝先练最不熟的 */
+    if (QZ.cfg.touchedSid !== SID) QZ.cfg.order = qzDefaultOrderOf(SID);
     var examOpt = orderSel.querySelector('option[value="exam"]');
     if (fmt) {
       if (!examOpt) {
@@ -44710,7 +44728,7 @@
     /* 三个筛选都会改变「还剩多少没做」，所以改完都要重算顶部统计 */
     byId("qSecSel").addEventListener("change", function () { QZ.cfg.sec = this.value; qzRenderStat(); });
     byId("qTypeSel").addEventListener("change", function () { QZ.cfg.type = this.value; qzRenderStat(); });
-    byId("qOrderSel").addEventListener("change", function () { QZ.cfg.order = this.value; qzRenderStat(); });
+    byId("qOrderSel").addEventListener("change", function () { QZ.cfg.order = this.value; QZ.cfg.touchedSid = SID; qzRenderStat(); });
     /* [layer] 第四个筛选：层次。同样要重算统计，不然「这组还剩 N 题」会停在旧口径 */
     if (byId("qLySel")) byId("qLySel").addEventListener("change", function () { QZ.cfg.ly = qzNum(this.value); qzRenderStat(); });
     /* [shuf] 选项顺序开关：随时可切，下一次渲染就生效（已答的题不受影响，答过的记录也不会变） */
