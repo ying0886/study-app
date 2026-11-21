@@ -3,9 +3,22 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 3.95.1
+  APP_VERSION: 3.96.0
   DATA_VERSION: 2026-11-20
-  本次变更: （3.95.1）全面排查与修复，数据/结构/schema 一律不动，只改逻辑与显示：
+  本次变更: （3.96.0）新增「专注铃」工具（⋯ 菜单），随机叮 + 闭眼 10 秒 + 90/20 循环——
+            ①做法：学习时 3–5 分钟随机响一声（网页内置发声，无外链无文件），响铃全屏浮层
+              「闭眼 10 秒」倒计时，可点浮层提前关；一轮学完自动进 20 分钟休息倒计时
+              （喝水/走动/看远，别刷手机），休息完一键开下一轮；时长 30/45/60/75/90 可选
+              （默认 60，撑不住就减，对应渐进方案）；
+            ②运行指示：抽屉关掉计时照走，右下角浮标显示 剩余时间·叮数，点浮标重开抽屉；
+            ③计时全部用时间戳现算（Date.now 对比 + 500ms 轮询），后台标签页被节流
+              只会晚响不会漏响；浮层 10 秒倒计时同源；
+            ④纯运行时：不写 localStorage、不进快照、不升 schema、不动题库与判分；
+              抽屉里写明证据边界——闭眼微休息的神经重放有实验支持（动作技能研究），
+              随机提示音是坚持机制（变比率强化），90 分钟周期证据弱，时长因此可调；
+            ⑤已知限制：手机锁屏后网页计时会停走，适合电脑/平板开着页面用（抽屉里有注）；
+              自测 _tmp/focus-test.mjs 全过；check.mjs 全过。
+  上次变更: （3.95.1）全面排查与修复，数据/结构/schema 一律不动，只改逻辑与显示：
               ①讲义标记不再被「从零学」抹掉：lnSaveRecall / lnSetLv 整条重写 teach 记录时
                 漏了 lk / lt，先讲义标「讲得出」再选自评档或做复述，标记就没了；
               ②同步合并保住单边自评档：mergeTeachMap 对 lv 取 min(0, x) 会把「这台评了、
@@ -1240,7 +1253,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="3.95.1">
+<meta name="app-version" content="3.96.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -4212,6 +4225,21 @@
     html[data-skin="kimetsu"] .today .btn.primary{animation:none !important}
     html[data-skin="kimetsu"] .card{background:#fff !important}
   }
+
+  /* [v3.96.0] 专注铃：时长档、运行状态大字、右下角浮标、闭眼 10 秒全屏浮层 */
+  .fcstatus{font-size:44px;font-weight:700;text-align:center;letter-spacing:1px;margin:8px 0 2px;font-variant-numeric:tabular-nums}
+  .fcmeta{text-align:center;color:var(--ink2);font-size:13px;margin:0 0 14px}
+  .fcchips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0 4px}
+  .fcchips .btn{min-width:58px}
+  .fcacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0 4px}
+  .fcnote{font-size:12px;color:var(--ink2);line-height:1.8;margin:14px 0 0;border-top:1px solid var(--line);padding-top:10px}
+  .fcpill{position:fixed;right:14px;bottom:14px;z-index:1200;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.14);cursor:pointer;font-variant-numeric:tabular-nums}
+  .fcover{position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .fcover[hidden]{display:none} /* 类里的 display:flex 会盖掉 [hidden] 的 UA 规则，必须显式关掉 */
+  .fcoverIn{text-align:center;color:#fff}
+  .fcoverK{font-size:26px;font-weight:700;margin:0 0 6px}
+  .fcoverN{font-size:96px;font-weight:700;line-height:1.1;margin:0;font-variant-numeric:tabular-nums}
+  .fcoverS{font-size:14px;color:rgba(255,255,255,.75);margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -4258,6 +4286,7 @@
       <button class="btn" id="pathBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="pathPanel">学习路径</button>
       <button class="btn" id="learnBtn" type="button" role="menuitem">从零学</button>
       <button class="btn" id="lectBtn" type="button" role="menuitem" title="按讲义章节通读：先自己说，再对答案，逐点标讲得出">讲义通读</button>
+      <button class="btn" id="fcBtn" type="button" role="menuitem" title="专注铃：3–5 分钟随机叮，响了闭眼 10 秒，一轮学完休息 20 分钟">专注铃</button>
       <button class="btn" id="resumeBtn" type="button" role="menuitem">继续上次</button>
       <button class="btn" id="reportBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="repDrawer">学习报告</button>
       <button class="btn" id="syncBtn" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="syncDrawer"><span class="dot" id="syncDot"></span>同步</button>
@@ -4613,6 +4642,26 @@
   </div>
   <div class="drawerBody" id="dataBody"></div>
 </aside>
+
+<!-- [focus] 专注铃：随机叮 + 闭眼 10 秒 + 90/20 循环；纯运行时，不写任何记录 -->
+<div class="drawerScrim" id="fcScrim" hidden></div>
+<aside class="drawer" id="fcDrawer" role="dialog" aria-modal="true" aria-labelledby="fcTitle" tabindex="-1" hidden>
+  <div class="drawerHead">
+    <h2 id="fcTitle">专注铃</h2>
+    <span class="drawerHint" id="fcHint"></span>
+    <button class="btn small" id="fcClose" type="button">关闭</button>
+  </div>
+  <div class="drawerBody" id="fcBody"></div>
+</aside>
+<div class="fcover" id="fcOver" hidden>
+  <div class="fcoverIn">
+    <p class="fcoverK">闭眼 10 秒</p>
+    <p class="fcoverN" id="fcOverN">10</p>
+    <p class="fcoverS">大脑正在替你复习 · 点一下可提前结束</p>
+  </div>
+</div>
+<div class="fcpill" id="fcPill" hidden></div>
+
 
 <div class="drawerScrim" id="syncScrim" hidden></div><aside class="drawer" id="syncDrawer" role="dialog" aria-modal="true" aria-labelledby="syncTitle" tabindex="-1" hidden>
   <div class="drawerHead">
@@ -31356,7 +31405,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "3.95.1";
+  var APP_VERSION = "3.96.0";
   var DATA_VERSION = "2026-11-20";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -43097,6 +43146,262 @@
   if (lctPickEl) lctPickEl.addEventListener("change", function () {
     LEC.si = qzNum(lctPickEl.value); LEC.open = {}; lecRender(); window.scrollTo(0, 0);
   });
+
+  /* ============================================================
+     [v3.96.0] 专注铃：随机叮 + 闭眼 10 秒 + 90/20 循环
+     纯运行时工具：不写 localStorage、不进快照、不升 schema。
+     计时全用时间戳现算（Date.now 对比 + 500ms 轮询）：后台标签页被节流
+     只会晚响、不会漏响。证据边界写在抽屉里：闭眼微休息的神经重放有
+     实验支持（动作技能研究，Bönstrup 2019 / Buch 2018），随机响是
+     变比率强化的坚持机制，90 分钟周期证据弱——时长因此可选 30–90。
+     ============================================================ */
+  var FC = { phase:"", dur:60, startAt:0, segMs:0, nextAt:0, beeps:0, brEnd:0, timer:null, overEnd:0, ac:null };
+  var FC_DURS = [30, 45, 60, 75, 90];
+  function fcPad(n) { return (n < 10 ? "0" : "") + n; }
+  function fcFmt(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.round(ms / 1000), m = Math.floor(s / 60);
+    return fcPad(m) + ":" + fcPad(s % 60);
+  }
+  /* 发声：第一次开始按钮里建 AudioContext（用户手势解锁），之后复用 */
+  function fcAudio() {
+    if (FC.ac) return FC.ac;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { FC.ac = new AC(); } catch (e) { FC.ac = null; }
+    return FC.ac;
+  }
+  function fcBeep(times, freq) {
+    var ac = fcAudio(), i;
+    if (!ac) return;
+    try {
+      if (ac.state === "suspended" && ac.resume) ac.resume();
+      var t = ac.currentTime;
+      for (i = 0; i < times; i++) {
+        var o = ac.createOscillator(), g = ac.createGain(), st = t + i * 0.4;
+        o.type = "sine"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.001, st);
+        g.gain.exponentialRampToValueAtTime(0.4, st + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, st + 0.32);
+        o.connect(g); g.connect(ac.destination);
+        o.start(st); o.stop(st + 0.36);
+      }
+    } catch (e) {}
+  }
+  /* 闭眼 10 秒浮层：倒计时数字由 fcTick 统一推进 */
+  function fcOverShow() {
+    FC.overEnd = Date.now() + 10000;
+    byId("fcOverN").textContent = "10";
+    byId("fcOver").hidden = false;
+  }
+  function fcOverHide() {
+    FC.overEnd = 0;
+    byId("fcOver").hidden = true;
+  }
+  function fcStatusUpd(now) {
+    var t = byId("fcTime"), m = byId("fcMeta");
+    if (!t) return;
+    if (FC.phase === "run") {
+      t.textContent = fcFmt(FC.startAt + FC.segMs - now);
+      if (m) m.textContent = "已叮 ×" + FC.beeps + " · 下一声在 3–5 分钟内随机响起";
+    } else if (FC.phase === "break") {
+      t.textContent = fcFmt(FC.brEnd - now);
+    }
+  }
+  function fcPillUpd(now) {
+    var pill = byId("fcPill");
+    if (!pill) return;
+    var d = byId("fcDrawer");
+    if (FC.phase === "" ) { pill.hidden = true; return; }
+    pill.hidden = !!(d && !d.hidden);
+    if (FC.phase === "run") pill.textContent = "专注铃 剩 " + fcFmt(FC.startAt + FC.segMs - now) + " · 叮×" + FC.beeps;
+    else if (FC.phase === "break") pill.textContent = "休息 剩 " + fcFmt(FC.brEnd - now);
+    else pill.textContent = "专注铃 · 一轮完成";
+  }
+  function fcRender() {
+    var body = byId("fcBody");
+    if (!body) return;
+    while (body.firstChild) body.removeChild(body.firstChild);
+    var hint = byId("fcHint");
+    if (FC.phase === "run") hint.textContent = "专注中 · 响铃就闭眼 10 秒";
+    else if (FC.phase === "break") hint.textContent = "休息中 · 别刷手机";
+    else if (FC.phase === "done") hint.textContent = "一轮完成";
+    else hint.textContent = "随机叮 · 闭眼 10 秒 · 90+20";
+
+    if (FC.phase === "") {
+      body.appendChild(txt("p", "fcmeta",
+        "学习时 3–5 分钟随机响一声，响了就闭眼 10 秒，接着学；一轮学完自动进 20 分钟休息。" +
+        "关掉抽屉计时照走，右下角有浮标。"));
+      var chips = el("div", "fcchips"), i;
+      for (i = 0; i < FC_DURS.length; i++) {
+        (function (mins) {
+          var b = el("button", "btn small");
+          b.type = "button";
+          b.textContent = mins + " 分钟";
+          b.setAttribute("aria-pressed", mins === FC.dur ? "true" : "false");
+          b.addEventListener("click", function () { FC.dur = mins; fcRender(); });
+          chips.appendChild(b);
+        })(FC_DURS[i]);
+      }
+      body.appendChild(chips);
+      var acts = el("div", "fcacts");
+      var go = el("button", "btn primary");
+      go.type = "button";
+      go.textContent = "开始专注铃（" + FC.dur + " 分钟）";
+      go.addEventListener("click", fcStart);
+      acts.appendChild(go);
+      body.appendChild(acts);
+      body.appendChild(txt("p", "fcnote",
+        "证据边界：闭眼微休息时大脑会重放刚练的内容（动作技能研究，Bönstrup 2019 / Buch 2018），" +
+        "「随机响」借变比率强化帮人坚持下去；90 分钟周期证据较弱，所以时长可调，撑不住就减。" +
+        "注意：手机锁屏后网页计时会停走，适合电脑或平板开着页面用。"));
+    } else if (FC.phase === "run") {
+      var t1 = txt("p", "fcstatus", "--:--"); t1.id = "fcTime";
+      var m1 = txt("p", "fcmeta", ""); m1.id = "fcMeta";
+      body.appendChild(t1); body.appendChild(m1);
+      var a1 = el("div", "fcacts");
+      var stop1 = el("button", "btn");
+      stop1.type = "button";
+      stop1.textContent = "停止";
+      stop1.addEventListener("click", fcStop);
+      a1.appendChild(stop1);
+      body.appendChild(a1);
+      fcStatusUpd(Date.now());
+    } else if (FC.phase === "break") {
+      var t2 = txt("p", "fcstatus", "--:--"); t2.id = "fcTime";
+      var m2 = txt("p", "fcmeta", "喝水 · 走动 · 看远处 —— 别刷手机、别打游戏"); m2.id = "fcMeta";
+      body.appendChild(t2); body.appendChild(m2);
+      var a2 = el("div", "fcacts");
+      var skip = el("button", "btn primary");
+      skip.type = "button";
+      skip.textContent = "跳过休息，开始下一轮";
+      skip.addEventListener("click", function () { fcStart(); });
+      var stop2 = el("button", "btn");
+      stop2.type = "button";
+      stop2.textContent = "停止";
+      stop2.addEventListener("click", fcStop);
+      a2.appendChild(skip); a2.appendChild(stop2);
+      body.appendChild(a2);
+      fcStatusUpd(Date.now());
+    } else {
+      body.appendChild(txt("p", "fcstatus", "休息结束"));
+      body.appendChild(txt("p", "fcmeta", "刚完成 " + FC.dur + " 分钟专注 + 20 分钟休息"));
+      var a3 = el("div", "fcacts");
+      var again = el("button", "btn primary");
+      again.type = "button";
+      again.textContent = "开始下一轮（" + FC.dur + " 分钟）";
+      again.addEventListener("click", function () { fcStart(); });
+      var end = el("button", "btn");
+      end.type = "button";
+      end.textContent = "结束";
+      end.addEventListener("click", fcStop);
+      a3.appendChild(again); a3.appendChild(end);
+      body.appendChild(a3);
+    }
+  }
+  function fcStart() {
+    FC.phase = "run";
+    FC.startAt = Date.now();
+    FC.segMs = FC.dur * 60000;
+    FC.nextAt = FC.startAt + (180 + Math.random() * 120) * 1000;
+    FC.beeps = 0;
+    fcAudio();
+    fcRender();
+    if (!FC.timer) FC.timer = setInterval(fcTick, 500);
+    fcPillUpd(Date.now());
+  }
+  function fcStop() {
+    FC.phase = "";
+    fcOverHide();
+    if (FC.timer) { clearInterval(FC.timer); FC.timer = null; }
+    fcRender();
+    fcPillUpd(Date.now());
+  }
+  function fcTick() {
+    var now = Date.now();
+    if (FC.overEnd) {
+      if (now >= FC.overEnd) fcOverHide();
+      else {
+        var left = Math.ceil((FC.overEnd - now) / 1000);
+        if (left < 1) left = 1;
+        byId("fcOverN").textContent = String(left);
+      }
+    }
+    if (FC.phase === "run") {
+      if (FC.startAt + FC.segMs - now <= 0) {
+        FC.phase = "break";
+        FC.brEnd = now + 20 * 60000;
+        fcBeep(2, 660);
+        if (typeof qzToast === "function") qzToast("这一轮学完了，休息 20 分钟——喝水、走动、看远处");
+        fcRender();
+      } else if (now >= FC.nextAt) {
+        FC.beeps++;
+        fcBeep(1, 880);
+        FC.nextAt = now + (180 + Math.random() * 120) * 1000;
+        fcOverShow();
+        if (typeof qzToast === "function") qzToast("叮 —— 闭眼 10 秒，让大脑替你复习");
+        fcRender();
+      } else {
+        fcStatusUpd(now);
+      }
+    } else if (FC.phase === "break") {
+      if (FC.brEnd - now <= 0) {
+        FC.phase = "done";
+        fcBeep(3, 660);
+        if (typeof qzToast === "function") qzToast("休息结束，可以开始下一轮了");
+        fcRender();
+      } else {
+        fcStatusUpd(now);
+      }
+    }
+    fcPillUpd(now);
+  }
+  function fcOpen() {
+    fcRender();
+    byId("fcScrim").hidden = false;
+    byId("fcDrawer").hidden = false;
+    document.body.classList.add("drawerOpen");
+    byId("fcClose").focus();
+    fcPillUpd(Date.now());
+  }
+  function closeFc() {
+    var d = byId("fcDrawer");
+    if (!d || d.hidden) return;
+    d.hidden = true;
+    byId("fcScrim").hidden = true;
+    document.body.classList.remove("drawerOpen");
+    fcPillUpd(Date.now());
+  }
+  var fcMenuBtn = byId("fcBtn");
+  if (fcMenuBtn) fcMenuBtn.addEventListener("click", function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    closeMore();
+    fcOpen();
+  });
+  var fcCloseBtn = byId("fcClose");
+  if (fcCloseBtn) fcCloseBtn.addEventListener("click", closeFc);
+  var fcScrimEl = byId("fcScrim");
+  if (fcScrimEl) fcScrimEl.addEventListener("click", closeFc);
+  var fcPillEl = byId("fcPill");
+  if (fcPillEl) fcPillEl.addEventListener("click", function () { fcOpen(); });
+  var fcOverEl = byId("fcOver");
+  if (fcOverEl) fcOverEl.addEventListener("click", fcOverHide);
+  /* [v3.96.0] 专注铃自测出口：只读状态 + 测试把钟拨快（同 __reviewQuiz 先例） */
+  window.__reviewFocus = {
+    state: function () {
+      return {
+        phase: FC.phase, dur: FC.dur, beeps: FC.beeps,
+        segLeft: FC.phase === "run" ? FC.startAt + FC.segMs - Date.now() : 0,
+        brLeft: FC.phase === "break" ? FC.brEnd - Date.now() : 0
+      };
+    },
+    hurryBeep: function () { if (FC.phase === "run") FC.nextAt = Date.now() + 50; },
+    hurrySeg: function () { if (FC.phase === "run") FC.startAt = Date.now() - FC.segMs + 50; },
+    hurryBreak: function () { if (FC.phase === "break") FC.brEnd = Date.now() + 50; },
+    open: fcOpen, close: closeFc, start: fcStart, stop: fcStop
+  };
+
+
   var lctTodoBtn = byId("lctTodo");
   if (lctTodoBtn) lctTodoBtn.addEventListener("click", function () {
     LEC.todo = !LEC.todo; lecRender();
