@@ -3,9 +3,25 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.2.0
+  APP_VERSION: 4.3.0
   DATA_VERSION: 2026-11-22
-  本次变更: （4.2.0）军理与高数期末的收尾修正——
+  本次变更: （4.3.0）刷题调度换成「遗忘曲线」——借鉴 Anki / FSRS 的记忆模型——
+            ①原来判断「该不该复习」只有启发式打分（错题 5 分 / 迟疑 4 分 / 越久没碰越高），
+              本质是按天数：一道题上次做对是 3 天前就不管它当初是真会还是蒙的。现在给每道题
+              记「记忆稳定度 S（天）」与「难度 D（1–10）」，用可提取性 R(t)=0.9^(t/S) 预测
+              「此刻还记得的概率」，新增顺序「只出该复习的（预测还记得的概率 < 80%）」：
+              做过的题只在 R 掉到 0.8 以下才重新推给你，会做的题不再天天冒出来；
+            ②推进规则：答对则 S 上涨、D 下调——R=0.9（准时复习）约 +12%、R=0.5（快忘时才想起）
+              约 +75%，越接近遗忘才想起巩固越多；答错则 S 砍到三成且最多只留 2 天、D 上调；
+              S 夹在 0.3–90 天，否则连对几次就半年不用碰；
+            ③落到记录里只多两个可选数字 s / d，不新增存储树、不升 schema；老记录没有 s/d 时
+              按 n / w / r 反推一个稳定度，历史数据不用迁移；同步合并时 s/d 跟着「更晚的那一端」
+              走（同刻取较大值，幂等 / 交换 / 结合），回读校验也纳入了这两个字段；
+            ④设置页统计条：选该顺序时报「到期 N 道、没做过 M 道、没到期 K 道（最近的约 X 天后）」，
+              一道都不到期时给可操作的提示，而不是让人对着空列表猜程序坏了；
+            ⑤自测 _tmp/fsrs-test.mjs（40 项）：遗忘曲线本身、S/D 走向、到期判定、科目盘点、
+              合并的幂等与交换，以及「3 天前做对的题重新出现 / 刚做完的题不立刻出现」的正反两面。
+  上次变更: （4.2.0）军理与高数期末的收尾修正——
             ①军理题库三处答案与解析不符已纠正（国防 #29 井冈山时期称红军 A、#40 国防教育方针
               全民参与 C、#46 海军节 4·23 D）——逐题比对 145 题解析正文后确认只此三处错位；
             ②学习路径补上今天新增的 46 个知识点，此前它们不在 PATH 里，今日路线「推进」永远
@@ -1318,7 +1334,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.2.0">
+<meta name="app-version" content="4.3.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -4501,6 +4517,7 @@
           <option value="seq">原序（按知识点）</option>
           <option value="mastery">先练最不熟的（按掌握度）</option>
           <option value="spaced">按遗忘曲线（该复习的在前）</option>
+          <option value="due">只出该复习的（预测还记得的概率 &lt; 80%）</option>
           <option value="layer">按层次爬坡（会哪层练哪层）</option>
           <option value="rand">随机打乱</option>
           <option value="wrong">只刷错题</option>
@@ -36503,7 +36520,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.2.0";
+  var APP_VERSION = "4.3.0";
   var DATA_VERSION = "2026-11-22";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -38884,12 +38901,14 @@
   function pickQuizEntry(a, b) {
     if (!a && !b) return null;
     var at = a ? normT(a.t) : -1, bt = b ? normT(b.t) : -1;
-    var r, t;
-    if (!a) { r = b.r === 1 ? 1 : 0; t = bt; }
-    else if (!b) { r = a.r === 1 ? 1 : 0; t = at; }
-    else if (at > bt) { r = a.r === 1 ? 1 : 0; t = at; }
-    else if (bt > at) { r = b.r === 1 ? 1 : 0; t = bt; }
-    else { r = (a.r === 1 || b.r === 1) ? 1 : 0; t = at; }   // 同刻：对优先
+    /* [fsrs] side 记下「r/t 采信了哪一端」，s/d 必须跟着走：
+       它们是「那次复习之后的状态」，不跟 t 走的话，合并出来的记录会一半新一半旧。 */
+    var r, t, side;
+    if (!a) { r = b.r === 1 ? 1 : 0; t = bt; side = 1; }
+    else if (!b) { r = a.r === 1 ? 1 : 0; t = at; side = 0; }
+    else if (at > bt) { r = a.r === 1 ? 1 : 0; t = at; side = 0; }
+    else if (bt > at) { r = b.r === 1 ? 1 : 0; t = bt; side = 1; }
+    else { r = (a.r === 1 || b.r === 1) ? 1 : 0; t = at; side = -1; }   // 同刻：对优先
     var n = Math.max(a ? qzNum(a.n) : 0, b ? qzNum(b.n) : 0);
     var w = Math.max(a ? qzNum(a.w) : 0, b ? qzNum(b.w) : 0);
     if (w > n) w = n;
@@ -38905,6 +38924,14 @@
        同一套 max 语义照样幂等、交换、结合，取消不会被另一端的旧标记复活。 */
     var wh = mergeWhyMap(a ? a.wh : null, b ? b.wh : null);
     var e = { r: r, n: n, w: w, t: t, wa: we.wa, wt: we.wt, wm: we.wm };
+    /* [fsrs] s/d 跟着 side 走；同刻则取较大值（更「记牢」的那侧）。
+       取 max 是幂等、交换、结合的，所以合并顺序不影响结果，与 n/w 同一套路子。 */
+    var sa = a ? memNum(a.s, 0) : 0, sb = b ? memNum(b.s, 0) : 0;
+    var da = (a && Number(a.d) > 0) ? memDOf(a) : 0, db = (b && Number(b.d) > 0) ? memDOf(b) : 0;
+    var ss = side === 0 ? sa : (side === 1 ? sb : Math.max(sa, sb));
+    var dd = side === 0 ? da : (side === 1 ? db : Math.max(da, db));
+    if (ss > 0) e.s = memClampS(ss);
+    if (dd > 0) e.d = dd;
     if (gz) e.gz = gz;
     if (gu) e.gu = gu;
     if (hz) e.hz = hz;
@@ -38991,6 +39018,9 @@
         if (qzNum(ea.hu) !== qzNum(eb.hu)) return false;
         /* [why] 丢分归因变化也要能被回读校验发现，否则同步完不会标脏 */
         if (!sameWhy(ea.wh, eb.wh)) return false;
+        /* [fsrs] 稳定度/难度是小数，用极小容差比（浮点往返不该被判成不一致） */
+        if (Math.abs(Number(ea.s || 0) - Number(eb.s || 0)) > 0.0005) return false;
+        if (Math.abs(Number(ea.d || 0) - Number(eb.d || 0)) > 0.0005) return false;
       }
     }
     return true;
@@ -42090,6 +42120,130 @@
     return true;
   }
   function qzDefaultOrderOf(sid) { return qzAllDoneOf(sid) ? "mastery" : "newrand"; }
+  /* ================= [fsrs] 遗忘曲线调度 ================= */
+  /* 缘起（v4.3.0）：原来的顺序只有启发式打分——错题 5 分、迟疑 4 分、越久没碰越高。
+     那是「按天数」的思路：一道题上次做对是 3 天前，就不管它当初是蒙对的还是真会。
+     借鉴 Anki / FSRS 的做法：给每道题记「记忆稳定度 S」与「难度 D」，
+     用可提取性 R(t) = 0.9^(t/S) 预测「此刻还记得的概率」，
+     只在 R 掉到门槛（默认 0.8）以下时才推给你。于是会做的题不会天天冒出来。
+     边界：不照搬 FSRS 那 19 个权重（它们要按个人历史拟合，抄错一位就是假的精确），
+     只保留能被单独验证的骨架：指数遗忘曲线 → 间隔随 S 增长 → 越接近遗忘才想起、巩固越多。
+     存储：只往逐题记录里加两个可选数字 s / d，不新增存储树、不升 schema；
+     老记录没有 s/d 就按 n/w/r 反推一个，所以历史数据不用迁移就能直接用。 */
+  var QZ_DUE_R = 0.8;                 // [fsrs] 到期门槛：预测还记得的概率低于它才推
+  var QZ_S_MIN = 0.3, QZ_S_MAX = 90;  // 稳定度的上下界（天）；不封顶的话连对几次就半年不碰
+  var QZ_D0 = 5;                      // 初始难度（1 容易 – 10 很难）
+  var QZ_LN09 = Math.log(0.9);        // 遗忘曲线底数的对数，负值
+
+  /* 记录里的 s/d 是小数，不能走 qzNum（它会 floor，E63 那类「精度被抹平」的坑） */
+  function memNum(x, dft) {
+    var v = Number(x);
+    return (isFinite(v) && v > 0) ? v : dft;
+  }
+  function memClampS(s) {
+    if (!(s > 0)) return QZ_S_MIN;
+    return s < QZ_S_MIN ? QZ_S_MIN : (s > QZ_S_MAX ? QZ_S_MAX : s);
+  }
+  /* 距今多少天：时钟回拨/未来时间一律按 0 处理，免得算出负间隔让 R > 1 */
+  function memDays(t, now) {
+    var d = ((now || nowMs()) - normT(t)) / 86400000;
+    return d > 0 ? d : 0;
+  }
+  /* 可提取性：t = S 时剩 90%；t = 2.12S 时剩 80%（正是门槛所在） */
+  function memR(s, days) {
+    var S = memNum(s, 1);
+    if (!(days > 0)) return 1;
+    var r = Math.pow(0.9, days / S);
+    return r > 1 ? 1 : (r > 0 ? r : 0);
+  }
+  /* 到期时刻：R 掉到门槛的反解 → lastT + S·ln(R)/ln(0.9) 天 */
+  function memDueAt(lastT, s) {
+    return normT(lastT) + (memNum(s, 1) * Math.log(QZ_DUE_R) / QZ_LN09) * 86400000;
+  }
+  /* 老记录（没有 s/d，或从别的设备导入的）按 n / w / r 反推稳定度：
+     净答对每多一次 ×1.35，每错一次 ÷1.8，夹进上下界。只是兜底，不作长期依据。 */
+  function memDeriveS(rec) {
+    if (!rec) return null;
+    var n = qzNum(rec.n), w = qzNum(rec.w);
+    if (!n) return null;
+    var right = rec.r === 1;
+    var net = n - w - (right ? 1 : 0);        // 除本次以外的净答对次数
+    var s = (right ? 1.35 : 0.35) * Math.pow(1.35, net > 0 ? net : 0) / Math.pow(1.8, w);
+    return memClampS(s);
+  }
+  function memSOf(rec) {
+    if (!rec) return null;
+    var s = Number(rec.s);
+    return (isFinite(s) && s > 0) ? memClampS(s) : memDeriveS(rec);
+  }
+  function memDOf(rec) {
+    var d = Number(rec && rec.d);
+    if (!(isFinite(d) && d > 0)) return QZ_D0;
+    return d < 1 ? 1 : (d > 10 ? 10 : d);
+  }
+  /* 一条记录此刻的调度视图。known=false 是没做过的题；derived=true 说明 s 是反推来的 */
+  function qzMemOf(rec, now) {
+    if (!rec) return { known: false, s: null, d: QZ_D0, R: null, dueAt: 0, days: 0, overdue: false, derived: false };
+    now = now || nowMs();
+    var s = memSOf(rec), days = memDays(rec.t, now), R = memR(s, days);
+    return {
+      known: true, s: s, d: memDOf(rec), R: R, days: days,
+      dueAt: memDueAt(rec.t, s),
+      overdue: R < QZ_DUE_R,
+      derived: !(Number(rec.s) > 0)
+    };
+  }
+  /* 一次作答之后的新稳定度与难度。old 是作答前的记录（第一次做就是 null）。
+     答对：增长量跟难度反着走、跟「多久没碰」正着走——R=0.9 时约 +12%，R=0.5 时约 +75%
+     （快忘的时候想起来，巩固得最多，这是间隔重复最核心的一条）。
+     答错：稳定度砍到三成、但最多只留 2 天（真的忘了就得重来），难度上调。 */
+  function qzMemNext(old, right, at) {
+    var now = normT(at) || nowMs();
+    var d0 = memDOf(old), s0 = memSOf(old), n = old ? qzNum(old.n) : 0;
+    if (!n || !s0) {
+      var s1 = right ? Math.max(0.5, 0.9 * (11 - d0) / 4) : 0.35;
+      return { s: memClampS(s1), d: right ? d0 : Math.min(10, d0 + 0.9) };
+    }
+    var R = memR(s0, memDays(old.t, now)), s, d;
+    if (right) {
+      var gain = (0.75 + 0.08 * (10 - d0)) * (Math.exp(1 - R) - 1);
+      s = s0 * (1 + (gain > 0.05 ? gain : 0.05));    // 至少 +5%：答对了总得往前走一点
+      d = Math.max(1, d0 - 0.15);
+    } else {
+      s = Math.min(2, s0 * 0.3);
+      d = Math.min(10, d0 + 0.9);
+    }
+    return { s: memClampS(s), d: d };
+  }
+  /* 这道题现在该不该推给我：没做过 → 该（新题总要见一次）；做过 → 看 R 是否掉到门槛以下 */
+  function qzIsDue(rec, now) {
+    if (!rec) return true;
+    return qzMemOf(rec, now).overdue;
+  }
+  /* 科目级的到期盘点（设置页统计条用）：到期 / 没到期 / 没做过 三档 */
+  function qzDueStat(sid) {
+    var pool = qzPoolOf(sid), now = nowMs(), out = { due: 0, later: 0, fresh: 0, total: pool.length, nextAt: 0 };
+    for (var i = 0; i < pool.length; i++) {
+      var rec = qzRecOf(sid, pool[i].key);
+      if (!rec) { out.fresh++; continue; }
+      var m = qzMemOf(rec, now);
+      if (m.overdue) out.due++;
+      else {
+        out.later++;
+        if (!out.nextAt || m.dueAt < out.nextAt) out.nextAt = m.dueAt;
+      }
+    }
+    return out;
+  }
+  /* 给界面用的一句话：还有多久到最近的一次复习 */
+  function qzDueWhen(ms) {
+    var d = ms / 86400000;
+    if (!(d > 0)) return "现在";
+    if (d < 1) return Math.max(1, Math.round(d * 24)) + " 小时后";
+    if (d < 30) return Math.round(d) + " 天后";
+    return Math.round(d / 30) + " 个月后";
+  }
+
   /* [quiz] 写一条作答记录。wrong 只在答错时传入：{wa 作答内容, wm 类型}；
      答对时保留上一次的错答（供「曾答错」回顾），不清空。 */
   function qzSaveRec(sid, key, right, wrong) {
@@ -42104,6 +42258,10 @@
       w: qzNum(old && old.w) + (right ? 0 : 1),
       t: t
     };
+    /* [fsrs] 用这次的结果推进记忆稳定度与难度（旧值算完即弃，不做累加） */
+    var mem = qzMemNext(old, !!right, t);
+    rec.s = mem.s;
+    rec.d = mem.d;
     if (old && typeof old.wa === "string") {      // 历史错答：原样带过来
       rec.wa = old.wa;
       rec.wt = qzNum(old.wt);
@@ -44076,6 +44234,22 @@
     }
     /* [layer] 层次筛选生效时也要说一句，否则「怎么只剩 40 题」会被当成 bug */
     if (qzNum(QZ.cfg.ly)) txt += " · 只出" + LY_NAME[qzNum(QZ.cfg.ly)] + "层";
+    /* [fsrs] 选了「只出该复习的」就把三档摊开：到期几道、还要几天、剩多少没做过。
+       只说一个「共 N 题」会让人以为程序没照顺序筛。 */
+    if (QZ.cfg.order === "due") {
+      var ds = qzDueStat(QZ.sid);
+      txt += " · 到期 " + ds.due + " 道";
+      if (ds.fresh) txt += "、没做过 " + ds.fresh + " 道";
+      if (ds.later) {
+        txt += "、没到期 " + ds.later + " 道";
+        if (ds.nextAt) txt += "（最近的约 " + qzDueWhen(ds.nextAt - nowMs()) + "）";
+      }
+      if (!ds.due && !ds.fresh) txt += " —— 现在没有到期的题，可以换其它顺序或加练错题";
+    } else {
+      /* [fsrs] 没选那个顺序时也报一句：否则这套调度在后台跑着，界面上一点痕迹都没有 */
+      var dsum = qzDueStat(QZ.sid);
+      if (dsum.due) txt += " · 有 " + dsum.due + " 道该复习了（顺序可选「只出该复习的」）";
+    }
     /* [sim] 模拟开着就把本卷题量写进统计条：全库题数和本卷题数不是一回事，得说清 */
     if (qzSimOn()) {
       var swant = qzNum(QZ.sim.count);
@@ -44136,7 +44310,24 @@
       if (onlyNew && r) continue;                              // 有记录就算做过（对错都跳过）
       if (ord === "guess" && !qzGuessOn(r)) continue;   // [guess] 只刷手动标记的蒙对题
       if (ord === "hesitate" && !qzHesOn(r)) continue;  // [hesitate] 只刷手动标了「想了很久」的题
+      /* [fsrs] 只出该复习的：做过的题里，预测还记得的概率掉到门槛以下才推；
+         没做过的照推——没见过的题谈不上遗忘，漏掉它等于题库永远刷不完 */
+      if (ord === "due" && r && !qzMemOf(r).overdue) continue;
       out.push(q);
+    }
+    /* [fsrs] 「只出该复习的」：到期题按可提取性 R 从小到大（最该忘的在前），
+       没做过的题排在最后（R 记 2，永远大于 0–1），两档内部用记录键定序以保证结果稳定 */
+    if (QZ.cfg.order === "due") {
+      var mrv = {}, di, mrec;
+      for (di = 0; di < out.length; di++) {
+        mrec = qzRecOf(QZ.sid, out[di].key);
+        mrv[out[di].key] = mrec ? qzMemOf(mrec).R : 2;
+      }
+      out.sort(function (a, b) {
+        var d = mrv[a.key] - mrv[b.key];
+        if (d) return d;
+        return String(a.key) < String(b.key) ? -1 : (String(a.key) > String(b.key) ? 1 : 0);
+      });
     }
     if (QZ.cfg.order === "spaced") {
       /* [spaced] 按紧迫度从大到小；同分用记录键定序，保证每次跑出来的顺序一致（可测试） */
@@ -44201,6 +44392,11 @@
       /* [newrand] 没做过的题刷完了要给准话，别只说「换个筛选试试」 */
       if (QZ.cfg.order === "new" || QZ.cfg.order === "newrand") {
         qzToast("本科目已经没有没做过的题了——换个章节，或到设置里重置进度");
+      } else if (QZ.cfg.order === "due") {
+        /* [fsrs] 这个顺序下「空」是正常结果，不是筛选出错：说清是没到期，不是没题 */
+        var dsn = qzDueStat(QZ.sid);
+        qzToast("现在没有到期的题" + (dsn.nextAt ? "，最近的一道约 " + qzDueWhen(dsn.nextAt - nowMs()) + " 该复习" : "") +
+          "——想现在就练，换「先练最不熟的」或「只刷错题」");
       } else {
         qzToast("没有符合条件的题目，换个筛选试试");
       }
@@ -49782,6 +49978,9 @@
     calibDev: qzCalibDev, ests: QZ_EST,
     /* [spaced] 遗忘曲线排序的自测入口 */
     urgency: qzUrgency,
+    /* [fsrs] 遗忘曲线调度的自测入口：单条视图 / 下一步状态 / 到期判定 / 科目盘点 */
+    memOf: qzMemOf, memNext: qzMemNext, isDue: qzIsDue, dueStat: qzDueStat,
+    dueWhen: qzDueWhen, memR: memR, dueR: function () { return QZ_DUE_R; },
     /* [pred] 期末估算的自测入口 */
     pred: qzPredictScore,
     /* [reflect] 反思写入 */
@@ -49863,6 +50062,7 @@
     syncTouched: syncTouched, toastSync: toastSync,
     syncAutoArm: syncAutoArm, syncAutoMin: syncAutoMin, syncAutoTick: syncAutoTick, syncOffline: syncOffline,
     mergeQuizMap: mergeQuizMap, mergeResetMap: mergeResetMap, dropReset: dropReset, sameQuiz: sameQuiz,
+    pickQuizEntry: pickQuizEntry,   // [fsrs] 单条合并：s/d 是否跟着更晚的那端走（自测用）
     /* [sync] 网络类失败的措辞/去重/退避：给自动化测试用，不参与业务逻辑 */
     syncNetText: syncNetText, syncNetStuck: syncNetStuck, syncErrText: syncErrText,
     syncEndpointHost: syncEndpointHost, syncHostOf: syncHostOf, syncWaitText: syncWaitText,
