@@ -3,9 +3,21 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.3.0
+  APP_VERSION: 4.3.1
   DATA_VERSION: 2026-11-22
-  本次变更: （4.3.0）刷题调度换成「遗忘曲线」——借鉴 Anki / FSRS 的记忆模型——
+  本次变更: （4.3.1）把遗忘曲线接到「今日路线」和「掌握程度」上——
+            ①今日路线补漏的「遗忘」项改由遗忘曲线给：原来按「距上次多少天」线性加分（最多 14 天、
+              每天 0.6），同名但难度不同的题被同等对待；现在换成「该点有几道到期 ×2 ＋ 最急那道
+              (1−R)×6」，量级与原来相当，所以「不会的」仍然排在「快忘的」前面；
+            ②今日路线新增第 4 类候选「已掌握但到期」：全答对且没蒙对的点，唯一该回来的理由就是
+              快忘了；此前它被硬性排除在外，一道题哪怕一个月没碰，今日路线也不会提它。它们单列
+              「复习」档（最多 2 个），不挤占「补漏」的 3 个名额，理由写「已掌握，N 道到期该复习 · X 天没碰」；
+            ③掌握程度面板每行加「下次复习」：到期写「该复习了（N 道到期）」，没到期写「下次复习 3 天后」；
+            ④设置页统计条的到期数改为按当前章节 / 题型 / 层次筛选统计——此前报的是全科数，筛了章节
+              一开练只有两三道，数字跟列表对不上，看着像算错了；
+            ⑤自测 _tmp/today-fsrs-test.mjs（12 项）：到期进「复习」档、没到期不进、不挤掉补漏、
+              面板文案；今日路线原有回归 _tmp/today-test.mjs 全过。
+  上次变更: （4.3.0）刷题调度换成「遗忘曲线」——借鉴 Anki / FSRS 的记忆模型——
             ①原来判断「该不该复习」只有启发式打分（错题 5 分 / 迟疑 4 分 / 越久没碰越高），
               本质是按天数：一道题上次做对是 3 天前就不管它当初是真会还是蒙的。现在给每道题
               记「记忆稳定度 S（天）」与「难度 D（1–10）」，用可提取性 R(t)=0.9^(t/S) 预测
@@ -1334,7 +1346,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.3.0">
+<meta name="app-version" content="4.3.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -36520,7 +36532,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.3.0";
+  var APP_VERSION = "4.3.1";
   var DATA_VERSION = "2026-11-22";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -42220,11 +42232,22 @@
     if (!rec) return true;
     return qzMemOf(rec, now).overdue;
   }
-  /* 科目级的到期盘点（设置页统计条用）：到期 / 没到期 / 没做过 三档 */
-  function qzDueStat(sid) {
-    var pool = qzPoolOf(sid), now = nowMs(), out = { due: 0, later: 0, fresh: 0, total: pool.length, nextAt: 0 };
+  /* 科目级的到期盘点：到期 / 没到期 / 没做过 三档。
+     opt 可带当前筛选（{sec,type,ly}）：统计条上的数字必须跟列表长度同口径，
+     否则筛了章节还报全科的「到期 12 道」，一开练只有 2 道，看着就像错了。 */
+  function qzDueStat(sid, opt) {
+    var pool = qzPoolOf(sid), now = nowMs();
+    var out = { due: 0, later: 0, fresh: 0, total: 0, nextAt: 0 };
+    var sec = opt && opt.sec ? opt.sec : "全部";
+    var type = opt && opt.type ? opt.type : "全部";
+    var ly = opt ? qzNum(opt.ly) : 0;
     for (var i = 0; i < pool.length; i++) {
-      var rec = qzRecOf(sid, pool[i].key);
+      var q = pool[i];
+      if (sec !== "全部" && q.kp.section !== sec) continue;
+      if (type !== "全部" && q.ex.type !== type) continue;
+      if (ly && qzLyOf(q.it) !== ly) continue;
+      out.total++;
+      var rec = qzRecOf(sid, q.key);
       if (!rec) { out.fresh++; continue; }
       var m = qzMemOf(rec, now);
       if (m.overdue) out.due++;
@@ -42232,6 +42255,23 @@
         out.later++;
         if (!out.nextAt || m.dueAt < out.nextAt) out.nextAt = m.dueAt;
       }
+    }
+    return out;
+  }
+  /* 一个知识点下的调度汇总：做了几道、几道到期、最急的可提取性、最近一次到期时刻。
+     今日路线的补漏排序与「下次复习」提示都用它，避免各处各算一套（口径分散就会互相矛盾）。 */
+  function qzKpMemOf(sid, kid) {
+    var idx = (qzIdx()[sid] || {})[kid], now = nowMs();
+    var out = { n: 0, due: 0, minR: 1, nextAt: 0 }, i, rec, m;
+    if (!idx) return out;
+    for (i in idx) if (has0(idx, i)) {
+      rec = qzRecOf(sid, idx[i]);
+      if (!rec) continue;
+      out.n++;
+      m = qzMemOf(rec, now);
+      if (m.overdue) out.due++;
+      if (m.R < out.minR) out.minR = m.R;
+      if (!out.nextAt || m.dueAt < out.nextAt) out.nextAt = m.dueAt;
     }
     return out;
   }
@@ -43373,6 +43413,14 @@
     if (it.open) meta += " · 未改正 " + it.open + " 题";
     else if (it.ever) meta += " · 错题已全部改正";
     if (it.guess) meta += " · 蒙对 " + it.guess + " 题";
+    /* [fsrs] 下次复习：只对刷过的点说。到期了就说「该复习了」（顺带几道），
+       没到期报还有多久——「下次复习 3 天后」比「掌握度 82%」更能决定今天做什么。
+       有未改正错题的点不说：它上面的「未改正 N 题」已经是更硬的理由，再加一句是重复信息。 */
+    var km = (it.done && !it.open) ? qzKpMemOf(QZ.sid, it.kid) : null;
+    if (km && km.n) {
+      if (km.due) meta += " · 该复习了（" + km.due + " 道到期）";
+      else if (km.nextAt) meta += " · 下次复习 " + qzDueWhen(km.nextAt - nowMs());
+    }
 
     b.title = "掌握度 " + it.score + "%（" + it.tier.label + "）：" + it.tier.hint +
       "。该知识点共 " + it.total + " 题，已刷 " + it.done + " 题，正确率 " + it.rate + "%" +
@@ -44236,8 +44284,10 @@
     if (qzNum(QZ.cfg.ly)) txt += " · 只出" + LY_NAME[qzNum(QZ.cfg.ly)] + "层";
     /* [fsrs] 选了「只出该复习的」就把三档摊开：到期几道、还要几天、剩多少没做过。
        只说一个「共 N 题」会让人以为程序没照顺序筛。 */
+    /* 统计条与列表必须同口径：把当前章节/题型/层次筛选一起传进去 */
+    var qcfg = { sec: QZ.cfg.sec, type: QZ.cfg.type, ly: QZ.cfg.ly };
     if (QZ.cfg.order === "due") {
-      var ds = qzDueStat(QZ.sid);
+      var ds = qzDueStat(QZ.sid, qcfg);
       txt += " · 到期 " + ds.due + " 道";
       if (ds.fresh) txt += "、没做过 " + ds.fresh + " 道";
       if (ds.later) {
@@ -44247,7 +44297,7 @@
       if (!ds.due && !ds.fresh) txt += " —— 现在没有到期的题，可以换其它顺序或加练错题";
     } else {
       /* [fsrs] 没选那个顺序时也报一句：否则这套调度在后台跑着，界面上一点痕迹都没有 */
-      var dsum = qzDueStat(QZ.sid);
+      var dsum = qzDueStat(QZ.sid, qcfg);
       if (dsum.due) txt += " · 有 " + dsum.due + " 道该复习了（顺序可选「只出该复习的」）";
     }
     /* [sim] 模拟开着就把本卷题量写进统计条：全库题数和本卷题数不是一回事，得说清 */
@@ -44394,7 +44444,7 @@
         qzToast("本科目已经没有没做过的题了——换个章节，或到设置里重置进度");
       } else if (QZ.cfg.order === "due") {
         /* [fsrs] 这个顺序下「空」是正常结果，不是筛选出错：说清是没到期，不是没题 */
-        var dsn = qzDueStat(QZ.sid);
+        var dsn = qzDueStat(QZ.sid, { sec: QZ.cfg.sec, type: QZ.cfg.type, ly: QZ.cfg.ly });
         qzToast("现在没有到期的题" + (dsn.nextAt ? "，最近的一道约 " + qzDueWhen(dsn.nextAt - nowMs()) + " 该复习" : "") +
           "——想现在就练，换「先练最不熟的」或「只刷错题」");
       } else {
@@ -46711,10 +46761,14 @@
   /* ---------- [today] 今日路线：补漏 + 推进，两路各挑几个点，一键合成今天这一组 ---------- */
   /* 思路借 DeepTutor 的 Mastery Path：不报「还剩多少章」，只回答「今天先做哪几件」。
      两路：
-       补漏——危险 / 薄弱 / 待复核（含蒙对）三类，欠账越多、越久没碰越靠前；
+       补漏——危险 / 薄弱 / 待复核（含蒙对）三类，欠账越多、越靠前；
+              [fsrs] 再加「已掌握但已到期」的第 4 类：全答对且没蒙对的点，唯一该回来的理由
+              就是快忘了；它们只在真有题到期时才进候选，且不是欠账，标签写「复习」；
        推进——沿 path.json 的段序往下走，找「三态还是 new」的第一个点（pathStateOf 同一套口径）。
-     全部现算、不落盘；打分只用于排序，不显示给人看，界面上只写「为什么选它」。 */
-  var TD_FIX_MAX = 3, TD_NEW_MAX = 2, TD_PER_KP = 3;
+     全部现算、不落盘；打分只用于排序，不显示给人看，界面上只写「为什么选它」。
+     [fsrs] 补漏打分里的「遗忘」项由遗忘曲线给（到期题 ×2 ＋ 最急那道 (1−R)×6），
+     不再只看「距上次多少天」——同名但难度不同的题，不该按同一个天数对待。 */
+  var TD_FIX_MAX = 3, TD_NEW_MAX = 2, TD_PER_KP = 3, TD_REV_MAX = 2;
   /* 今日路线算出的「指路话」，由 renderToday 写、renderGrowth 复用（成长卡重绘后要再写一次） */
   var TODAY_TIP = "";
   function paintGrowthTip() {
@@ -46722,9 +46776,12 @@
     if (tip && TODAY_TIP) tip.textContent = "下一步：照下面的「今日路线」走就行——" + TODAY_TIP + "。";
   }
 
-  function todayWhy(mt, days) {
+  function todayWhy(mt, days, km) {
     var bits = [];
-    if (mt.open) bits.push("未改正 " + mt.open + " 道");
+    if (mt.tier.key === "master") {
+      /* [fsrs] 已掌握的点不是欠账：说清它是「回来复习」的，别让人以为又错了 */
+      bits.push(km && km.due ? "已掌握，" + km.due + " 道到期该复习" : "已掌握");
+    } else if (mt.open) bits.push("未改正 " + mt.open + " 道");
     else if (mt.guess) bits.push("全对但 " + mt.guess + " 道是蒙的");
     else if (mt.errs) bits.push("曾错 " + mt.errs + " 次，已改对");
     else bits.push("已全对，巩固一下");
@@ -46734,7 +46791,7 @@
   }
 
   function todayRoute(sid) {
-    var out = { fix: [], fresh: [], read: null, questions: 0, empty: "" }, i, j, k, mt, days, lv, sc, n;
+    var out = { fix: [], rev: [], fresh: [], read: null, questions: 0, empty: "" }, i, j, k, mt, days, lv, sc, n;
     var sub = subjectById(sid);
     if (!sub || !QZ_READY) { out.empty = "本科目没有题库，今日路线用不上"; return out; }
     var cand = [], now = nowMs(), list = qzMasteryList(sid);
@@ -46751,20 +46808,37 @@
     for (i = 0; i < list.length; i++) {
       mt = list[i];
       k = mt.tier.key;
-      if (k !== "danger" && k !== "weak" && k !== "review") continue;
+      /* [fsrs] 「已掌握」也进候选：全答对且没蒙对，唯一该回来的理由就是快忘了。
+         此前它被排除在外，于是一道题哪怕一个月没碰，今日路线也永远不会提它。 */
+      if (k !== "danger" && k !== "weak" && k !== "review" && k !== "master") continue;
       n = (byKp[mt.kid] || []).length;
       if (!n) continue;
       days = mt.last ? Math.max(0, (now - mt.last) / 86400000) : 99;
       lv = mt.lv === "A" ? 3 : (mt.lv === "B" ? 2 : 1);
-      /* 分数＝欠账（未改正×10＋错次×2＋蒙对×8）＋遗忘（最多 14 天，每天 0.6）＋级别权重 */
-      sc = mt.open * 10 + qzNum(mt.errs) * 2 + qzNum(mt.guess) * 8 + Math.min(14, days) * 0.6 + lv;
+      var km = qzKpMemOf(sid, mt.kid);
+      /* 已掌握的点只在真有题到期时才提，否则它们会一直挤占补漏名额 */
+      if (k === "master" && !km.due) continue;
+      /* 分数＝欠账（未改正×10＋错次×2＋蒙对×8）＋遗忘＋级别权重。
+         [fsrs] 遗忘项从「距上次多少天」换成可提取性：到期题 ×2 ＋ 最急那道 (1−R)×6，
+         量级与原来的 days 项（≤8.4）相当，所以「不会的」仍然优先于「快忘的」。 */
+      sc = mt.open * 10 + qzNum(mt.errs) * 2 + qzNum(mt.guess) * 8
+         + km.due * 2 + (1 - km.minR) * 6 + lv;
       cand.push({
         kid: mt.kid, name: mt.name, section: mt.section, lv: mt.lv, n: n,
-        why: todayWhy(mt, days), score: sc, tag: "补漏"
+        why: todayWhy(mt, days, km), score: sc,
+        tag: k === "master" ? "复习" : "补漏"
       });
     }
+    /* [fsrs] 排序后按来源分流：欠账（补漏 3 个）在前，到期复习（2 个）在后——
+       「不会的」永远比「快忘的」更该先处理，所以宁可少提复习也不挤掉补漏 */
     cand.sort(function (a, b) { return b.score - a.score; });
-    out.fix = cand.slice(0, TD_FIX_MAX);
+    var fixC = [], revC = [], ci;
+    for (ci = 0; ci < cand.length; ci++) {
+      if (cand[ci].tag === "复习") { if (revC.length < TD_REV_MAX) revC.push(cand[ci]); }
+      else if (fixC.length < TD_FIX_MAX) fixC.push(cand[ci]);
+    }
+    out.fix = fixC;
+    out.rev = revC;
 
     /* ② 推进：段序就是课程顺序，走到第一个「没动过」的点就停（凑够 2 个为止）。
        PATH 在脚本里定义得比 renderAll 晚（首屏渲染时还是 undefined），
@@ -46809,7 +46883,7 @@
       }
     }
 
-    var picks = out.fix.concat(out.fresh);
+    var picks = out.fix.concat(out.rev).concat(out.fresh);
     for (i = 0; i < picks.length; i++) out.questions += Math.min(TD_PER_KP, picks[i].n);
     if (!picks.length) out.empty = "本科目的点都推到头了，也没有欠账——去刷整卷，或者换个科目。";
     return out;
@@ -46821,7 +46895,7 @@
     var main = el("div", "tdmain");
     var top = el("div", "tdtop");
     top.appendChild(txt("span", "tdname", p.name));
-    top.appendChild(txt("span", "tdtag " + (p.tag === "补漏" ? "tdtag-fix" : "tdtag-new"), p.tag));
+    top.appendChild(txt("span", "tdtag " + (p.tag === "推进" ? "tdtag-new" : "tdtag-fix"), p.tag));
     main.appendChild(top);
     main.appendChild(txt("div", "tdwhy", p.why + (p.section ? " · " + p.section : "")));
     li.appendChild(main);
@@ -46895,7 +46969,7 @@
   function renderToday() {
     var box = byId("todayRoute");
     if (!box) return;
-    var r = todayRoute(SID), picks = r.fix.concat(r.fresh), i;
+    var r = todayRoute(SID), picks = r.fix.concat(r.rev).concat(r.fresh), i;
     /* 没有要练的题、但有讲义可读时不能整块藏掉——那正好是「今天就去读一节」的日子 */
     if (!picks.length && !r.read) { box.hidden = true; box.innerHTML = ""; return; }
     box.hidden = false;
@@ -46948,6 +47022,7 @@
       box.appendChild(go);
     }
     box.setAttribute("data-fix", String(r.fix.length));
+    box.setAttribute("data-rev", String(r.rev.length));
     box.setAttribute("data-fresh", String(r.fresh.length));
 
     /* 成长路径那句「先把目录翻一遍」是没路线时的兜底话术；既然下面已经有具体安排，就改成指路。
@@ -46961,7 +47036,7 @@
 
   /* 一键开练：每个点取不超过 3 道，优先没做过的，其次还没改对的 */
   function todayRun() {
-    var r = todayRoute(SID), picks = r.fix.concat(r.fresh), list = [], i, j, pool, take, a, b;
+    var r = todayRoute(SID), picks = r.fix.concat(r.rev).concat(r.fresh), list = [], i, j, pool, take, a, b;
     if (!picks.length) { qzToast("今天没有要练的题"); return; }
     for (i = 0; i < picks.length; i++) {
       pool = qzPoolOfKp(SID, picks[i].kid).slice(0);
