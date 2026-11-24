@@ -3,9 +3,13 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.7.0
+  APP_VERSION: 4.7.1
   DATA_VERSION: 2026-11-22
-  本次变更: （4.7.0）听力精听搬进页面：手机也能逐句听——
+  本次变更: （4.7.1）窄屏「⋯」菜单改成两列——
+            把学习台 / 公式库 / 全部科目概览收进菜单后，一列排下来是 19 项、比手机屏幕还高，
+             展开后几乎把整屏右侧占满。窄屏（≤560）改为两列网格、宽 300、最高 72vh 且内部滚动，
+             高度从 900+ 降到 436，19 项一屏看得全；桌面仍是单列，行为不变。
+  上次变更: （4.7.0）听力精听搬进页面：手机也能逐句听——
             ①上一版的入口卡在手机上是废的：给的是 D:// 开头的本地路径，手机上点不开。改法不是补一句
               「请在电脑上使用」，而是把训练器的核心搬进页面——选一个 MP3，直接在这里逐句听；
             ②播放器：大按钮「上一句开头」（离本句头不到 0.6 秒就再退一句）、播放 / 重播本句 / 下一句、
@@ -1412,7 +1416,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.7.0">
+<meta name="app-version" content="4.7.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -1580,6 +1584,18 @@
     background:var(--card);border:1px solid var(--line2);border-radius:8px;
     box-shadow:0 6px 20px rgba(0,0,0,.10)}
   .moremenu[hidden]{display:none !important}
+  /* [eng] 6 个科目后，≤480 把「学习台/公式库/全部科目概览」也收进了这个菜单，
+     一列排下来有 14 项、比屏幕还高。窄屏改两列 + 限高滚动，高度砍掉一半。 */
+  @media (max-width:560px){
+    .moremenu{
+      min-width:0;width:300px;max-width:calc(100vw - 28px);
+      display:grid;grid-template-columns:1fr 1fr;gap:2px;
+      max-height:min(72vh,520px);overflow-y:auto;overscroll-behavior:contain;
+      padding:8px;
+    }
+    .moremenu .btn{min-height:44px;font-size:13.5px;padding:0 10px;white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis}
+  }
   .moremenu .btn{justify-content:flex-start;width:100%;min-height:40px;border:0;border-radius:6px;
     text-align:left;font-size:14px}
   .moremenu .btn:hover{background:var(--chip)}
@@ -36776,7 +36792,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.7.0";
+  var APP_VERSION = "4.7.1";
   var DATA_VERSION = "2026-11-22";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
