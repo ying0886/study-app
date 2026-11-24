@@ -3,9 +3,13 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.11.1
+  APP_VERSION: 4.11.2
   DATA_VERSION: 2026-11-24
-  本次变更: （4.11.1）修专注铃在手机上没有声音——
+  本次变更: （4.11.2）专注铃去掉振动——
+            按你的要求，响铃只出声、不震手机。上一版为「声音被系统拦了也能感觉到」加的
+            navigator.vibrate 那段整块删掉（含调用点），其它一律不动：手势里解锁音频通道、
+            resume 成功后再排音、开始时的试音、「试响一声」按钮与状态行、三角波 + 二次谐波音色都保留。
+  上次变更: （4.11.1）修专注铃在手机上没有声音——
             ①原因：原来的做法是「开始」里建 AudioContext，然后在 500ms 轮询的定时器里调 resume() 再排音。
               手机的自动播放策略下，定时器不是用户手势，resume() 的 Promise 会被拒；切后台/锁屏后系统还会
               挂起音频通道，回来时上下文仍是 suspended——表现就是「计时在走、已叮×3，但一声不响」；
@@ -1458,7 +1462,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.11.1">
+<meta name="app-version" content="4.11.2">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -39731,7 +39735,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.11.1";
+  var APP_VERSION = "4.11.2";
   var DATA_VERSION = "2026-11-24";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -52946,13 +52950,6 @@
     } catch (e) {}
     return true;
   }
-  /* 振动兜底：安卓有效，iOS 忽略（不报错） */
-  function fcVibrate(times) {
-    if (!navigator.vibrate) return;
-    var pat = [], i;
-    for (i = 0; i < times; i++) { if (i) pat.push(90); pat.push(130); }
-    try { navigator.vibrate(pat); } catch (e) {}
-  }
   /* 排音：三角波 + 二次谐波，手机小扬声器上比纯正弦更容易听见 */
   function fcPlay(times, freq) {
     var ac = FC.ac, i, t;
@@ -52973,7 +52970,6 @@
     }
   }
   function fcBeep(times, freq) {
-    fcVibrate(times);                 /* 声音被系统拦了也能感觉到 */
     var ac = fcAudio();
     if (!ac) return;
     if (fcSndState() === "ok") {
