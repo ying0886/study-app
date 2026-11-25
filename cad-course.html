@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoCAD 2020 自学路线 · 8 章 32 小时</title>
+<meta name="app-version" content="1.0.0">
+<style>
+  :root{
+    --bg:#f6f4ee;
+    --card:#fffefb;
+    --ink:#1b1b19;
+    --ink2:#55544e;
+    --ink3:#8d8b83;
+    --line:#e3dfd4;
+    --line2:#d3cec0;
+    --accent:#2f6b4f;
+    --accent-soft:#e8efe9;
+    --warn:#8a5a1f;
+    --warn-soft:#f6efe1;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size:15px;line-height:1.75;
+    padding:0 0 96px;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
+
+  /* ---------- 头部 ---------- */
+  header{padding:48px 0 24px;border-bottom:1px solid var(--line2);margin-bottom:8px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--ink3);text-transform:uppercase;margin-bottom:14px}
+  h1{font-size:30px;line-height:1.35;margin:0 0 10px;font-weight:700;letter-spacing:-.01em}
+  h1 .sub{display:block;font-size:15px;font-weight:400;color:var(--ink2);margin-top:10px;letter-spacing:0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .tag{font-size:12.5px;padding:5px 10px;border:1px solid var(--line2);border-radius:3px;color:var(--ink2);background:var(--card)}
+
+  /* ---------- 通用块 ---------- */
+  h2{font-size:19px;margin:44px 0 6px;font-weight:700;letter-spacing:.01em}
+  h2 .n{color:var(--ink3);font-weight:400;margin-right:8px;font-variant-numeric:tabular-nums}
+  .lead{color:var(--ink2);margin:0 0 18px;font-size:14.5px}
+  .rule{height:1px;background:var(--line);border:0;margin:0}
+
+  /* ---------- 原则 ---------- */
+  .principles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0 8px}
+  .pr{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+  .pr b{display:block;font-size:14px;margin-bottom:4px}
+  .pr span{font-size:13px;color:var(--ink2);line-height:1.65}
+
+  /* ---------- 表格 ---------- */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0 4px;background:var(--card)}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;letter-spacing:.06em;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--line2)}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink2)}
+  tbody tr:last-child td{border-bottom:0}
+
+  /* ---------- 进度 ---------- */
+  .prog{margin:26px 0 0;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:4px}
+  .prog-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink2);margin-bottom:8px}
+  .prog-top b{font-size:13px;color:var(--ink)}
+  .bar{height:6px;background:#eae6db;border-radius:3px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+
+  /* ---------- 章节 ---------- */
+  .ch{background:var(--card);border:1px solid var(--line);border-radius:5px;margin:20px 0 0;overflow:hidden}
+  .ch-hd{display:flex;gap:14px;align-items:flex-start;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+  .ch-no{
+    flex:0 0 auto;width:38px;height:38px;border-radius:3px;background:var(--accent-soft);
+    color:var(--accent);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;
+    font-variant-numeric:tabular-nums;margin-top:2px;
+  }
+  .ch-tt{flex:1 1 auto;min-width:0}
+  .ch-tt h3{margin:0;font-size:17px;font-weight:700;line-height:1.4}
+  .ch-tt p{margin:3px 0 0;font-size:13px;color:var(--ink3)}
+  .ch-bd{padding:16px 20px 20px}
+
+  .lbl{font-size:11.5px;letter-spacing:.12em;color:var(--ink3);font-weight:600;margin:18px 0 8px;text-transform:uppercase}
+  .lbl:first-child{margin-top:0}
+
+  ol.vid{margin:0;padding-left:0;list-style:none;font-size:13.5px;columns:2;column-gap:24px}
+  ol.vid li{margin:0 0 4px;color:var(--ink2);break-inside:avoid}
+  ol.vid li em{font-style:normal;color:var(--ink);font-variant-numeric:tabular-nums}
+  ol.vid li span{color:var(--ink3);font-size:12px}
+
+  /* ---------- 自测 ---------- */
+  details.q{margin:6px 0 0;border:1px solid var(--line);border-radius:3px;background:#fff}
+  details.q > summary{
+    cursor:pointer;padding:10px 14px;font-size:13.5px;list-style:none;
+    display:flex;gap:10px;align-items:flex-start;min-height:44px;
+  }
+  details.q > summary::-webkit-details-marker{display:none}
+  details.q > summary::before{content:"?";flex:0 0 auto;width:18px;height:18px;border:1px solid var(--line2);border-radius:50%;font-size:11px;color:var(--ink3);display:flex;align-items:center;justify-content:center;margin-top:3px}
+  details.q[open] > summary::before{content:"!";color:var(--accent);border-color:var(--accent)}
+  details.q .ans{padding:0 14px 12px 42px;font-size:13.5px;color:var(--ink2)}
+  details.q .ans b{color:var(--ink)}
+  .qwrap{margin-top:2px}
+
+  /* ---------- 任务卡 ---------- */
+  .task{margin:18px 0 0;border:1px solid var(--line2);border-left:3px solid var(--accent);border-radius:3px;background:#fff;padding:16px 18px}
+  .task-hd{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;margin-bottom:4px}
+  .task-hd b{font-size:14.5px}
+  .file{font-family:Consolas,"Courier New",monospace;font-size:12px;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:2px}
+  .task p{margin:8px 0;font-size:13.5px;color:var(--ink2)}
+  .steps{margin:8px 0 12px;padding-left:20px;font-size:13.5px;color:var(--ink2)}
+  .steps li{margin:4px 0}
+  .steps b{color:var(--ink);font-weight:600}
+  kbd{font-family:Consolas,"Courier New",monospace;font-size:12px;background:#f2efe7;border:1px solid var(--line2);border-bottom-width:2px;border-radius:3px;padding:1px 5px;color:#2b2a26;white-space:nowrap}
+
+  .check{list-style:none;margin:10px 0 0;padding:0}
+  .check li{margin:0}
+  .check label{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:13.5px;cursor:pointer;min-height:34px}
+  .check input{margin:4px 0 0;flex:0 0 auto;width:16px;height:16px;accent-color:var(--accent)}
+  .check input:checked + span{color:var(--ink3);text-decoration:line-through}
+
+  .pit{margin:14px 0 0;padding:10px 14px;background:var(--warn-soft);border-radius:3px;font-size:13px;color:#6d4a15}
+  .pit b{color:var(--warn);font-weight:600}
+  .pit ul{margin:4px 0 0;padding-left:18px}
+
+  /* ---------- 附录 ---------- */
+  .repo{border:1px solid var(--line);border-radius:3px;background:#fff;padding:14px 16px;margin:10px 0}
+  .repo b{font-size:14px}
+  .repo .path{font-family:Consolas,monospace;font-size:12.5px;color:var(--accent);word-break:break-all}
+  .repo p{margin:6px 0 0;font-size:13px;color:var(--ink2)}
+  pre{background:#22241f;color:#e8e5da;padding:14px 16px;border-radius:4px;overflow-x:auto;font-size:12.5px;line-height:1.65;font-family:Consolas,"Courier New",monospace}
+  pre .c{color:#8d9a86}
+  code.inl{font-family:Consolas,monospace;font-size:12.5px;background:#f2efe7;padding:1px 5px;border-radius:2px}
+
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line2);font-size:12.5px;color:var(--ink3)}
+
+  /* ---------- 打印 ---------- */
+  @media print{
+    body{background:#fff;padding:0;font-size:10.5pt}
+    .ch,.task,.pr,.repo,.prog{break-inside:avoid;border-color:#bbb}
+    .noprint{display:none !important}
+    details.q{display:none}
+    h2{break-after:avoid}
+  }
+  @media (max-width:640px){
+    .principles{grid-template-columns:1fr}
+    ol.vid{columns:1}
+    h1{font-size:24px}
+    header{padding-top:32px}
+    .ch-hd{padding:16px 14px 12px}
+    .ch-bd{padding:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Self-taught Drafting · 2026</div>
+  <h1>AutoCAD 2020 自学路线
+    <span class="sub">8 章 · 每章一个看得见的产出 · 约 32 小时 / 6 周</span>
+  </h1>
+  <div class="meta">
+    <span class="tag">软件：本机 AutoCAD 2020 简体中文</span>
+    <span class="tag">主教程：B 站「大梦空间」CAD2020 套课</span>
+    <span class="tag">验收：8 个 .dwg + 1 张 A3 PDF</span>
+    <span class="tag">每日 45–60 分钟</span>
+  </div>
+</header>
+
+<h2><span class="n">00</span>先说清楚：这门课怎么学才有效</h2>
+<p class="lead">CAD 不是知识课，是<strong>手上功夫</strong>。看懂了不等于会画，会画了不等于画得快。所以这份路线的结构是：一节视频 → 一段练习 → 一件必须交出来的东西。</p>
+
+<div class="principles">
+  <div class="pr">
+    <b>1. 每集视频，看完必须关掉重画一遍</b>
+    <span>第一遍跟着画，第二遍关掉视频自己从零画。关掉还能画出来，才算学过。这一条比看多少集都重要。</span>
+  </div>
+  <div class="pr">
+    <b>2. 只用键盘，不点工具栏</b>
+    <span>从头就养成输命令的习惯（L、C、TR…）。点按钮画图的人，永远快不起来。</span>
+  </div>
+  <div class="pr">
+    <b>3. 每章交一个文件，不合格就重画</b>
+    <span>任务下面列的是<strong>验收标准</strong>，不是建议。尺寸差一点、图层乱一点，都不算过。</span>
+  </div>
+  <div class="pr">
+    <b>4. 卡住先查 F1，再查 GitHub</b>
+    <span>CAD 里按 F1 是 Autodesk 官方帮助，比任何教程都准。图库里画不出来的图，附录 A 有现成的练习库。</span>
+  </div>
+</div>
+
+<h2><span class="n">01</span>教程源：为什么选这一套</h2>
+<p class="lead">B 站 CAD 教程很多，但大多数是“室内设计施工图”“机械制图”这种<strong>行业专题</strong>，零基础进去会被专业名词淹没。选它的三个硬理由：</p>
+
+<table>
+  <thead><tr><th style="width:22%">对比项</th><th>大梦空间 · CAD2020 套课</th><th>其他常见教程</th></tr></thead>
+  <tbody>
+    <tr><td>版本对口</td><td>专门为 2020 录的，界面和你电脑上的一模一样</td><td>多为 2022/2024，界面改过，会找不到按钮</td></tr>
+    <tr><td>体量</td><td>入门 15 集共 72 分钟，每集 3–9 分钟，一个命令一集</td><td>动辄 60–100 集，一半在讲安装和废话</td></tr>
+    <tr><td>结构</td><td>先命令、后图层标注打印、最后综合题，正好是制图的真实顺序</td><td>直接进户型图/零件图，基础命令靠你自己补</td></tr>
+  </tbody>
+</table>
+
+<p class="lead" style="margin-top:16px"><strong>找法（链接失效就用这个）</strong>：B 站搜 <code class="inl">大梦空间 CAD2020</code>，认两个合集——<br>
+① <strong>CAD2020 入门级教程（全套 15 节课）</strong>，UP 主主页置顶，播放量约 1000 万，B 站 CAD 区第一；<br>
+② <strong>CAD2020 进阶教程</strong>（图层 / 块 / 填充 / 标注 / 打印，约 17 集）+ 附带的<strong>参数化详解 5 集</strong>。</p>
+
+<p class="lead">参考 BV 号：入门 <code class="inl">BV1Hx411f772</code>，进阶 <code class="inl">BV1Ut411u7yr</code>。B 站 BV 号偶尔会因合集调整失效，搜 UP 主名最稳。</p>
+<p class="lead" style="color:var(--ink3);font-size:13px">补一句：这套课的入门 15 集<strong>没有讲矩形（REC）和偏移（O）</strong>——都是两分钟能补上的基础命令，我把它们放在第 3 章最后一题里，不必为此换教程。</p>
+
+<h2><span class="n">02</span>八章总览</h2>
+
+<table>
+  <thead><tr><th style="width:6%">章</th><th style="width:28%">内容</th><th style="width:34%">要交的东西</th><th style="width:14%">视频</th><th style="width:10%">练习</th></tr></thead>
+  <tbody>
+    <tr><td class="num">1</td><td>界面、坐标系、直线</td><td>01-阶梯剖面.dwg</td><td class="num">01–02</td><td class="num">2.5h</td></tr>
+    <tr><td class="num">2</td><td>圆、圆弧、多段线、多边形</td><td>02-圆形徽标.dwg</td><td class="num">03–06</td><td class="num">3.5h</td></tr>
+    <tr><td class="num">3</td><td>移动/复制/拉伸/旋转/镜像/缩放/对齐</td><td>03-窗格立面.dwg</td><td class="num">07–10</td><td class="num">3h</td></tr>
+    <tr><td class="num">4</td><td>修剪延伸、圆角倒角、曲线连接</td><td>04-开口扳手.dwg</td><td class="num">11–13</td><td class="num">3h</td></tr>
+    <tr><td class="num">5</td><td>三种阵列、参数化约束</td><td>05-散热板.dwg ＋ 05b-参数化.dwg</td><td class="num">14–15 ＋5</td><td class="num">3h</td></tr>
+    <tr><td class="num">6</td><td>图层、线型、块、样板文件</td><td>06-A3图框.dwt ＋ 06-扳手-规范版.dwg</td><td class="num">进阶 03–05/11/12</td><td class="num">3.5h</td></tr>
+    <tr><td class="num">7</td><td>标注、文字、填充、打印出图</td><td>07-扳手-A3.pdf</td><td class="num">进阶 13–17</td><td class="num">3h</td></tr>
+    <tr><td class="num">8</td><td>三视图 + 综合大作业</td><td>08-大作业.dwg ＋ A3 PDF</td><td class="num">进阶 02</td><td class="num">8h</td></tr>
+  </tbody>
+</table>
+
+<div class="prog noprint">
+  <div class="prog-top"><span>验收清单完成度</span><b><span id="pgDone">0</span> / <span id="pgAll">0</span></b></div>
+  <div class="bar"><i id="pgBar"></i></div>
+</div>
+
+<!-- ================= 第 1 章 ================= -->
+<h2><span class="n">03</span>第 1 章 · 界面、坐标系、直线</h2>
+<p class="lead">目标：能在空白图里，用键盘准确画出指定长度的水平线和垂直线，不再靠鼠标瞎拖。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">1</div>
+    <div class="ch-tt">
+      <h3>把坐标系装进脑子</h3>
+      <p>入门 01–02 集 · 约 11 分钟 · 练习 2.5 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>入门 01</em> 界面设置及基础操作 <span>5:49</span></li>
+      <li><em>入门 02</em> 直线绘图工具 <span>5:40</span></li>
+    </ol>
+    <p class="lead" style="font-size:13px;margin-top:10px">第 1 集里有三件事必须做：右下角齿轮切到<strong>「草图与注释」</strong>工作空间；<kbd>OP</kbd> 打开选项 → 显示 → 十字光标拉到 100；记住 <kbd>Z</kbd> <kbd>E</kbd> 看全图和 <kbd>P</kbd> 平移。</p>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>画完图，屏幕上什么都没有了，一步找回？</summary><div class="ans"><b><kbd>Z</kbd> 空格 <kbd>E</kbd> 空格</b>（范围缩放）。图形跑到视野外时，这是最快的救回方法，比滚轮乱滚靠谱。</div></details>
+      <details class="q"><summary><kbd>F8</kbd> 和 <kbd>F3</kbd> 分别管什么？</summary><div class="ans"><b>F8 = 正交</b>，光标只能走水平/垂直；<b>F3 = 对象捕捉</b>，靠近端点、中点、圆心会自动吸附。画图时这两个几乎全程开着。</div></details>
+      <details class="q"><summary>输入 <code class="inl">100,50</code> 和 <code class="inl">@100,50</code> 有什么区别？</summary><div class="ans"><b>100,50 = 绝对坐标</b>，指图纸上坐标为 (100,50) 的那个点；<b>@100,50 = 相对坐标</b>，指「从上一个点往右 100、往上 50」。实际画图 95% 用相对坐标。</div></details>
+      <details class="q"><summary>从当前点画一条长 120、与水平成 30° 的斜线，怎么输？</summary><div class="ans"><b><code class="inl">@120&lt;30</code></b>。格式是「@长度&lt;角度」，角度逆时针为正。这类叫<strong>极坐标</strong>，画斜线和圆弧时天天用。</div></details>
+      <details class="q"><summary>画线时提示「指定下一点或 [闭合(C)/放弃(U)]」，想撤掉刚才那一段？</summary><div class="ans">输 <b><kbd>U</kbd></b> 空格，退一段；想整体结束按<b>空格或 Esc</b>。注意 <kbd>U</kbd> 是退一段，<kbd>Esc</kbd> 是整条命令退出但已画的线还在。</div></details>
+      <details class="q"><summary>为什么明明开了对象捕捉，还是抓到了旁边的点？</summary><div class="ans">因为图太密、捕捉框抓到了最近的那个标记。解决办法：<b>放大到能看清再点</b>，或者临时按 <b><kbd>F3</kbd> 关掉捕捉</b>手动点。这是新手最常犯的「画出来差 0.5 mm」的根源。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T1 · 六级台阶剖面</b>
+        <span class="file">作业/01-阶梯剖面.dwg</span>
+      </div>
+      <p>画一个楼梯的侧面剖切轮廓：每级<strong>踏面宽 300、踢面高 150</strong>，共 6 级，底部封口成闭合轮廓。整张图<strong>全部用 <kbd>L</kbd> 命令 + 相对坐标</strong>完成，全程 <kbd>F8</kbd> 正交，不许点工具栏。</p>
+      <ol class="steps">
+        <li>新建图纸，<kbd>L</kbd> 空格，起点输 <b><code class="inl">0,0</code></b>（绝对坐标，定在地面上）。</li>
+        <li>向上 <b><code class="inl">@0,150</code></b>，向右 <b><code class="inl">@300,0</code></b>。这两步是一级台阶。</li>
+        <li>把上一步的两句再重复 5 遍，一共 6 级，最后应该停在 <b>(1800, 900)</b>。</li>
+        <li>向下封口 <b><code class="inl">@0,-900</code></b>，向左回起点 <b><code class="inl">@-1800,0</code></b>，空格结束。</li>
+        <li>自检：<kbd>ID</kbd> 空格点最右上那个角，看命令行报的坐标是不是 <b>1800,900</b>。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c1a"><span>轮廓闭合，没有任何一段线头多出来或少一段</span></label></li>
+        <li><label><input type="checkbox" data-k="c1b"><span>用 <kbd>ID</kbd> 查右上角 = (1800, 900)，误差 0</span></label></li>
+        <li><label><input type="checkbox" data-k="c1c"><span><kbd>DIST</kbd> 量任意一级踏面 = 300.0000</span></label></li>
+        <li><label><input type="checkbox" data-k="c1d"><span>全图没有一条斜线（说明正交从头开到尾）</span></label></li>
+        <li><label><input type="checkbox" data-k="c1e"><span>整个过程你没碰过鼠标左键点工具栏</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>忘打 <b>@</b>，线一下飞到 (300,0)，图看着是散的一堆短线——这是坐标系没进脑子，重画一遍。</li>
+          <li>数量数错，画成 5 级或 7 级。老师改图只看总尺寸，1800 对不上就是错。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 2 章 ================= -->
+<h2><span class="n">04</span>第 2 章 · 圆、圆弧、多段线、多边形</h2>
+<p class="lead">目标：掌握「圆的 6 种画法」里最常用的 4 种，学会用对象捕捉把图形准确挂到已有图形上——这是 CAD 里最关键的手感。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">2</div>
+    <div class="ch-tt">
+      <h3>从“点线”升级到“几何关系”</h3>
+      <p>入门 03–06 集 · 约 24 分钟 · 练习 3.5 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>入门 03</em> 圆 <span>8:53</span></li>
+      <li><em>入门 04</em> 圆弧 <span>4:29</span></li>
+      <li><em>入门 05</em> 多段线 <span>6:20</span></li>
+      <li><em>入门 06</em> 多边形 <span>4:13</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>已知一条线的两个端点，要以它们为直径画圆，用哪个选项？</summary><div class="ans"><b><kbd>C</kbd> → 输 <code class="inl">2P</code> → 点两个端点</b>。同理 <code class="inl">3P</code> 是过圆周上任意三点（画外接圆用）。</div></details>
+      <details class="q"><summary>要画一个同时和两条直线相切的圆，命令怎么走？</summary><div class="ans"><b><kbd>C</kbd> 空格 → 输 <code class="inl">T</code>（切点、切点、半径）→ 在两条线上各点一下 → 输半径</b>。这是画过渡圆弧、倒圆最常用的方式，比算坐标快一百倍。</div></details>
+      <details class="q"><summary>画一个内接于半径 80 的圆的正五边形？</summary><div class="ans"><b><kbd>POL</kbd> → 输 5 → 点圆心 → 输 <code class="inl">I</code>（内接）→ 80</b>。<kbd>I</kbd> 是顶点在圆上，<kbd>C</kbd> 是边与圆相切，画螺母用 C，画星形用 I。</div></details>
+      <details class="q"><summary>多段线（PL）和普通直线（L）最本质的区别？</summary><div class="ans">多段线画的整条是<b>一个对象</b>，且可以带宽度、可以直接变成圆弧段；直线画的每一段都是独立对象。做轮廓、做填充边界、算面积，都用多段线。</div></details>
+      <details class="q"><summary>已经用 <kbd>L</kbd> 画了一堆首尾相连的线，怎么合成一条多段线？</summary><div class="ans"><b><kbd>PE</kbd> 空格 → <code class="inl">M</code> → 框选全部 → 空格 → <code class="inl">Y</code> → 选「合并」→ 空格</b>。这个命令在第 4 章算面积时要用。</div></details>
+      <details class="q"><summary>圆弧用「起点-端点-半径」时，凸向哪边由什么决定？</summary><div class="ans">由<b>两点的先后顺序</b>决定，圆弧总是从起点逆时针走向端点。画反了就把两个点换个顺序点，别去调半径。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T2 · 圆形徽标</b>
+        <span class="file">作业/02-圆形徽标.dwg</span>
+      </div>
+      <p>画一个直径 240 的徽标：外圆 φ240、内圆 φ200 同心，中间一个内接于 R80 圆的正五边形，五边形顶点两两连线成五角星，外圈加三段装饰弧。这一张练的是<strong>「把新图形挂到旧图形上」</strong>。</p>
+      <ol class="steps">
+        <li><kbd>C</kbd> 空格，圆心输 <b>0,0</b>，半径 <b>120</b>；再 <kbd>C</kbd> 空格，圆心直接<b>把光标放到刚画的圆上、等出现「圆心」标记再点</b>，半径 <b>100</b>。两个圆心必须重合。</li>
+        <li><kbd>POL</kbd> 空格 → <b>5</b> → 圆心同上用捕捉 → <code class="inl">I</code> → <b>80</b>。五边形顶点会落在 R80 上。</li>
+        <li><kbd>L</kbd> 空格，从五边形一个顶点连到<b>隔一个</b>的顶点（用「端点」捕捉），连 5 条，成一个五角星。会多出 5 个交叉点，这是对的。</li>
+        <li><kbd>A</kbd>（圆弧）→ 起点落在外圆、端点落在内圆，输半径 <b>110</b>，做一段装饰弧。同样操作再来两次，三段弧分别放在 0°、120°、240° 三个方向（换起点位置就行，这一章还不要求复制）。</li>
+        <li><kbd>PL</kbd> 空格 → 输 <code class="inl">W</code> → 起点宽 <b>6</b> 终点宽 <b>6</b> → 沿五角星一条边画一段带宽度的小飘带，体会宽多段线。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c2a"><span>两个圆的圆心重合：<kbd>DIST</kbd> 量两圆心 = 0</span></label></li>
+        <li><label><input type="checkbox" data-k="c2b"><span>五边形 5 个顶点到圆心的距离都 = 80（抽查 3 个）</span></label></li>
+        <li><label><input type="checkbox" data-k="c2c"><span>五角星 5 条连线，放大后没有一条线头戳出顶点</span></label></li>
+        <li><label><input type="checkbox" data-k="c2d"><span>装饰弧的端点真的落在外圆和内圆上（不是浮在旁边）</span></label></li>
+        <li><label><input type="checkbox" data-k="c2e"><span>带宽度的那段飘带，选中后能在特性里看到「宽度 6」</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>第二、三个圆的圆心靠「看着差不多」点上去 → 差 0.3 mm，肉眼看不出来，但 DIST 一量就露。必须等捕捉标记出现再点。</li>
+          <li>五角星连成「相邻顶点」了，画出来是正五边形。要连<b>隔一个</b>的顶点。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 3 章 ================= -->
+<h2><span class="n">05</span>第 3 章 · 变换类修改命令</h2>
+<p class="lead">目标：明白「修图比画图快」这件事。一张图 80% 的时间花在修改上，这一章的六个命令就是修改的全部基础。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">3</div>
+    <div class="ch-tt">
+      <h3>移动、复制、拉伸、旋转、镜像、缩放</h3>
+      <p>入门 07–10 集 · 约 16 分钟 · 练习 3 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>入门 07</em> 移动与复制 <span>5:51</span></li>
+      <li><em>入门 08</em> 拉伸 <span>2:35</span></li>
+      <li><em>入门 09</em> 旋转 <span>3:57</span></li>
+      <li><em>入门 10</em> 镜像、缩放、对齐缩放 <span>5:54</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>拉伸（S）和移动（M）本质区别在哪？</summary><div class="ans"><b>M 是整个搬走，形状不变；S 是把框住的那部分端点拉走，形状会变</b>。而且 S 必须用<strong>交叉窗口</strong>（从右下往左上框）选择，只包住一半的对象才会被拉伸。甲方案改尺寸最常用的就是 S。</div></details>
+      <details class="q"><summary>一个图形已经有 17° 的斜角，现在想让它是 0°（水平），用旋转怎么一步到位？</summary><div class="ans"><b><kbd>RO</kbd> → 选对象 → 定基点 → 输 <code class="inl">R</code>（参照）→ 点斜线上两点 → 再点水平方向一点</b>。不查角度、不心算，这是旋转最实用的用法。</div></details>
+      <details class="q"><summary>对齐（AL）命令最后问「是否基于对齐点缩放对象」，选 Y 和 N 差什么？</summary><div class="ans"><b>N 只旋转+平移</b>让两个点对上；<b>Y 还会把对象缩放</b>，使第二组点也重合。要把一个块贴到一段长度不同的墙上，就用 Y。</div></details>
+      <details class="q"><summary>镜像完发现原对象还在，怎么只留镜像出来的那个？</summary><div class="ans">镜像时命令行问「是否删除源对象」，<b>输 <code class="inl">Y</code></b> 就删掉原图。忘了输也不怕：事后选中原图删掉即可。</div></details>
+      <details class="q"><summary>缩放（SC）输入 <code class="inl">1.5</code> 是放大还是缩小？</summary><div class="ans"><b>放大 1.5 倍</b>。比例因子大于 1 放大、小于 1 缩小（输 0.5 = 缩一半）。缩放会连标注尺寸一起变，注意。</div></details>
+      <details class="q"><summary>复制（CO）时想一次复制一串等距的对象，怎么做最省事？</summary><div class="ans"><kbd>CO</kbd> 选对象定基点后，<b>连续输多个位移点</b>（如 <code class="inl">@500,0</code> 回车 <code class="inl">@500,0</code> 回车…），一次命令复制一排。再快一点就用第 5 章的阵列。</div></details>
+      <details class="q"><summary>这套课没讲矩形（REC）和偏移（O），这两个该怎么用？</summary><div class="ans"><b>REC</b>：空格 → 点第一角点 → 输 <code class="inl">@宽,高</code>，带圆角先输 <code class="inl">F</code> 设半径；矩形本质是一条闭合多段线。<b>O 偏移</b>：空格 → 输距离 → 选对象 → 点哪边就往哪边偏移，画墙厚、画等距线比复制快。这两个命令后面几章都会用到，两分钟就能上手。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T3 · 窗格立面</b>
+        <span class="file">作业/03-窗格立面.dwg</span>
+      </div>
+      <p>画一扇 3×3 的窗：每格 500×500，九格贴合成 1500×1500 的整体，然后把整扇窗绕左下角旋转 30°，再用镜像做出对开的两扇，两扇之间留 20 的缝。</p>
+      <ol class="steps">
+        <li>用 <kbd>L</kbd> 从 <b>0,0</b> 画一个 500×500 的方框（<code class="inl">@500,0</code> → <code class="inl">@0,500</code> → <code class="inl">@-500,0</code> → <code class="inl">C</code> 闭合）。</li>
+        <li><kbd>CO</kbd> 选它 → 基点随便定在左下角 → 连续给 <b><code class="inl">@500,0</code></b>、<b><code class="inl">@1000,0</code></b> → 空格。得到一个横排。</li>
+        <li>再 <kbd>CO</kbd> 框选这三个 → 连续给 <b><code class="inl">@0,500</code></b>、<b><code class="inl">@0,1000</code></b> → 空格。九格齐了。</li>
+        <li><kbd>RO</kbd> 全选 → 基点定在整扇窗左下角 → 输 <b>30</b>。</li>
+        <li><kbd>MI</kbd> 全选 → 镜像线竖直画在右侧 20 处（先在旁边画一条辅助竖线，用偏移 <kbd>O</kbd> 或 <kbd>L</kbd> 画）→ 镜像完保留原对象。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c3a"><span>九格尺寸完全一致：<kbd>DIST</kbd> 抽查任意两格边 = 500.0000</span></label></li>
+        <li><label><input type="checkbox" data-k="c3b"><span>九格之间没有缝也没有重叠（放大交界处看）</span></label></li>
+        <li><label><input type="checkbox" data-k="c3c"><span>旋转后整体确实倾斜 30°（<kbd>LIST</kbd> 查一条边的角度）</span></label></li>
+        <li><label><input type="checkbox" data-k="c3d"><span>镜像出来的第二扇与第一扇间距正好 20</span></label></li>
+        <li><label><input type="checkbox" data-k="c3e"><span>整张图没有多余辅助线残留</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>复制时基点没定在图形的角上，第二排就对不齐。基点永远优先选<strong>图形的角点或圆心</strong>。</li>
+          <li>旋转前没全选，只转了一格。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 4 章 ================= -->
+<h2><span class="n">06</span>第 4 章 · 修剪、延伸、圆角倒角</h2>
+<p class="lead">这一章是从「能画」到「画得干净」的分水岭。剪刀用熟了，画图速度会突然跳一个台阶。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">4</div>
+    <div class="ch-tt">
+      <h3>剪刀是 CAD 的灵魂</h3>
+      <p>入门 11–13 集 · 约 11 分钟 · 练习 3 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>入门 11</em> 修剪和延伸 <span>4:20</span></li>
+      <li><em>入门 12</em> 圆角和倒角 <span>3:39</span></li>
+      <li><em>入门 13</em> 曲线和曲线连接 <span>2:57</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>修剪（TR）最快的用法是什么？</summary><div class="ans"><b><kbd>TR</kbd> 空格 空格</b>——两下空格表示「全图都当边界」，然后你想剪哪段点哪段，点哪剪哪。</div></details>
+      <details class="q"><summary>圆角（F）半径设成 0，会有什么效果？</summary><div class="ans">两条线会<b>直接延伸/修剪到相交成尖角</b>。这是 CAD 里最快让两条线「正确相交」的办法，比先延伸再修剪快得多。</div></details>
+      <details class="q"><summary>倒角（CHA）和圆角（F）差别在哪？</summary><div class="ans">倒角切的是<b>斜直线</b>（要设两个距离 D），圆角切的是<b>圆弧</b>（要设半径 R）。机械件去毛刺用倒角，铸造件过渡用圆角。</div></details>
+      <details class="q"><summary>合并（JOIN）能连什么、不能连什么？</summary><div class="ans">能把<b>共线或首尾相接</b>的同类对象连成一个整体；中间有断口、不共线的连不上。连成闭合多段线之后，<kbd>AREA</kbd> 才能正常算面积。</div></details>
+      <details class="q"><summary>点了半天剪不掉，一般是什么原因？</summary><div class="ans">三种：① 剪的那段<b>没跟边界真的相交</b>（差一点点，放大看）；② 对象被<b>锁定图层</b>了；③ 你想剪的是<b>块内部的线</b>，得先炸开（<kbd>X</kbd>）。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T4 · 开口扳手</b>
+        <span class="file">作业/04-开口扳手.dwg</span>
+      </div>
+      <p>画一把开口扳手的完整外轮廓：头部圆 φ44、尾部圆 φ30，两圆心相距 160，用两条外公切线连起来，头部开一个 18 宽的开口，开口根部倒 R6 圆角，最后合成一条<strong>闭合多段线</strong>。</p>
+      <ol class="steps">
+        <li><kbd>C</kbd> 圆心 <b>0,0</b> 半径 <b>22</b>；再 <kbd>C</kbd> 圆心 <b>160,0</b> 半径 <b>15</b>。</li>
+        <li>画切线：<kbd>L</kbd> 空格 → 按住 <kbd>Shift</kbd> 右键 → 选「切点」→ 点第一个圆上半部 → 再 Shift+右键「切点」→ 点第二个圆上半部。下半部同样再来一条。</li>
+        <li><kbd>TR</kbd> 空格 空格，剪掉两圆上多余的弧段，只留下外轮廓那一圈。</li>
+        <li>开口：在头部上方画两条间距 18 的平行竖线（从圆心往上，用 <kbd>O</kbd> 偏移 9 各一条），<kbd>TR</kbd> 剪掉头部的顶弧和开口内的部分。</li>
+        <li><kbd>F</kbd> → <code class="inl">R</code> → <b>6</b> → 点开口根部两条边，倒圆角。</li>
+        <li><kbd>JOIN</kbd> 框选全部 → 空格。选中它，特性里应该显示「多段线（闭合）」。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c4a"><span><kbd>JOIN</kbd> 之后选中图形，特性面板显示「多段线」且「闭合 是」</span></label></li>
+        <li><label><input type="checkbox" data-k="c4b"><span><kbd>AREA</kbd> 能算出面积数字（说明真的闭合了）</span></label></li>
+        <li><label><input type="checkbox" data-k="c4c"><span>两圆中心距 = 160，直径 = 44 / 30</span></label></li>
+        <li><label><input type="checkbox" data-k="c4d"><span>开口宽度 <kbd>DIST</kbd> 量 = 18.0000</span></label></li>
+        <li><label><input type="checkbox" data-k="c4e"><span>放大看，切点处没有「小台阶」，弧和直线是顺的</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>切线没捕捉到真正的切点，画出来和圆之间有条缝 → <kbd>TR</kbd> 剪完发现轮廓是断的。判断方法：放大切点位置，能看到两条线交叉或悬空。</li>
+          <li><kbd>JOIN</kbd> 失败：说明轮廓上有断口。用 <kbd>TR</kbd> 补一下断口两端的线让它们真的相交。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 5 章 ================= -->
+<h2><span class="n">07</span>第 5 章 · 阵列与参数化</h2>
+<p class="lead">阵列解决「重复」，参数化解决「改一个数全图跟着变」。这两个是让 CAD 从画图工具变成设计工具的东西。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">5</div>
+    <div class="ch-tt">
+      <h3>批量复制，和用数字驱动图形</h3>
+      <p>入门 14–15 集 ＋ 参数化详解 5 集 · 约 40 分钟 · 练习 3 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>入门 14</em> 矩形/路径/环形阵列 <span>6:32</span></li>
+      <li><em>入门 15</em> 参数化 <span>3:05</span></li>
+      <li><em>参数化 01–05</em> 几何约束/标注约束/三角案例 <span>约 30 分</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>环形阵列必须指定哪三样东西？</summary><div class="ans"><b>中心点、项目数、填充角度</b>（360° 就是绕一整圈）。另外注意「关联」开关：开着，改一个全变，改数量自动增删。</div></details>
+      <details class="q"><summary>阵列开着「关联」和关着有什么实际区别？</summary><div class="ans">关联 = 整组是<b>一个对象</b>，改项目数全组跟着变；不关联 = 炸成<b>一堆独立对象</b>，改一个只改一个。做重复构件要关联，做一次性的排布可以不关联。</div></details>
+      <details class="q"><summary>几何约束和标注约束，分别管什么？</summary><div class="ans"><b>几何约束管关系</b>（水平、垂直、相等、相切、同心）；<b>标注约束管数值</b>（宽 100、角 30°）。先用几何约束定形状，再用标注约束定大小，这个顺序反了会过约束。</div></details>
+      <details class="q"><summary>图形突然变红、怎么拖都不动，是什么情况？</summary><div class="ans">一般为<b>过约束</b>：同一件事被两处约束同时规定死了（比如既相等又各标了不同尺寸）。删掉其中一条约束就好。</div></details>
+      <details class="q"><summary>把标注约束的 100 改成 80，图形没反应，为什么？</summary><div class="ans">多半是这个尺寸<b>没被真正约束住</b>（约束图标是灰的/或图形被「固定」约束锁死）。要看到图形跟着缩，必须有能动的自由度。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T5-A · 散热板</b>
+        <span class="file">作业/05-散热板.dwg</span>
+      </div>
+      <p>320×200 的底板，内部挖 10 列 × 6 行共 60 个 24×12 的通风槽，槽间距 28，四角倒 R10 圆角。</p>
+      <ol class="steps">
+        <li><kbd>REC</kbd> 空格 → 点 <b>0,0</b> → 输 <code class="inl">@320,200</code> 得底板。</li>
+        <li><kbd>REC</kbd> 从 <b>20,20</b> 画一个 <code class="inl">@24,12</code> 的槽。</li>
+        <li><kbd>AR</kbd>（阵列）选这个槽 → 选<strong>矩形</strong> → 列数 <b>10</b> 列距 <b>28</b>，行数 <b>6</b> 行距 <b>28</b>。</li>
+        <li><kbd>F</kbd> → <code class="inl">R</code> → <b>10</b> → 依次点底板四个角。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c5a"><span>槽正好 60 个（选中阵列看特性里的「项目数」）</span></label></li>
+        <li><label><input type="checkbox" data-k="c5b"><span>相邻两槽中心距 = 28，槽本身 24×12</span></label></li>
+        <li><label><input type="checkbox" data-k="c5c"><span>所有槽都在底板内，没有被边线切掉半个</span></label></li>
+        <li><label><input type="checkbox" data-k="c5d"><span>四角圆角半径都是 10</span></label></li>
+      </ul>
+
+      <div class="task-hd" style="margin-top:20px">
+        <b>任务 T5-B · 参数化支架</b>
+        <span class="file">作业/05b-参数化.dwg</span>
+      </div>
+      <p>画一个 100×60 的矩形，加上约束让它「宽 100、高 60」，然后把宽度改成 <strong>80</strong>，图形必须自己变窄。</p>
+      <ol class="steps">
+        <li><kbd>REC</kbd> 画任意大小的矩形。</li>
+        <li>切到「参数化」功能区 → 全约束（自动约束）→ 框选矩形，让水平和垂直约束自动加上。</li>
+        <li>标注约束：<b>线性</b> → 标宽 = 100、高 = 60。</li>
+        <li>双击宽度那个 100 → 改成 <b>80</b> → 回车。矩形要立刻变窄。</li>
+        <li>截图存成 <code class="inl">05b-参数化-改尺寸后.png</code>，和下一条验收一起看。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c5e"><span>改完 80，矩形确实变窄了，标注数字同步变成 80</span></label></li>
+        <li><label><input type="checkbox" data-k="c5f"><span>约束图标没有变红（说明没过约束）</span></label></li>
+        <li><label><input type="checkbox" data-k="c5g"><span>截图已保存，能一眼看出「改一个数、图形跟着变」</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>阵列的行列距填成「间距 28」但槽宽 24，实际间隙只有 4，画完看着还行，一量就错。记住：阵列的间距是<b>基点到基点</b>的距离。</li>
+          <li>参数化里先标了尺寸再想要「相等」约束 → 直接冲突变红。顺序永远是：几何约束 → 标注约束。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 6 章 ================= -->
+<h2><span class="n">08</span>第 6 章 · 图层、线型、块、样板</h2>
+<p class="lead">这一章开始，你的图从「自己能看懂」变成「别人能看懂、并且能交给别人改」。图层乱是业余和专业最明显的分界线。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">6</div>
+    <div class="ch-tt">
+      <h3>把手上的画，变成一张规范的图</h3>
+      <p>进阶 03–05 / 11 / 12 集 · 约 40 分钟 · 练习 3.5 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>进阶 03–05</em> 图层简介 / 新建 / 图层工具 <span>约 20 分</span></li>
+      <li><em>进阶 11</em> 颜色与线型 <span>约 6 分</span></li>
+      <li><em>进阶 12</em> 块的创建和注意点 <span>约 8 分</span></li>
+      <li><em>进阶 06–10</em> 点样式/打断/等分/云线/构造线 <span>选看</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>0 层特殊在哪？</summary><div class="ans">不能删、不能改名，而且<b>画在 0 层上的线，一旦被做成块，颜色会跟着插入的图层走</b>。所以正规做法：0 层只用来放块，日常图形一律分到自己的图层。</div></details>
+      <details class="q"><summary>特性里的 ByLayer 是什么意思？</summary><div class="ans">「随层」——颜色、线型、线宽全都<b>跟着它所在的图层设置走</b>。正确做法是画图时全部 ByLayer，想改颜色就改图层，不要单个对象去改颜色。</div></details>
+      <details class="q"><summary>图层「关闭」和「冻结」有什么区别？</summary><div class="ans">关闭只是看不见，还参与运算；<b>冻结完全不参与重生成和打印预演</b>，大图卡的时候冻结比关闭有效得多。打印不想出现的图层，用冻结。</div></details>
+      <details class="q"><summary>中心线设成 DASHED 线型，画出来还是一根实线，为什么？</summary><div class="ans">线型比例太小，虚线密到看不见。<b>输 <kbd>LTSCALE</kbd>，把比例调大（比如 10 或 20）</b>，或者改那个图层的「线型比例」。这是新手 100% 会遇到的。</div></details>
+      <details class="q"><summary><kbd>B</kbd> 和 <kbd>W</kbd> 都是做块，区别？</summary><div class="ans"><b>B = 内部块</b>，只存在当前这张图里；<b>W = 写块</b>，单独存成一个 .dwg 文件，可以插到任何图里。标题栏、标准件做成 W。</div></details>
+      <details class="q"><summary>改了块里的一条线，图里所有同名块都变了，靠什么实现的？</summary><div class="ans">因为块是<b>引用</b>，改的是「块定义」。用 <kbd>BEDIT</kbd>（块编辑器）或双击块进入编辑，改一次全部引用同步更新——这才是块的真正价值。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T6-A · A3 图框样板</b>
+        <span class="file">作业/06-A3图框.dwt</span>
+      </div>
+      <p>做一份自己的 A3 样板：内置图框、标题栏块、五个标准图层、一个标注样式。以后每张新图都从它开始。</p>
+      <ol class="steps">
+        <li>新建图纸，<kbd>UNITS</kbd> 确认单位是毫米。</li>
+        <li>建图层（<kbd>LA</kbd>）：<b>轮廓</b>（白，线宽 0.3）、<b>中心线</b>（红，线型 CENTER，线宽 0.13）、<b>标注</b>（绿）、<b>文字</b>（青）、<b>填充</b>（灰）。</li>
+        <li>在「图框」层画 420×297 外框，再 <kbd>O</kbd> 向内偏移 5；左边那条再单独偏移到 25（装订边）。</li>
+        <li>右下角画 180×56 的标题栏，填「图名 / 比例 / 日期 / 姓名」四格。</li>
+        <li>全选标题栏 → <kbd>B</kbd> → 名字 <b>TITLE-A3</b> → <b>基点一定要选右下角</b> → 确定。</li>
+        <li>新建标注样式 <kbd>D</kbd>：文字高 3.5，箭头 2.5，全局比例 1，名字 <b>GB-3.5</b>。</li>
+        <li>另存为 → 文件类型选 <b>AutoCAD 图形样板（*.dwt）</b> → 存进 作业 目录。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c6a"><span>图层表里正好 5 个自建图层（加上 0 层共 6 个），名字和颜色对</span></label></li>
+        <li><label><input type="checkbox" data-k="c6b"><span>点标题栏，特性显示「块参照」而不是一堆线</span></label></li>
+        <li><label><input type="checkbox" data-k="c6c"><span>中心线图层画一条线，显示为点划线（不是实线）</span></label></li>
+        <li><label><input type="checkbox" data-k="c6d"><span>新建文件 → 选这个 dwt，图框和图层直接就在</span></label></li>
+      </ul>
+
+      <div class="task-hd" style="margin-top:20px">
+        <b>任务 T6-B · 扳手规范版</b>
+        <span class="file">作业/06-扳手-规范版.dwg</span>
+      </div>
+      <p>把第 4 章的扳手搬到新样板里，所有线按图层归类，一件都不许留在 0 层。</p>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c6e"><span>选中扳手轮廓，特性里图层 = 「轮廓」</span></label></li>
+        <li><label><input type="checkbox" data-k="c6f"><span>按 <kbd>QSELECT</kbd> 选「图层 = 0」= 0 个对象</span></label></li>
+        <li><label><input type="checkbox" data-k="c6g"><span>套上了 A3 图框，标题栏里写了图名和比例</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>做块时基点随手点，插进来位置全乱。<b>基点一定是块将来要对齐的那个角</b>。</li>
+          <li>图层里改了线宽，但屏幕上没变化——因为 <kbd>LWT</kbd>（显示线宽）没打开。打印时会正常，屏幕上看不见而已。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 7 章 ================= -->
+<h2><span class="n">09</span>第 7 章 · 标注、文字、填充、打印</h2>
+<p class="lead">一张图的价值在于「别人能不能照着它把东西做出来」。尺寸标不全，画得再漂亮也是废图。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">7</div>
+    <div class="ch-tt">
+      <h3>标全尺寸，打印出图</h3>
+      <p>进阶 13–17 集 · 约 45 分钟 · 练习 3 小时</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">视频</div>
+    <ol class="vid">
+      <li><em>进阶 13–14</em> 图案填充 / 修改 <span>约 16 分</span></li>
+      <li><em>进阶 15</em> 图元显示顺序 <span>约 5 分</span></li>
+      <li><em>进阶 16</em> 标注尺寸讲解 <span>约 12 分</span></li>
+      <li><em>进阶 17</em> 圆心、中心线 <span>约 6 分</span></li>
+    </ol>
+
+    <div class="lbl">概念自测</div>
+    <div class="qwrap">
+      <details class="q"><summary>标两点之间的水平/垂直距离，用哪个命令？</summary><div class="ans"><b><kbd>DLI</kbd> 线性标注</b>。斜线方向的距离用 <kbd>DAL</kbd>（对齐标注），半径 <kbd>DRA</kbd>，直径 <kbd>DDI</kbd>，角度 <kbd>DAN</kbd>，连续标注 <kbd>DCO</kbd>。</div></details>
+      <details class="q"><summary>标注文字太小/太大，改哪里才对？</summary><div class="ans">改<b>标注样式</b>（<kbd>D</kbd> → 文字高度），不要一个一个去改标注对象。图太小就调「调整 → 使用全局比例」，一处改全部跟着变。</div></details>
+      <details class="q"><summary>打印预览是空白的，最可能的原因？</summary><div class="ans">① 打印范围选成了「显示」而图在别处；② 图层的<b>「打印」列被关掉了</b>；③ 打印样式表里颜色映射成白色。按这个顺序查。</div></details>
+      <details class="q"><summary>要输出 PDF，打印机选哪个？</summary><div class="ans"><b>DWG To PDF.pc3</b>。图纸尺寸选 A3，打印区域选「窗口」框住图框，勾上「居中打印」和「打印对象线宽」，比例选 1:1。</div></details>
+      <details class="q"><summary>填充（H）跟着边界改了不跟着变，为什么？</summary><div class="ans">填充的<b>「关联」</b>没开。重建的时候勾上关联，边界一动填充自动重算。另外填充不显示，通常是「填充显示」<kbd>FILLMODE</kbd> 被关了。</div></details>
+      <details class="q"><summary>尺寸线压住了图形，怎么调？</summary><div class="ans">选中标注，拖<b>夹点</b>挪位置；或者用 <kbd>MLEADER</kbd> 引线把数字引到图外。别用直线去遮挡，会留一堆碎线。</div></details>
+    </div>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>任务 T7 · 扳手出图</b>
+        <span class="file">作业/07-扳手-A3.pdf</span>
+      </div>
+      <p>给第 6 章的扳手标全尺寸、写技术要求、套 A3 图框，打印成一张<strong>能交给车间</strong>的 PDF。这张 PDF 是整个课程前七章的成果证明。</p>
+      <ol class="steps">
+        <li>打开 06-扳手-规范版，在「中心线」层给两个圆加中心十字线（进阶 17 的方法，或 <kbd>DCE</kbd> 圆心标记）。</li>
+        <li>「标注」层上标：两圆中心距 <kbd>DLI</kbd> 160、两个直径 <kbd>DDI</kbd> 44 和 30、开口宽 18、圆角 <kbd>DRA</kbd> R6、总长。</li>
+        <li>「文字」层用 <kbd>MT</kbd> 写三条技术要求：① 未注圆角 R2；② 去毛刺，无锐边；③ 材料 45 钢。</li>
+        <li><kbd>Ctrl</kbd>+<kbd>P</kbd> → 打印机 DWG To PDF.pc3 → 图纸 A3 → 打印区域「窗口」→ 框住内框 → 居中 ✓ → 打印对象线宽 ✓ → 比例 1:1 → 预览 → 输出。</li>
+        <li>用 PDF 阅读器打开，放大到 200% 检查线宽和文字。</li>
+      </ol>
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c7a"><span>五个关键尺寸齐全，一个不缺（160 / φ44 / φ30 / 18 / R6）</span></label></li>
+        <li><label><input type="checkbox" data-k="c7b"><span>PDF 里轮廓线明显比标注线粗（线宽生效了）</span></label></li>
+        <li><label><input type="checkbox" data-k="c7c"><span>所有标注数字大小一致、方向一致，没有倒过来或挤在一起</span></label></li>
+        <li><label><input type="checkbox" data-k="c7d"><span>打印比例为 1:1，A3 幅面铺满</span></label></li>
+        <li><label><input type="checkbox" data-k="c7e"><span>标题栏里图名、比例、日期、姓名都填了</span></label></li>
+      </ul>
+      <div class="pit"><b>大概率会踩的坑</b>
+        <ul>
+          <li>标注全画在 0 层 → 以后改图层颜色改不动。一定要切到「标注」层再标。</li>
+          <li>直接点「布满图纸」，比例变成 1:1.37 这种怪数 → 图纸交给别人对不上量具。<b>比例必须手动设 1:1</b>。</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 第 8 章 ================= -->
+<h2><span class="n">10</span>第 8 章 · 三视图与综合大作业</h2>
+<p class="lead">最后一章不再教新命令，只做一件事：把前七章的东西拼成一张真正的工作图。</p>
+
+<div class="ch">
+  <div class="ch-hd">
+    <div class="ch-no">8</div>
+    <div class="ch-tt">
+      <h3>按行业标准画一张能交出去的图</h3>
+      <p>进阶 02 集（面试题：快捷键画三视图）· 练习 8 小时，可分两次</p>
+    </div>
+  </div>
+  <div class="ch-bd">
+
+    <div class="lbl">先做这个热身</div>
+    <p class="lead" style="font-size:13.5px">跟着进阶第 2 集，用纯快捷键画一遍它那个构件的三视图。重点不是画得像，是体会「主视图定了，俯视图的每一条线都是投影下来的」。</p>
+
+    <div class="task">
+      <div class="task-hd">
+        <b>大作业 · 三选一</b>
+        <span class="file">作业/08-大作业.dwg ＋ 08-大作业.pdf</span>
+      </div>
+      <p>挑一个方向。选哪个不重要，重要的是<strong>走完全流程</strong>：新建 → 画 → 图层 → 标注 → 套图框 → 打印 PDF。图上必须有你说的清来源的每一个尺寸。</p>
+
+      <p style="margin-top:14px"><strong>A · 机械向：法兰端盖三视图</strong><br>
+      画一个 φ120 的法兰端盖：主视图（外形 + 中心孔 φ40 + 6 个 φ12 螺栓孔均布在 R45 上）、俯视图（厚度 15，中间凸台 φ60 高 10）、左视图。三个视图必须严格对齐。</p>
+
+      <p><strong>B · 建筑/室内向：单身公寓平面图</strong><br>
+      画一个 6m×4.5m 的房间平面：墙厚 240，一扇 900 宽的门（画开启弧线）、两扇 1200 的窗、一套床桌椅的简单块，标出所有墙体和开间尺寸。</p>
+
+      <p><strong>C · 车辆工程向（已按你的专业定好尺寸）· 盘式制动盘零件图</strong><br>
+      主视图 + A-A 全剖视图。外径 φ280、摩擦环内径 φ160、盘厚 24（通风盘），中心止口孔 φ68，5 个 φ14 螺栓孔均布在 φ114.3 节圆上，端面 36 条直通风槽（用第 5 章的环形阵列排）。中心线必须画，两个视图严格按投影对齐。</p>
+      <p style="font-size:13px;color:var(--ink3);margin-top:-2px">公差、表面粗糙度、形位公差是大二「机械制图」课的内容，这一章不做要求——你现在还没学过，不丢人。真想加分，就在标题栏上方加一行「未注公差按 GB/T 1804-m」，这是车间真正会看的那句话。</p>
+
+      <ul class="check">
+        <li><label><input type="checkbox" data-k="c8a"><span>三个视图（或平面图）尺寸链闭合，没有漏标</span></label></li>
+        <li><label><input type="checkbox" data-k="c8b"><span>机械向：用 <kbd>XL</kbd> 构造线验证「长对正、高平齐、宽相等」三条都成立</span></label></li>
+        <li><label><input type="checkbox" data-k="c8c"><span>图层全部规范，0 层零残留（QSELECT 验证）</span></label></li>
+        <li><label><input type="checkbox" data-k="c8d"><span>A3 PDF，1:1，线宽分明，标题栏填写完整</span></label></li>
+        <li><label><input type="checkbox" data-k="c8e"><span>能对着这张图，给一个不懂 CAD 的人讲清每一个尺寸是怎么来的</span></label></li>
+      </ul>
+      <div class="pit"><b>这一章唯一的标准</b>
+        <p style="margin:6px 0 0">不是「画得像教材」，是<strong>「别人拿着这张 PDF 能把这个东西做出来」</strong>。凡是需要猜的地方，就是你没标全。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 附录 A ================= -->
+<h2><span class="n">11</span>附录 A · 画不出来时去哪找图</h2>
+<p class="lead">学 CAD 最有效的补充练习不是再看教程，是<strong>拿一张别人的图照着抄</strong>。下面四个仓库都是真的 dwg / 图片，抄图时对照别人的图层和标注方式，比自己瞎画进步快得多。</p>
+
+<div class="repo">
+  <b>StudyCADCAM 练习图备份 · 1155 张 2D 练习题</b>
+  <div class="path">github.com/kkxk/studycadcam-backup</div>
+  <p>最有价值的一个。原博客 2025 年关站，有人用网页存档把 2D/3D 练习题全抓下来了，图片格式，编号连续。建议每天抄 1 张（30 分钟），从 <code class="inl">2d-cad-exercises</code> 里挑 1–50 号。抄完和图对照，差在哪一目了然。</p>
+</div>
+
+<div class="repo">
+  <b>AutoCAD 2D 机械制图（含 PNG 预览）</b>
+  <div class="path">github.com/Aadityajain-hub/AutoCAD_2D_Drawings</div>
+  <p>6 张按 ISO/BIS 标准做的机械图，每张都有 dwg + png 两版。优点是<b>有预览图</b>，不用先下载就能看难度。适合第 7 章之后练「标准标注长什么样」。</p>
+</div>
+
+<div class="repo">
+  <b>AutoCAD 2D 练习 20 题（带 dwg 源文件）</b>
+  <div class="path">github.com/ssha0/YouTube</div>
+  <p>路径 <code class="inl">files/Autodesk/AutoCAD/</code> 下 20 个 AutoCAD 2D Exercise。这 20 题难度是递增的，第 1 题到第 20 题正好对应你第 2 章到第 6 章的水平。</p>
+</div>
+
+<div class="repo">
+  <b>ezdxf · 用 Python 读写 DXF（进阶玩法）</b>
+  <div class="path">github.com/mozman/ezdxf</div>
+  <p>能读你自己的图，把图层、标注、对象数打印出来——相当于给图做「体检」。下面的附录 B 就是用它写的验收脚本。</p>
+</div>
+
+<!-- ================= 附录 B ================= -->
+<h2><span class="n">12</span>附录 B · 客观验收脚本（可选）</h2>
+<p class="lead">验收清单靠肉眼容易骗自己。这个脚本能把图里的<strong>图层清单、对象统计、标注数量</strong>直接打印出来，数字对不对一眼就知道。不想折腾 Python 可以跳过，不影响主线。</p>
+
+<p class="lead" style="font-size:13.5px"><strong>用法</strong>：① 在 CAD 里 <code class="inl">另存为</code> → 文件类型选 <strong>AutoCAD 2010 DXF (*.dxf)</strong>；② 把这个 .dxf 和下面的脚本放同一个文件夹；③ 命令行跑 <code class="inl">python check.py 你的文件名.dxf</code>。第一次用先 <code class="inl">pip install ezdxf</code>。</p>
+
+<pre><span class="c"># check.py  —— 把 DXF 当体检报告读：图层、对象、标注</span>
+import sys, collections
+import ezdxf
+
+def check(path):
+    doc = ezdxf.readfile(path)
+    msp = doc.modelspace()
+
+    print("文件：", path)
+    print("-" * 44)
+
+    <span class="c"># 1. 图层清单</span>
+    names = sorted(doc.layers.names())
+    print("图层 %d 个：" % len(names))
+    for n in names:
+        print("   ", n)
+
+    <span class="c"># 2. 实体统计（哪些东西落在哪个层）</span>
+    per_layer = collections.Counter(e.dxf.layer for e in msp)
+    print("\n各图层对象数：")
+    for k, v in sorted(per_layer.items(), key=lambda x: -x[1]):
+        print("   %-12s %4d" % (k, v))
+
+    <span class="c"># 3. 分类统计</span>
+    kinds = collections.Counter(e.dxftype() for e in msp)
+    print("\n对象类型：")
+    for k, v in sorted(kinds.items(), key=lambda x: -x[1]):
+        print("   %-12s %4d" % (k, v))
+
+    <span class="c"># 4. 标注与块</span>
+    print("\n标注 %d 个，块引用 %d 个" % (
+        len(msp.query("DIMENSION")), len(msp.query("INSERT"))))
+
+    <span class="c"># 5. 0 层残留检查（第 6 章验收用）</span>
+    zero = per_layer.get("0", 0)
+    print("\n0 层对象：%d %s" % (zero, "← 干净" if zero == 0 else "← 有残留，要归层"))
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("用法: python check.py 图纸.dxf")
+    else:
+        check(sys.argv[1])</pre>
+
+<p class="lead" style="font-size:13px;color:var(--ink3)">这脚本只读不写，不会改你的图。输出里最该看的是最后一行「0 层对象」——第 6 章之后，它应该是 0。</p>
+
+<!-- ================= 附录 C ================= -->
+<h2><span class="n">13</span>附录 C · 必须背下来的 20 个键</h2>
+<p class="lead">先背这 20 个，覆盖前五章 90% 的操作。其余的等用到再查。</p>
+
+<table>
+  <thead><tr><th style="width:16%">键</th><th style="width:26%">命令</th><th>干什么 / 什么时候用</th></tr></thead>
+  <tbody>
+    <tr><td class="num">L</td><td>直线</td><td>一切的基础，配 @相对坐标用</td></tr>
+    <tr><td class="num">C</td><td>圆</td><td>半径 / D 直径 / 2P / 3P / T 相切</td></tr>
+    <tr><td class="num">A</td><td>圆弧</td><td>三点、起点端点半径</td></tr>
+    <tr><td class="num">PL</td><td>多段线</td><td>一个整体、可带宽度、可转弧</td></tr>
+    <tr><td class="num">REC</td><td>矩形</td><td>@宽,高，本质是闭合多段线</td></tr>
+    <tr><td class="num">O</td><td>偏移</td><td>画墙厚、等距线，比复制快</td></tr>
+    <tr><td class="num">M</td><td>移动</td><td>整体搬位置</td></tr>
+    <tr><td class="num">CO</td><td>复制</td><td>可连续复制多个</td></tr>
+    <tr><td class="num">TR</td><td>修剪</td><td>两次空格 = 全图当边界</td></tr>
+    <tr><td class="num">EX</td><td>延伸</td><td>把线拉到边界上</td></tr>
+    <tr><td class="num">F</td><td>圆角</td><td>R 设半径，设 0 就是倒尖角</td></tr>
+    <tr><td class="num">RO</td><td>旋转</td><td>R 参照 = 按已有角度转</td></tr>
+    <tr><td class="num">MI</td><td>镜像</td><td>对称件画一半就够</td></tr>
+    <tr><td class="num">SC</td><td>缩放</td><td>比例因子 1.5 = 放大</td></tr>
+    <tr><td class="num">AR</td><td>阵列</td><td>矩形 / 路径 / 环形</td></tr>
+    <tr><td class="num">LA</td><td>图层</td><td>管颜色、线型、线宽</td></tr>
+    <tr><td class="num">B</td><td>块</td><td>基点选对齐的角</td></tr>
+    <tr><td class="num">DLI</td><td>线性标注</td><td>最常用，配 DCO 连续标</td></tr>
+    <tr><td class="num">Z E</td><td>范围缩放</td><td>看不见图了按这个</td></tr>
+    <tr><td class="num">Ctrl+P</td><td>打印</td><td>出 PDF 的最后一步</td></tr>
+  </tbody>
+</table>
+
+<h2><span class="n">14</span>六周怎么排</h2>
+
+<table>
+  <thead><tr><th style="width:14%">周</th><th style="width:44%">内容</th><th>周日的检查点</th></tr></thead>
+  <tbody>
+    <tr><td class="num">第 1 周</td><td>第 1–2 章（直线、圆、弧、PL、多边形）</td><td>四个 .dwg 里的前两个，尺寸全对</td></tr>
+    <tr><td class="num">第 2 周</td><td>第 3–4 章（变换、修剪圆角）</td><td>窗格和扳手能独立复现，不用看笔记</td></tr>
+    <tr><td class="num">第 3 周</td><td>第 5 章（阵列、参数化）</td><td>60 个槽的散热板画完，参数化能改数</td></tr>
+    <tr><td class="num">第 4 周</td><td>第 6 章（图层、块、样板）</td><td>有自己的 .dwt，新图打开就有图框</td></tr>
+    <tr><td class="num">第 5 周</td><td>第 7 章（标注、打印）</td><td>第一张 A3 PDF 出来，线宽分明</td></tr>
+    <tr><td class="num">第 6 周</td><td>第 8 章（大作业）</td><td>大作业 dwg + PDF 交齐</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <p>验收进度存在本机浏览器，换设备不会同步。清单打勾只是提醒，真正的标准是：<strong>关掉这份文档，你还能把这张图画出来。</strong></p>
+  <p style="margin-top:8px;color:var(--ink3)">教程源：B 站「大梦空间」CAD2020 入门 15 集／进阶 17 集／参数化详解 5 集。练习图库：GitHub（见附录 A）。软件：本机 AutoCAD 2020。</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "cad.course.v1";
+  var boxes = document.querySelectorAll(".check input[type=checkbox]");
+  var doneEl = document.getElementById("pgDone");
+  var allEl = document.getElementById("pgAll");
+  var barEl = document.getElementById("pgBar");
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }
+    catch(e){ return {}; }
+  }
+  function save(o){
+    try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){}
+  }
+  function refresh(){
+    var n = 0, i;
+    for(i=0;i<boxes.length;i++){ if(boxes[i].checked){ n++; } }
+    doneEl.textContent = n;
+    allEl.textContent = boxes.length;
+    barEl.style.width = (boxes.length ? (n / boxes.length * 100) : 0) + "%";
+  }
+
+  var st = load();
+  var i, k;
+  for(i=0;i<boxes.length;i++){
+    k = boxes[i].getAttribute("data-k");
+    if(st[k]){ boxes[i].checked = true; }
+    boxes[i].addEventListener("change", function(){
+      var s = load();
+      s[this.getAttribute("data-k")] = this.checked ? 1 : 0;
+      save(s);
+      refresh();
+    });
+  }
+  refresh();
+})();
+</script>
+</body>
+</html>
