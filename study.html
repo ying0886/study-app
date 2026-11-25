@@ -3,9 +3,12 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.36.1
+  APP_VERSION: 4.36.2
   DATA_VERSION: 2026-11-25
-  本次变更: （4.36.1）①线上此前停在 4.20.0，本次一次性追平 4.21–4.36 共 16 个次版本（思政模板解析清零、军理若干批题、英语精听句子边界重做等，明细见各自版本的变更块）；
+  本次变更: （4.36.2）①课程页附录 B 换成新做的 cad-check 命令（零依赖纯 Node 读 DXF，按章节判定），删掉原来的 ezdxf 版长代码，用户不再需要 pip install；
+            ②附录 B 直接给了真实输出样例（PASS/FAIL + 逐条怎么改），并写明它判不了什么（好不好看、PDF 线宽）；
+            ③study.html 本身无改动，只同步 cad-course.html 与版本号。
+  上次变更: （4.36.1）①线上此前停在 4.20.0，本次一次性追平 4.21–4.36 共 16 个次版本（思政模板解析清零、军理若干批题、英语精听句子边界重做等，明细见各自版本的变更块）；
             ②本轮实改只有一件事：挂 CAD 自学入口（详见 4.36.0 那条），版本号 +1 是为了让 update.json 明显大于线上旧值，客户端才会弹更新条；
             ③附带同步：CAD自学/CAD自学路线.html → 线上 cad-course.html（study.html 里 CAD 页的跳转在线上走这个 ASCII 名，中文目录会乱码）。
   上次变更: （4.36.0）挂 CAD 自学入口（不内置课程数据，纯前端分支）——
@@ -1670,7 +1673,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.36.1">
+<meta name="app-version" content="4.36.2">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -42400,7 +42403,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.36.1";
+  var APP_VERSION = "4.36.2";
   var DATA_VERSION = "2026-11-25";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */

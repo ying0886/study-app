@@ -765,59 +765,35 @@
 <div class="repo">
   <b>ezdxf · 用 Python 读写 DXF（进阶玩法）</b>
   <div class="path">github.com/mozman/ezdxf</div>
-  <p>能读你自己的图，把图层、标注、对象数打印出来——相当于给图做「体检」。下面的附录 B 就是用它写的验收脚本。</p>
+  <p>能读你自己的图，把图层、标注、对象数读成程序能处理的数据。日常验收用不到它（命令已经写好了），等你想自己写更复杂的检查时再从这儿入手。</p>
 </div>
 
 <!-- ================= 附录 B ================= -->
-<h2><span class="n">12</span>附录 B · 客观验收脚本（可选）</h2>
-<p class="lead">验收清单靠肉眼容易骗自己。这个脚本能把图里的<strong>图层清单、对象统计、标注数量</strong>直接打印出来，数字对不对一眼就知道。不想折腾 Python 可以跳过，不影响主线。</p>
+<h2><span class="n">12</span>附录 B · 交作业前跑一遍体检</h2>
+<p class="lead">验收清单靠肉眼容易骗自己。这个脚本会把每一条验收直接判成 PASS / FAIL，失败项还给一句「该怎么改」——像下面这样：</p>
 
-<p class="lead" style="font-size:13.5px"><strong>用法</strong>：① 在 CAD 里 <code class="inl">另存为</code> → 文件类型选 <strong>AutoCAD 2010 DXF (*.dxf)</strong>；② 把这个 .dxf 和下面的脚本放同一个文件夹；③ 命令行跑 <code class="inl">python check.py 你的文件名.dxf</code>。第一次用先 <code class="inl">pip install ezdxf</code>。</p>
+<p class="lead" style="font-size:13.5px"><strong>用法（三步，不用装任何东西）</strong>：① CAD 里 <code class="inl">另存为</code> → 文件类型选 <strong>AutoCAD 2010 DXF (*.dxf)</strong>，存进 <code class="inl">作业/</code>；② 打开命令行，进到 <code class="inl">D:\复习程序</code>；③ 跑：</p>
 
-<pre><span class="c"># check.py  —— 把 DXF 当体检报告读：图层、对象、标注</span>
-import sys, collections
-import ezdxf
+<p class="lead" style="font-size:13px"><code class="inl">node .workbuddy/skills/cad-check/scripts/cadcheck.mjs 作业/01-阶梯剖面.dxf --ch=1</code></p>
 
-def check(path):
-    doc = ezdxf.readfile(path)
-    msp = doc.modelspace()
+<p class="lead" style="font-size:13px;color:var(--ink3)">`--ch=1` 换成你画的第几章。不加就是只做通用检查（单位、实体数、图层、0 层残留）。</p>
 
-    print("文件：", path)
-    print("-" * 44)
+<pre><span class="c">== 第 1 章 体检 · 01-阶梯剖面.dxf ==</span>
+单位 毫米 · 实体 14 个 · 图层 1 个 · 0 层 14 个
 
-    <span class="c"># 1. 图层清单</span>
-    names = sorted(doc.layers.names())
-    print("图层 %d 个：" % len(names))
-    for n in names:
-        print("   ", n)
+<span class="c">OK   </span>DXF 能解析出实体  [实体 14 个]
+<span class="c">OK   </span>单位是毫米  [毫米]
+<span class="c">FAIL </span>所有线段都是水平或垂直  [13 / 14 条]
+     → 有斜线说明 F8 正交没开，或者某一段用了绝对坐标
+<span class="c">FAIL </span>右上角到达 (1800,900)  [包围盒 1799.8 × 900]
+     → 6 级 × 300 宽 = 1800，6 级 × 150 高 = 900
+<span class="c">OK   </span>起点在 (0,0)
+<span class="c">OK   </span>竖直段里有 6 段长 150  [6 段]
 
-    <span class="c"># 2. 实体统计（哪些东西落在哪个层）</span>
-    per_layer = collections.Counter(e.dxf.layer for e in msp)
-    print("\n各图层对象数：")
-    for k, v in sorted(per_layer.items(), key=lambda x: -x[1]):
-        print("   %-12s %4d" % (k, v))
+5 通过 / 2 失败</pre>
 
-    <span class="c"># 3. 分类统计</span>
-    kinds = collections.Counter(e.dxftype() for e in msp)
-    print("\n对象类型：")
-    for k, v in sorted(kinds.items(), key=lambda x: -x[1]):
-        print("   %-12s %4d" % (k, v))
-
-    <span class="c"># 4. 标注与块</span>
-    print("\n标注 %d 个，块引用 %d 个" % (
-        len(msp.query("DIMENSION")), len(msp.query("INSERT"))))
-
-    <span class="c"># 5. 0 层残留检查（第 6 章验收用）</span>
-    zero = per_layer.get("0", 0)
-    print("\n0 层对象：%d %s" % (zero, "← 干净" if zero == 0 else "← 有残留，要归层"))
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("用法: python check.py 图纸.dxf")
-    else:
-        check(sys.argv[1])</pre>
-
-<p class="lead" style="font-size:13px;color:var(--ink3)">这脚本只读不写，不会改你的图。输出里最该看的是最后一行「0 层对象」——第 6 章之后，它应该是 0。</p>
+<p class="lead" style="font-size:13px;color:var(--ink3)">这脚本只读不写，不会改你的图。判定口径是我按每章任务书定的，不是唯一答案——你想加一条「必须 6 级台阶」之类的规则，改脚本里 <code class="inl">chapters</code> 对应的数字就行，别改容差去凑。</p>
+<p class="lead" style="font-size:13px;color:var(--ink3)">它判不了「好不好看」，也判不了那张 PDF 的线宽——这两件事只能自己打开看。</p>
 
 <!-- ================= 附录 C ================= -->
 <h2><span class="n">13</span>附录 C · 必须背下来的 20 个键</h2>

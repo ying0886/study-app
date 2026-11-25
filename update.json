@@ -1,6 +1,6 @@
 {
-  "version": "4.36.1",
+  "version": "4.36.2",
   "url": "https://ying0886.github.io/study-app/study.html",
-  "notes": "①线上此前停在 4.20.0，本次一次性追平 4.21–4.36 共 16 个次版本（思政模板解析清零、军理若干批题、英语精听句子边界重做等，明细见各自版本的变更块）；②本轮实改只有一件事：挂 CAD 自学入口（详见 4.36.0 那条），版本号 +1 是为了让 update.json 明显大于线上旧值，客户端才会弹更新条；③附带同步：CAD自学/CAD自学路线.html → 线上 cad-course.html（study.html 里 CAD 页的跳转在线上走这个 ASCII 名，中文目录会乱码）。",
+  "notes": "①课程页附录 B 换成新做的 cad-check 命令（零依赖纯 Node 读 DXF，按章节判定），删掉原来的 ezdxf 版长代码，用户不再需要 pip install；②附录 B 直接给了真实输出样例（PASS/FAIL + 逐条怎么改），并写明它判不了什么（好不好看、PDF 线宽）；③study.html 本身无改动，只同步 cad-course.html 与版本号。",
   "date": "2026-11-25"
 }
