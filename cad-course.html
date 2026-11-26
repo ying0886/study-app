@@ -114,6 +114,18 @@
   .check input{margin:4px 0 0;flex:0 0 auto;width:16px;height:16px;accent-color:var(--accent)}
   .check input:checked + span{color:var(--ink3);text-decoration:line-through}
 
+  /* ---------- 30 天打卡表 ---------- */
+  .punch tbody td{padding:7px 8px;font-size:13px;vertical-align:top}
+  .punch tbody tr:nth-child(even){background:#fbfaf6}
+  .punch .grp td{background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.06em;padding:6px 8px}
+  .punch td.d{font-variant-numeric:tabular-nums;color:var(--ink3);white-space:nowrap;width:52px}
+  .punch td.ck{width:44px;text-align:center}
+  .punch input{width:17px;height:17px;margin:1px 0 0;accent-color:var(--accent);cursor:pointer}
+  .punch td.ck label{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .punch b{font-weight:600}
+  .punch em{font-style:normal;color:var(--accent);font-family:Consolas,"Courier New",monospace;font-size:12px}
+  .tb-vid{font-size:12px;line-height:1.45;color:var(--ink2)}
+
   .pit{margin:14px 0 0;padding:10px 14px;background:var(--warn-soft);border-radius:3px;font-size:13px;color:#6d4a15}
   .pit b{color:var(--warn);font-weight:600}
   .pit ul{margin:4px 0 0;padding-left:18px}
@@ -144,6 +156,20 @@
     header{padding-top:32px}
     .ch-hd{padding:16px 14px 12px}
     .ch-bd{padding:14px}
+
+    /* 30 天表在手机上五列挤成竖排，改成「一行一块」 */
+    .punch thead{display:none}
+    .punch,.punch tbody,.punch tr,.punch td{display:block}
+    .punch tbody tr:not(.grp){position:relative;padding:10px 2px 10px 44px;border-bottom:1px solid var(--line)}
+    .punch tbody td{padding:0;border:0;width:auto}
+    .punch td.ck{position:absolute;left:0;top:2px;width:22px;text-align:left}
+    .punch td.ck label{width:40px;height:44px;display:flex;align-items:center;justify-content:center;margin:-8px 0 0 -10px}
+    .punch td.d{display:inline-block;font-weight:600;color:var(--ink);font-size:12px}
+    .punch td:nth-child(3){display:inline-block;margin-left:8px;font-size:11px}
+    .punch td:nth-child(4){margin-top:3px;font-size:13.5px;line-height:1.55}
+    .punch td:nth-child(5){margin-top:4px;font-size:12px;line-height:1.5}
+    .punch td:nth-child(5)::before{content:"过关 · ";color:var(--accent);font-weight:600}
+    .punch .grp td{padding:6px 8px;margin-top:10px}
   }
 </style>
 </head>
@@ -157,7 +183,7 @@
   </h1>
   <div class="meta">
     <span class="tag">软件：本机 AutoCAD 2020 简体中文</span>
-    <span class="tag">主教程：B 站「大梦空间」CAD2020 套课</span>
+    <span class="tag">主教程：B 站「大梦空间」CAD2020 套课（入门 15 ＋ 中级 16 ＋ 高级 15 ＋ 参数化 5）</span>
     <span class="tag">验收：8 个 .dwg + 1 张 A3 PDF</span>
     <span class="tag">每日 45–60 分钟</span>
   </div>
@@ -181,7 +207,7 @@
   </div>
   <div class="pr">
     <b>4. 卡住先查 F1，再查 GitHub</b>
-    <span>CAD 里按 F1 是 Autodesk 官方帮助，比任何教程都准。图库里画不出来的图，附录 A 有现成的练习库。</span>
+    <span>CAD 里按 F1 是 Autodesk 官方帮助，比任何教程都准。画不出来的图，附录 A 有 30 天抄图表，按当天的章节进度取图。</span>
   </div>
 </div>
 
@@ -197,26 +223,35 @@
   </tbody>
 </table>
 
-<p class="lead" style="margin-top:16px"><strong>找法（链接失效就用这个）</strong>：B 站搜 <code class="inl">大梦空间 CAD2020</code>，认两个合集——<br>
-① <strong>CAD2020 入门级教程（全套 15 节课）</strong>，UP 主主页置顶，播放量约 1000 万，B 站 CAD 区第一；<br>
-② <strong>CAD2020 进阶教程</strong>（图层 / 块 / 填充 / 标注 / 打印，约 17 集）+ 附带的<strong>参数化详解 5 集</strong>。</p>
+<p class="lead" style="margin-top:16px"><strong>这套课现在有新旧两版，先看清区别</strong>：旧版是「入门 15 ＋ 进阶 17 ＋ 参数化 5」，新版把进阶那 17 集重录、拆成<strong>中级班 16 集 ＋ 高级班 15 集</strong>。内容基本对应，但<strong>集号全变了</strong>——所以下面一章一章列的是<strong>集标题，不是集号</strong>，按标题在合集目录里找，新旧版都不会找错。</p>
 
-<p class="lead">参考 BV 号：入门 <code class="inl">BV1Hx411f772</code>，进阶 <code class="inl">BV1Ut411u7yr</code>。B 站 BV 号偶尔会因合集调整失效，搜 UP 主名最稳。</p>
-<p class="lead" style="color:var(--ink3);font-size:13px">补一句：这套课的入门 15 集<strong>没有讲矩形（REC）和偏移（O）</strong>——都是两分钟能补上的基础命令，我把它们放在第 3 章最后一题里，不必为此换教程。</p>
+<table style="margin-top:10px">
+  <thead><tr><th style="width:26%">合集</th><th style="width:14%">集数</th><th>大致内容</th></tr></thead>
+  <tbody>
+    <tr><td>零基础入门（新版）</td><td class="num">15</td><td>界面、直线、圆、弧、多段线、多边形、移动复制、拉伸、旋转、镜像缩放对齐、修剪延伸、圆角倒角、曲线连接、三种阵列、参数化入门</td></tr>
+    <tr><td>参数化专题讲解＋练习</td><td class="num">5</td><td>两种界面下的参数化认知、几何约束、标注约束、三角形案例、圆相切三角的对错画法</td></tr>
+    <tr><td>基础中级班（新版）</td><td class="num">16</td><td>打断／分解／合并、修订云线、填充、创建块、插入块、块编辑、文字块（属性块）、块的写出和外部插入、线型、图层的新建和切换、图层的应用、特性匹配、矩形与环形阵列、阵列的修改与应用、路径阵列、定数等分与定距等分</td></tr>
+    <tr><td>高级班（新版）</td><td class="num">15</td><td>拉伸、对齐、插入图片、单行文字、多行文字、自制表格、导入表格、标注的使用／引线／补充／样式、坐标、出图比例、布局与视口、打印</td></tr>
+  </tbody>
+</table>
+
+<p class="lead" style="margin-top:14px"><strong>找法（链接失效就用这个）</strong>：B 站搜 <code class="inl">大梦空间 CAD2020</code>，认 UP 主主页置顶的四个合集，按名字对号入座。入门合集播放量约 1000 万，B 站 CAD 区第一。<br>
+参考 BV 号：入门 <code class="inl">BV1Hx411f772</code>，旧版进阶 <code class="inl">BV1Ut411u7yr</code>。B 站合集会调整、旧 BV 号会失效，<strong>搜 UP 主名最稳</strong>。</p>
+<p class="lead" style="color:var(--ink3);font-size:13px">补四句：① 入门 15 集<strong>没有讲矩形（REC）和偏移（O）</strong>——都是两分钟能补上的基础命令，我把它们放在第 3 章最后一题里，不必为此换教程；② <strong>中级 16 集、高级班 15 集的目录都逐一核对过了</strong>（2026-11-26），所以正文里写的集号可以直接用；③ 高级班讲的全是「让图能交出去」的活：<strong>文字、表格、标注、引线、出图比例、布局视口、打印</strong>，第 7 章就是按这个顺序排的；④ <strong>新版里没有讲三视图的那一集</strong>（旧版进阶第 2 集「绘图员面试题」），所以第 8 章改成任务书 + 抄图自学。</p>
 
 <h2><span class="n">02</span>八章总览</h2>
 
 <table>
-  <thead><tr><th style="width:6%">章</th><th style="width:28%">内容</th><th style="width:34%">要交的东西</th><th style="width:14%">视频</th><th style="width:10%">练习</th></tr></thead>
+  <thead><tr><th style="width:6%">章</th><th style="width:26%">内容</th><th style="width:30%">要交的东西</th><th style="width:24%">视频（按集标题找）</th><th style="width:8%">练习</th></tr></thead>
   <tbody>
-    <tr><td class="num">1</td><td>界面、坐标系、直线</td><td>01-阶梯剖面.dwg</td><td class="num">01–02</td><td class="num">2.5h</td></tr>
-    <tr><td class="num">2</td><td>圆、圆弧、多段线、多边形</td><td>02-圆形徽标.dwg</td><td class="num">03–06</td><td class="num">3.5h</td></tr>
-    <tr><td class="num">3</td><td>移动/复制/拉伸/旋转/镜像/缩放/对齐</td><td>03-窗格立面.dwg</td><td class="num">07–10</td><td class="num">3h</td></tr>
-    <tr><td class="num">4</td><td>修剪延伸、圆角倒角、曲线连接</td><td>04-开口扳手.dwg</td><td class="num">11–13</td><td class="num">3h</td></tr>
-    <tr><td class="num">5</td><td>三种阵列、参数化约束</td><td>05-散热板.dwg ＋ 05b-参数化.dwg</td><td class="num">14–15 ＋5</td><td class="num">3h</td></tr>
-    <tr><td class="num">6</td><td>图层、线型、块、样板文件</td><td>06-A3图框.dwt ＋ 06-扳手-规范版.dwg</td><td class="num">进阶 03–05/11/12</td><td class="num">3.5h</td></tr>
-    <tr><td class="num">7</td><td>标注、文字、填充、打印出图</td><td>07-扳手-A3.pdf</td><td class="num">进阶 13–17</td><td class="num">3h</td></tr>
-    <tr><td class="num">8</td><td>三视图 + 综合大作业</td><td>08-大作业.dwg ＋ A3 PDF</td><td class="num">进阶 02</td><td class="num">8h</td></tr>
+    <tr><td class="num">1</td><td>界面、坐标系、直线</td><td>01-阶梯剖面.dwg</td><td class="tb-vid">入门·界面设置／直线 ＋ 高级·坐标（选看）</td><td class="num">2.5h</td></tr>
+    <tr><td class="num">2</td><td>圆、圆弧、多段线、多边形</td><td>02-圆形徽标.dwg</td><td class="tb-vid">入门·圆／圆弧／多段线／多边形</td><td class="num">3.5h</td></tr>
+    <tr><td class="num">3</td><td>移动/复制/拉伸/旋转/镜像/缩放/对齐</td><td>03-窗格立面.dwg</td><td class="tb-vid">入门·移动与复制／拉伸／旋转／镜像缩放对齐 ＋ 高级·拉伸／对齐</td><td class="num">3h</td></tr>
+    <tr><td class="num">4</td><td>修剪延伸、圆角倒角、曲线连接</td><td>04-开口扳手.dwg</td><td class="tb-vid">入门·修剪和延伸／圆角和倒角／曲线连接</td><td class="num">3h</td></tr>
+    <tr><td class="num">5</td><td>三种阵列、参数化约束</td><td>05-散热板.dwg ＋ 05b-参数化.dwg</td><td class="tb-vid">入门·三种阵列／参数化 ＋ 参数化专题 5 集 ＋ 中级 13–16·阵列与等分</td><td class="num">3h</td></tr>
+    <tr><td class="num">6</td><td>图层、线型、块、样板文件</td><td>06-A3图框.dwt ＋ 06-扳手-规范版.dwg</td><td class="tb-vid">中级 04–12·块四集（含文字块）／线型／图层两集／特性匹配</td><td class="num">3.5h</td></tr>
+    <tr><td class="num">7</td><td>标注、文字、填充、打印出图</td><td>07-扳手-A3.pdf</td><td class="tb-vid">中级·填充 ＋ 高级·文字／表格／标注四集／引线／出图比例／布局视口／打印</td><td class="num">3h</td></tr>
+    <tr><td class="num">8</td><td>三视图 + 综合大作业</td><td>08-大作业.dwg ＋ A3 PDF</td><td class="tb-vid">无对应视频（详见本章）</td><td class="num">8h</td></tr>
   </tbody>
 </table>
 
@@ -239,10 +274,11 @@
   </div>
   <div class="ch-bd">
 
-    <div class="lbl">视频</div>
+    <div class="lbl">视频（按集标题找）</div>
     <ol class="vid">
       <li><em>入门 01</em> 界面设置及基础操作 <span>5:49</span></li>
       <li><em>入门 02</em> 直线绘图工具 <span>5:40</span></li>
+      <li><em>高级 12</em> 坐标 <span>选看，第 1 章会用到</span></li>
     </ol>
     <p class="lead" style="font-size:13px;margin-top:10px">第 1 集里有三件事必须做：右下角齿轮切到<strong>「草图与注释」</strong>工作空间；<kbd>OP</kbd> 打开选项 → 显示 → 十字光标拉到 100；记住 <kbd>Z</kbd> <kbd>E</kbd> 看全图和 <kbd>P</kbd> 平移。</p>
 
@@ -359,17 +395,19 @@
     <div class="ch-no">3</div>
     <div class="ch-tt">
       <h3>移动、复制、拉伸、旋转、镜像、缩放</h3>
-      <p>入门 07–10 集 · 约 16 分钟 · 练习 3 小时</p>
+      <p>入门·移动复制／拉伸／旋转／镜像缩放对齐 ＋ 高级·拉伸／对齐（进阶用法）· 约 22 分钟 · 练习 3 小时</p>
     </div>
   </div>
   <div class="ch-bd">
 
-    <div class="lbl">视频</div>
+    <div class="lbl">视频（按集标题找，不按集号）</div>
     <ol class="vid">
-      <li><em>入门 07</em> 移动与复制 <span>5:51</span></li>
-      <li><em>入门 08</em> 拉伸 <span>2:35</span></li>
-      <li><em>入门 09</em> 旋转 <span>3:57</span></li>
-      <li><em>入门 10</em> 镜像、缩放、对齐缩放 <span>5:54</span></li>
+      <li><em>入门</em> 移动与复制 <span>5:51</span></li>
+      <li><em>入门</em> 拉伸 <span>2:35</span></li>
+      <li><em>入门</em> 旋转 <span>3:57</span></li>
+      <li><em>入门</em> 镜像、缩放、对齐缩放 <span>5:54</span></li>
+      <li><em>高级 01</em> 拉伸 <span>跟入门那集配着看，讲得更细</span></li>
+      <li><em>高级 02</em> 对齐 <span>AL，入门那集只带了一句</span></li>
     </ol>
 
     <div class="lbl">概念自测</div>
@@ -485,16 +523,20 @@
     <div class="ch-no">5</div>
     <div class="ch-tt">
       <h3>批量复制，和用数字驱动图形</h3>
-      <p>入门 14–15 集 ＋ 参数化详解 5 集 · 约 40 分钟 · 练习 3 小时</p>
+      <p>入门·阵列／参数化 ＋ 参数化专题 5 集 ＋ 中级·阵列四集 · 约 60 分钟 · 练习 3 小时</p>
     </div>
   </div>
   <div class="ch-bd">
 
-    <div class="lbl">视频</div>
+    <div class="lbl">视频（按集标题找，不按集号）</div>
     <ol class="vid">
-      <li><em>入门 14</em> 矩形/路径/环形阵列 <span>6:32</span></li>
-      <li><em>入门 15</em> 参数化 <span>3:05</span></li>
-      <li><em>参数化 01–05</em> 几何约束/标注约束/三角案例 <span>约 30 分</span></li>
+      <li><em>入门</em> 矩形阵列 / 路径阵列 / 环形阵列 <span>6:32</span></li>
+      <li><em>中级 13</em> 矩形阵列和环形阵列 <span>参数面板讲全</span></li>
+      <li><em>中级 14</em> 矩形阵列和环形阵列的修改与应用 <span>改完怎么调整，这集最实用</span></li>
+      <li><em>中级 15</em> 路径阵列 <span>沿曲线等距排</span></li>
+      <li><em>中级 16</em> 定数等分和定距等分 <span>DIV / ME，配合点样式用</span></li>
+      <li><em>入门</em> 参数化 <span>3:05</span></li>
+      <li><em>参数化 01–05</em> 几何约束 / 标注约束 / 三角案例 <span>约 30 分</span></li>
     </ol>
 
     <div class="lbl">概念自测</div>
@@ -562,17 +604,23 @@
     <div class="ch-no">6</div>
     <div class="ch-tt">
       <h3>把手上的画，变成一张规范的图</h3>
-      <p>进阶 03–05 / 11 / 12 集 · 约 40 分钟 · 练习 3.5 小时</p>
+      <p>中级 04–12 连着看（9 集，UP 主就是这么排的）· 约 50 分钟 · 练习 3.5 小时</p>
     </div>
   </div>
   <div class="ch-bd">
 
-    <div class="lbl">视频</div>
+    <div class="lbl">视频（按集标题找，也按集号——这套是连号的）</div>
     <ol class="vid">
-      <li><em>进阶 03–05</em> 图层简介 / 新建 / 图层工具 <span>约 20 分</span></li>
-      <li><em>进阶 11</em> 颜色与线型 <span>约 6 分</span></li>
-      <li><em>进阶 12</em> 块的创建和注意点 <span>约 8 分</span></li>
-      <li><em>进阶 06–10</em> 点样式/打断/等分/云线/构造线 <span>选看</span></li>
+      <li><em>中级 04</em> 创建块 <span>必修，块这一章的地基</span></li>
+      <li><em>中级 05</em> 插入块 <span>I 命令，注意插入点与缩放</span></li>
+      <li><em>中级 06</em> 块编辑 <span>改块不用炸开</span></li>
+      <li><em>中级 07</em> 文字块 <span><b>属性块</b>，标题栏的正规做法</span></li>
+      <li><em>中级 08</em> 块的写出和外部插入 <span>WBLOCK，跨图纸用</span></li>
+      <li><em>中级 09</em> 线型 <span>点划线画不出来，看本章自测第 4 题</span></li>
+      <li><em>中级 10</em> 图层的新建和切换</li>
+      <li><em>中级 11</em> 图层的应用 <span>本章重点，图层怎么分工</span></li>
+      <li><em>中级 12</em> 特性匹配 <span>MA，刷格式用</span></li>
+      <li><em>选看</em> 中级 01 打断、分解与合并／中级 02 修订云线 <span>各 3–5 分</span></li>
     </ol>
 
     <div class="lbl">概念自测</div>
@@ -582,6 +630,7 @@
       <details class="q"><summary>图层「关闭」和「冻结」有什么区别？</summary><div class="ans">关闭只是看不见，还参与运算；<b>冻结完全不参与重生成和打印预演</b>，大图卡的时候冻结比关闭有效得多。打印不想出现的图层，用冻结。</div></details>
       <details class="q"><summary>中心线设成 DASHED 线型，画出来还是一根实线，为什么？</summary><div class="ans">线型比例太小，虚线密到看不见。<b>输 <kbd>LTSCALE</kbd>，把比例调大（比如 10 或 20）</b>，或者改那个图层的「线型比例」。这是新手 100% 会遇到的。</div></details>
       <details class="q"><summary><kbd>B</kbd> 和 <kbd>W</kbd> 都是做块，区别？</summary><div class="ans"><b>B = 内部块</b>，只存在当前这张图里；<b>W = 写块</b>，单独存成一个 .dwg 文件，可以插到任何图里。标题栏、标准件做成 W。</div></details>
+      <details class="q"><summary>普通块和属性块差在哪？标题栏为什么要用属性块？</summary><div class="ans">普通块里的字是<b>死的</b>，改一次要进块编辑器；属性块里的字是<b>可填的字段</b>（用 <kbd>ATT</kbd> 定义的），插入时弹框让你填，双击还能改，将来还能用「数据提取」把几十张图的图名一次导成表格。标题栏、图框、标准件这类「结构固定、内容每张不同」的东西，标准做法都是属性块。</div></details>
       <details class="q"><summary>改了块里的一条线，图里所有同名块都变了，靠什么实现的？</summary><div class="ans">因为块是<b>引用</b>，改的是「块定义」。用 <kbd>BEDIT</kbd>（块编辑器）或双击块进入编辑，改一次全部引用同步更新——这才是块的真正价值。</div></details>
     </div>
 
@@ -595,14 +644,16 @@
         <li>新建图纸，<kbd>UNITS</kbd> 确认单位是毫米。</li>
         <li>建图层（<kbd>LA</kbd>）：<b>轮廓</b>（白，线宽 0.3）、<b>中心线</b>（红，线型 CENTER，线宽 0.13）、<b>标注</b>（绿）、<b>文字</b>（青）、<b>填充</b>（灰）。</li>
         <li>在「图框」层画 420×297 外框，再 <kbd>O</kbd> 向内偏移 5；左边那条再单独偏移到 25（装订边）。</li>
-        <li>右下角画 180×56 的标题栏，填「图名 / 比例 / 日期 / 姓名」四格。</li>
-        <li>全选标题栏 → <kbd>B</kbd> → 名字 <b>TITLE-A3</b> → <b>基点一定要选右下角</b> → 确定。</li>
+        <li>右下角画 180×56 的标题栏框线，按「图名 / 比例 / 日期 / 姓名」分成四格。</li>
+        <li>用 <kbd>ATT</kbd>（属性定义）在四格里各放一个文字属性：标记分别是 <b>TITLE / SCALE / DATE / NAME</b>，提示写中文，默认值留「未填」，文字高 3.5。这是「文字块」的核心——以后插入时它会弹框让你填，不用每次改字。</li>
+        <li>全选标题栏（框线 + 四个属性）→ <kbd>B</kbd> → 名字 <b>TITLE-A3</b> → <b>基点一定要选右下角</b> → 确定。这样它就成了一个<b>属性块</b>。</li>
+        <li>试插一个：<kbd>I</kbd> 插入 TITLE-A3，看它是不是弹出四个填框。填完双击块还能再改——这一步通过了，第 7 章就有标题栏可用。</li>
         <li>新建标注样式 <kbd>D</kbd>：文字高 3.5，箭头 2.5，全局比例 1，名字 <b>GB-3.5</b>。</li>
         <li>另存为 → 文件类型选 <b>AutoCAD 图形样板（*.dwt）</b> → 存进 作业 目录。</li>
       </ol>
       <ul class="check">
         <li><label><input type="checkbox" data-k="c6a"><span>图层表里正好 5 个自建图层（加上 0 层共 6 个），名字和颜色对</span></label></li>
-        <li><label><input type="checkbox" data-k="c6b"><span>点标题栏，特性显示「块参照」而不是一堆线</span></label></li>
+        <li><label><input type="checkbox" data-k="c6b"><span>双击标题栏弹出属性框，能改图名 / 比例 / 日期 / 姓名（说明做成了属性块）</span></label></li>
         <li><label><input type="checkbox" data-k="c6c"><span>中心线图层画一条线，显示为点划线（不是实线）</span></label></li>
         <li><label><input type="checkbox" data-k="c6d"><span>新建文件 → 选这个 dwt，图框和图层直接就在</span></label></li>
       </ul>
@@ -637,18 +688,31 @@
     <div class="ch-no">7</div>
     <div class="ch-tt">
       <h3>标全尺寸，打印出图</h3>
-      <p>进阶 13–17 集 · 约 45 分钟 · 练习 3 小时</p>
+      <p>中级·填充 ＋ 高级班文字／表格／标注／布局／打印（15 集里 12 集都用得上）· 约 60 分钟 · 练习 3 小时</p>
     </div>
   </div>
   <div class="ch-bd">
 
-    <div class="lbl">视频</div>
+    <div class="lbl">视频（按集标题找，不按集号）</div>
     <ol class="vid">
-      <li><em>进阶 13–14</em> 图案填充 / 修改 <span>约 16 分</span></li>
-      <li><em>进阶 15</em> 图元显示顺序 <span>约 5 分</span></li>
-      <li><em>进阶 16</em> 标注尺寸讲解 <span>约 12 分</span></li>
-      <li><em>进阶 17</em> 圆心、中心线 <span>约 6 分</span></li>
+      <li><em>中级 03</em> 图案填充 <span>约 10 分</span></li>
+      <li><em>中级</em> 图案填充修改 <span>旧版进阶 14，配套看</span></li>
+      <li><em>高级 04</em> 单行文字 <span>DT，短标签用它</span></li>
+      <li><em>高级 05</em> 多行文字 <span>MT，技术要求用这个</span></li>
+      <li><em>高级 06</em> 自制表格 <span>标题栏、明细表就靠它</span></li>
+      <li><em>高级 07</em> 导入表格 <span>Excel 里排好再导，比手画快</span></li>
+      <li><em>高级 08</em> 标注的使用 <span>DLI／DAL／DRA／DDI／DAN／DCO</span></li>
+      <li><em>高级 09</em> 引线 <span>LE／MLEADER，尺寸压图时用</span></li>
+      <li><em>高级 10</em> 标注的补充讲解 <span>本章重点，别跳</span></li>
+      <li><em>高级 11</em> 标注样式 <span>D，改一处全图跟着变</span></li>
+      <li><em>高级 13</em> 出图比例 <span>1:1、1:2、1:5 怎么定</span></li>
+      <li><em>高级 14</em> 布局与视口 <span>模型空间画图、布局空间出图</span></li>
+      <li><em>高级 15</em> 打印 <span>最后一集，边看边打一张 A4 试</span></li>
     </ol>
+
+    <div class="pit" style="margin-top:14px"><b>这一章的视频是全套课最多的一章</b>
+      <p style="margin:6px 0 0">十几集加起来不到 1 小时，但<strong>别一次看完</strong>。顺序是：先文字＋表格（04–07）把标题栏做出来，再标注（08–11）标尺寸，最后布局打印（13–15）出图。看完一段就在扳手上试一次，比连看十几集有用。</p>
+    </div>
 
     <div class="lbl">概念自测</div>
     <div class="qwrap">
@@ -658,6 +722,9 @@
       <details class="q"><summary>要输出 PDF，打印机选哪个？</summary><div class="ans"><b>DWG To PDF.pc3</b>。图纸尺寸选 A3，打印区域选「窗口」框住图框，勾上「居中打印」和「打印对象线宽」，比例选 1:1。</div></details>
       <details class="q"><summary>填充（H）跟着边界改了不跟着变，为什么？</summary><div class="ans">填充的<b>「关联」</b>没开。重建的时候勾上关联，边界一动填充自动重算。另外填充不显示，通常是「填充显示」<kbd>FILLMODE</kbd> 被关了。</div></details>
       <details class="q"><summary>尺寸线压住了图形，怎么调？</summary><div class="ans">选中标注，拖<b>夹点</b>挪位置；或者用 <kbd>MLEADER</kbd> 引线把数字引到图外。别用直线去遮挡，会留一堆碎线。</div></details>
+      <details class="q"><summary>单行文字（DT）和多行文字（MT）该用哪个？</summary><div class="ans"><b>短标签用 DT，成段的话用 MT</b>。DT 每行是一个独立对象，写好几行就有几个对象，适合「A-A」「R6」这种；MT 一个对象里能放多段、能单独加粗某几个字、能堆叠公差，技术要求必须用它。改一整段话，MT 是双击一次的事，DT 得挨个改。</div></details>
+      <details class="q"><summary>标题栏用属性块还是表格？</summary><div class="ans"><b>标题栏用属性块，明细表用表格</b>。标题栏是每张图都要、格子固定、只需改几个字——做成属性块（中级 07 的「文字块」+ 第 6 章的 TITLE-A3），插入时弹框填，双击还能改。明细表（零件清单）行数会变，得用 <kbd>TABLE</kbd>，加行删行不用重画。</div></details>
+      <details class="q"><summary>模型空间画好了，为什么还要进布局？</summary><div class="ans">模型空间是<b>按真实尺寸 1:1 画的图</b>，布局空间是<b>那张纸</b>。出图比例、图框、标题栏放在布局里，视口负责把模型「摆」到纸上。这样同一张图要出 A3 和 A1，不用改图形，只改视口比例。高级 13–14 两集讲的就是这件事。</div></details>
     </div>
 
     <div class="task">
@@ -667,9 +734,10 @@
       </div>
       <p>给第 6 章的扳手标全尺寸、写技术要求、套 A3 图框，打印成一张<strong>能交给车间</strong>的 PDF。这张 PDF 是整个课程前七章的成果证明。</p>
       <ol class="steps">
-        <li>打开 06-扳手-规范版，在「中心线」层给两个圆加中心十字线（进阶 17 的方法，或 <kbd>DCE</kbd> 圆心标记）。</li>
+        <li>打开 06-扳手-规范版，在「中心线」层给两个圆加中心十字线（<kbd>DCE</kbd> 圆心标记，或直接画两条点划线）。</li>
         <li>「标注」层上标：两圆中心距 <kbd>DLI</kbd> 160、两个直径 <kbd>DDI</kbd> 44 和 30、开口宽 18、圆角 <kbd>DRA</kbd> R6、总长。</li>
-        <li>「文字」层用 <kbd>MT</kbd> 写三条技术要求：① 未注圆角 R2；② 去毛刺，无锐边；③ 材料 45 钢。</li>
+        <li>「文字」层用 <kbd>MT</kbd> 写三条技术要求：① 未注圆角 R2；② 去毛刺，无锐边；③ 材料 45 钢。写的时候注意 <kbd>MT</kbd> 只有文字，不要混进引线。</li>
+        <li>标题栏用第 6 章做好的属性块：<kbd>I</kbd> 插入 <b>TITLE-A3</b>，弹出的四个框依次填「开口扳手 / 1:1 / 2026-11-26 / 你的名字」。<strong>标题栏用属性块，不用表格</strong>——一次做好、每张图重复用；表格是留给行数会变的明细表（高级 06、07 两集讲的就是它）。</li>
         <li><kbd>Ctrl</kbd>+<kbd>P</kbd> → 打印机 DWG To PDF.pc3 → 图纸 A3 → 打印区域「窗口」→ 框住内框 → 居中 ✓ → 打印对象线宽 ✓ → 比例 1:1 → 预览 → 输出。</li>
         <li>用 PDF 阅读器打开，放大到 200% 检查线宽和文字。</li>
       </ol>
@@ -700,13 +768,15 @@
     <div class="ch-no">8</div>
     <div class="ch-tt">
       <h3>按行业标准画一张能交出去的图</h3>
-      <p>进阶 02 集（面试题：快捷键画三视图）· 练习 8 小时，可分两次</p>
+      <p>无对应视频（新版删了这一集）· 练习 8 小时，可分两次</p>
     </div>
   </div>
   <div class="ch-bd">
 
     <div class="lbl">先做这个热身</div>
-    <p class="lead" style="font-size:13.5px">跟着进阶第 2 集，用纯快捷键画一遍它那个构件的三视图。重点不是画得像，是体会「主视图定了，俯视图的每一条线都是投影下来的」。</p>
+    <p class="lead" style="font-size:13.5px">新版四个合集里<strong>没有讲三视图的那一集</strong>（旧版进阶第 2 集叫「绘图员面试题-快捷键绘制构件三视图」）。两条路，任选：<br>
+    ① 旧版合集 <code class="inl">BV1Ut411u7yr</code> 里如果那集还在，花 15 分钟看一遍；<br>
+    ② 不看视频，直接按三条规则画：<strong>主视图定长和高，俯视图和它「长对正」，左视图和它「高平齐」，俯视图与左视图「宽相等」</strong>。用 <kbd>XL</kbd> 构造线当投影线，一条一条把点投过去——画完两个构件，这三条就变成手上的习惯，不需要视频教。</p>
 
     <div class="task">
       <div class="task-hd">
@@ -741,32 +811,73 @@
 </div>
 
 <!-- ================= 附录 A ================= -->
-<h2><span class="n">11</span>附录 A · 画不出来时去哪找图</h2>
-<p class="lead">学 CAD 最有效的补充练习不是再看教程，是<strong>拿一张别人的图照着抄</strong>。下面四个仓库都是真的 dwg / 图片，抄图时对照别人的图层和标注方式，比自己瞎画进步快得多。</p>
+<h2><span class="n">11</span>附录 A · 30 天抄图表</h2>
+<p class="lead">学 CAD 最有效的补充练习不是再看教程，是<strong>拿一张别人的图照着抄</strong>。8 章那 10 张图练完，你会「画得出来」；这 30 张练完，你会「画得快」。一天一张，20–30 分钟，跟当天的章节练习算在同一段 45 分钟里，不额外加时间。</p>
 
-<div class="repo">
-  <b>StudyCADCAM 练习图备份 · 1155 张 2D 练习题</b>
-  <div class="path">github.com/kkxk/studycadcam-backup</div>
-  <p>最有价值的一个。原博客 2025 年关站，有人用网页存档把 2D/3D 练习题全抓下来了，图片格式，编号连续。建议每天抄 1 张（30 分钟），从 <code class="inl">2d-cad-exercises</code> 里挑 1–50 号。抄完和图对照，差在哪一目了然。</p>
+<div class="principles" style="margin-top:14px">
+  <div class="pr"><b>1. 只看图，不找成品 dwg</b><span>S 和 M 都是图片。按高级班「03 插入图片」那集的做法：<kbd>IM</kbd> 把图插进 CAD，用 <kbd>SC</kbd> 参照缩放到尺寸对上，半透明描一遍，描完删掉图片——剩下的就是你自己画的。</span></div>
+  <div class="pr"><b>2. 超时就算没画完</b><span>25 分钟闹钟响了还差一大截，直接停，记下卡在哪个命令，第二天重画同一张。硬撑到 1 小时是无效练习。</span></div>
+  <div class="pr"><b>3. 存成 作业/练/p01.dwg</b><span>一张一个文件，编号跟表里的天数一致。往后想回头看自己第 5 天长什么样，翻得到。</span></div>
 </div>
 
-<div class="repo">
-  <b>AutoCAD 2D 机械制图（含 PNG 预览）</b>
-  <div class="path">github.com/Aadityajain-hub/AutoCAD_2D_Drawings</div>
-  <p>6 张按 ISO/BIS 标准做的机械图，每张都有 dwg + png 两版。优点是<b>有预览图</b>，不用先下载就能看难度。适合第 7 章之后练「标准标注长什么样」。</p>
+<p class="lead" style="margin-top:16px;font-size:13.5px"><strong>图源（按表里的编号取图）</strong><br>
+<b>S</b> = <code class="inl">github.com/kkxk/studycadcam-backup</code> → <code class="inl">2d-cad-exercises</code>，1155 张，编号连续、难度大致递增。表里的 <em>S01</em> 就是取第 1 号。<br>
+<b>Y</b> = <code class="inl">github.com/ssha0/YouTube</code> → <code class="inl">files/Autodesk/AutoCAD/</code>，20 个带 dwg 的练习，难度递增，卡住时当备用。<br>
+<b>M</b> = <code class="inl">github.com/Aadityajain-hub/AutoCAD_2D_Drawings</code>，6 张带 PNG 预览的机械图，第 25 天以后挑，用来对照「标准图长什么样」。</p>
+
+<p class="lead" style="margin-top:10px;font-size:13px;color:var(--ink3)">三个源都是<b>图片</b>，没有 dwg 成品。这不是缺点——插进 CAD 描一遍，比下载别人的 dwg 打开看一眼有用得多。描完必须删图片，不然你会以为自己会画。</p>
+
+<div class="prog noprint">
+  <div class="prog-top"><span>抄图打卡</span><b><span id="pkDone">0</span> / <span id="pkAll">0</span> 张</b></div>
+  <div class="bar"><i id="pkBar"></i></div>
 </div>
 
-<div class="repo">
-  <b>AutoCAD 2D 练习 20 题（带 dwg 源文件）</b>
-  <div class="path">github.com/ssha0/YouTube</div>
-  <p>路径 <code class="inl">files/Autodesk/AutoCAD/</code> 下 20 个 AutoCAD 2D Exercise。这 20 题难度是递增的，第 1 题到第 20 题正好对应你第 2 章到第 6 章的水平。</p>
-</div>
+<table class="punch" style="margin-top:18px">
+  <thead><tr><th style="width:44px">✓</th><th style="width:52px">天</th><th style="width:64px">取图</th><th>这张练什么</th><th style="width:28%">过关线</th></tr></thead>
+  <tbody>
+    <tr class="grp"><td colspan="5">第 1 组 · 跟第 1–2 章同步（线条与圆）</td></tr>
+    <tr><td class="d">第 1 天</td><td><em>S01</em></td><td>纯直角轮廓：<b>L</b> + <kbd>F8</kbd> 正交 + <code class="inl">@x,y</code> 相对坐标</td><td class="tb-vid">闭合无缝、尺寸一个不差</td></tr>
+    <tr><td class="d">第 2 天</td><td><em>S02</em></td><td>带 30°／45° 斜线：极坐标 <code class="inl">@长&lt;角</code></td><td class="tb-vid">斜线端点能落到整数坐标</td></tr>
+    <tr><td class="d">第 3 天</td><td><em>S03</em></td><td><b>C</b> 的四种画法：半径、D 直径、2P、3P</td><td class="tb-vid">四种各画一个，圆心对得上</td></tr>
+    <tr><td class="d">第 4 天</td><td><em>S04</em></td><td><b>A</b> 圆弧：三点弧、起点端点半径</td><td class="tb-vid">弧的两个端点都贴在轮廓上</td></tr>
+    <tr><td class="d">第 5 天</td><td><em>S05</em></td><td><b>PL</b> 多段线：直线段与圆弧段混画，带宽度</td><td class="tb-vid">整条轮廓是「一个对象」</td></tr>
+    <tr><td class="d">第 6 天</td><td><em>S06</em></td><td><b>C</b> + <b>TR</b>：两个圆相切过渡的外轮廓</td><td class="tb-vid">相切处不放近看也不交叉</td></tr>
 
-<div class="repo">
-  <b>ezdxf · 用 Python 读写 DXF（进阶玩法）</b>
-  <div class="path">github.com/mozman/ezdxf</div>
-  <p>能读你自己的图，把图层、标注、对象数读成程序能处理的数据。日常验收用不到它（命令已经写好了），等你想自己写更复杂的检查时再从这儿入手。</p>
-</div>
+    <tr class="grp"><td colspan="5">第 2 组 · 跟第 3 章同步（变换类修改）</td></tr>
+    <tr><td class="d">第 7 天</td><td><em>S07</em></td><td><b>REC</b> 矩形 + <b>O</b> 偏移做墙厚式等距线</td><td class="tb-vid">偏移后各边间距完全相等</td></tr>
+    <tr><td class="d">第 8 天</td><td><em>S08</em></td><td><b>M</b> 移动 + <b>CO</b> 连续复制出等距多份</td><td class="tb-vid">间距用 DLI 量每一档都一样</td></tr>
+    <tr><td class="d">第 9 天</td><td><em>S09</em></td><td><b>MI</b> 镜像：对称件只画一半</td><td class="tb-vid">镜像后删除源对象，轮廓完整</td></tr>
+    <tr><td class="d">第 10 天</td><td><em>S10</em></td><td><b>RO</b> 旋转，用 <kbd>R</kbd> 参照把斜件摆正</td><td class="tb-vid">摆正后能用 DLI 直接量</td></tr>
+    <tr><td class="d">第 11 天</td><td><em>S11</em></td><td><b>SC</b> 缩放（含参照）+ <b>AL</b> 对齐</td><td class="tb-vid">缩放后关键尺寸等于图上标注</td></tr>
+    <tr><td class="d">第 12 天</td><td><em>S12</em></td><td><b>S</b> 拉伸 + <b>TR</b> 两次空格全图修剪</td><td class="tb-vid">图里没有一条多余线头</td></tr>
+
+    <tr class="grp"><td colspan="5">第 3 组 · 跟第 4 章同步（圆角倒角与连接）</td></tr>
+    <tr><td class="d">第 13 天</td><td><em>S13</em></td><td><b>F</b> 圆角：R 分别试 0 / 5 / 10</td><td class="tb-vid">R=0 时能当倒尖角用</td></tr>
+    <tr><td class="d">第 14 天</td><td><em>S14</em></td><td><b>CHA</b> 倒角：距离方式和角度方式各用一次</td><td class="tb-vid">两个参数都记得改</td></tr>
+    <tr><td class="d">第 15 天</td><td><em>S15</em></td><td><b>EX</b> 延伸 + <b>F</b> 组合收口</td><td class="tb-vid">延伸后交点严丝合缝</td></tr>
+    <tr><td class="d">第 16 天</td><td><em>S16</em></td><td><b>BR</b> 打断 + <b>J</b> 合并</td><td class="tb-vid">打断处间距等于图上尺寸</td></tr>
+    <tr><td class="d">第 17 天</td><td><em>S17</em></td><td>内切／外切圆弧连接（钩子类轮廓）</td><td class="tb-vid">用 <kbd>T</kbd> 相切验证能相切</td></tr>
+    <tr><td class="d">第 18 天</td><td><em>S18</em></td><td>综合：开口扳手类连接件，卡表计时</td><td class="tb-vid">25 分钟内出完整轮廓</td></tr>
+
+    <tr class="grp"><td colspan="5">第 4 组 · 跟第 5 章同步（阵列与参数化）</td></tr>
+    <tr><td class="d">第 19 天</td><td><em>S19</em></td><td><b>AR</b> 矩形阵列：行列数与间距</td><td class="tb-vid">改阵列数，图形跟着变</td></tr>
+    <tr><td class="d">第 20 天</td><td><em>S20</em></td><td><b>AR</b> 环形阵列：中心点 + 填充角度</td><td class="tb-vid">首尾两份不重叠也不留缝</td></tr>
+    <tr><td class="d">第 21 天</td><td><em>S21</em></td><td><b>AR</b> 路径阵列：沿曲线等距排列</td><td class="tb-vid">末端那份处理成「正好收尾」</td></tr>
+    <tr><td class="d">第 22 天</td><td><em>S22</em></td><td><b>DIV</b> 定数等分 / <b>ME</b> 定距等分</td><td class="tb-vid">先改点样式，能看见分点</td></tr>
+    <tr><td class="d">第 23 天</td><td><em>S23</em></td><td>参数化：几何约束（相等、相切、同心、对称）</td><td class="tb-vid">拖动图元，约束不许破</td></tr>
+    <tr><td class="d">第 24 天</td><td><em>S24</em></td><td>参数化：标注约束改数字，图形跟着变形</td><td class="tb-vid">改一次尺寸，全图正确联动</td></tr>
+
+    <tr class="grp"><td colspan="5">第 5 组 · 跟第 6–7 章同步（画成一张能交的图）</td></tr>
+    <tr><td class="d">第 25 天</td><td><em>S25</em></td><td>把第 6 天那张旧图重画一遍，这次分图层</td><td class="tb-vid">0 层零残留，线型线宽分明</td></tr>
+    <tr><td class="d">第 26 天</td><td><em>S26</em></td><td><b>B</b> 块：重复件做成块，改一个全改</td><td class="tb-vid">用 <kbd>X</kbd> 炸开后能看出是块</td></tr>
+    <tr><td class="d">第 27 天</td><td><em>S27</em></td><td>标注：<b>DLI</b> + <b>DCO</b> 连续标 + <b>DRA</b> 半径</td><td class="tb-vid">尺寸链闭合，没有漏标</td></tr>
+    <tr><td class="d">第 28 天</td><td><em>S28</em></td><td>三视图：用 <b>XL</b> 构造线保证长对正、高平齐</td><td class="tb-vid">三个视图沿构造线严格对齐</td></tr>
+    <tr><td class="d">第 29 天</td><td><em>S29</em></td><td>综合件 → A3 图框 → 打印成 PDF</td><td class="tb-vid">PDF 1:1，线宽能分清粗细</td></tr>
+    <tr><td class="d">第 30 天</td><td><em>M 任选</em></td><td>挑一张「看着就烦」的机械图，限时 25 分钟</td><td class="tb-vid">出完整轮廓 + 至少 5 个标注</td></tr>
+  </tbody>
+</table>
+
+<p class="lead" style="margin-top:14px;font-size:13px;color:var(--ink3)">编号是参考，不是命令。某天的图明显太简单（5 分钟就画完）就往后跳 3 号；明显看不懂（20 分钟连轮廓都没起）就往前退 3 号——难度曲线比编号可靠。<strong>顺序可以调，一天一张不能断。</strong></p>
 
 <!-- ================= 附录 B ================= -->
 <h2><span class="n">12</span>附录 B · 交作业前跑一遍体检</h2>
@@ -839,9 +950,11 @@
   </tbody>
 </table>
 
+<p class="lead" style="margin-top:14px;font-size:13.5px"><strong>30 天抄图表跟这张六周表并行</strong>：第 1 周五天练第 1 组，第 2 周练第 2–3 组，第 3 周练第 4 组，第 4–5 周练第 5 组，第 6 周用大作业顶掉抄图。一天一张，跟章节练习合计 45–60 分钟，<strong>不额外加时间</strong>——课程学的是命令，抄图练的是手速，两件事不能互相替代。</p>
+
 <footer>
   <p>验收进度存在本机浏览器，换设备不会同步。清单打勾只是提醒，真正的标准是：<strong>关掉这份文档，你还能把这张图画出来。</strong></p>
-  <p style="margin-top:8px;color:var(--ink3)">教程源：B 站「大梦空间」CAD2020 入门 15 集／进阶 17 集／参数化详解 5 集。练习图库：GitHub（见附录 A）。软件：本机 AutoCAD 2020。</p>
+  <p style="margin-top:8px;color:var(--ink3)">教程源：B 站「大梦空间」CAD2020 入门 15 集／基础中级班 16 集／高级班 15 集／参数化专题 5 集，四个合集的目录已逐一核对（2026-11-26）。旧版对应「入门 15 ＋ 进阶 17 ＋ 参数化 5」。抄图源：GitHub（见附录 A）。软件：本机 AutoCAD 2020。</p>
 </footer>
 
 </div>
@@ -850,10 +963,35 @@
 (function(){
   "use strict";
   var KEY = "cad.course.v1";
+
+  /* 抄图表：给每一行补一个勾选框，键 p1…p30。
+     和验收清单共用同一个 localStorage 键（键名不冲突：验收是 c1a…c8e），
+     学习台只读 c 系列，所以加这些不会把那边的进度条搅乱。 */
+  var rows = document.querySelectorAll(".punch tbody tr");
+  var n = 0, j, td, cb, lb;
+  for(j=0;j<rows.length;j++){
+    if(rows[j].className === "grp"){ continue; }
+    n++;
+    td = document.createElement("td");
+    td.className = "ck";
+    lb = document.createElement("label");
+    cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.setAttribute("data-k", "p" + n);
+    cb.setAttribute("aria-label", "第 " + n + " 天打卡");
+    lb.appendChild(cb);
+    td.appendChild(lb);
+    rows[j].insertBefore(td, rows[j].firstChild);
+  }
+
   var boxes = document.querySelectorAll(".check input[type=checkbox]");
+  var pboxes = document.querySelectorAll(".punch input[type=checkbox]");
   var doneEl = document.getElementById("pgDone");
   var allEl = document.getElementById("pgAll");
   var barEl = document.getElementById("pgBar");
+  var pkDone = document.getElementById("pkDone");
+  var pkAll = document.getElementById("pkAll");
+  var pkBar = document.getElementById("pkBar");
 
   function load(){
     try{ return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }
@@ -863,11 +1001,19 @@
     try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(e){}
   }
   function refresh(){
-    var n = 0, i;
-    for(i=0;i<boxes.length;i++){ if(boxes[i].checked){ n++; } }
-    doneEl.textContent = n;
+    var c = 0, i;
+    for(i=0;i<boxes.length;i++){ if(boxes[i].checked){ c++; } }
+    doneEl.textContent = c;
     allEl.textContent = boxes.length;
-    barEl.style.width = (boxes.length ? (n / boxes.length * 100) : 0) + "%";
+    barEl.style.width = (boxes.length ? (c / boxes.length * 100) : 0) + "%";
+  }
+  function refreshPk(){
+    var c = 0, i;
+    if(!pkDone || !pboxes.length){ return; }
+    for(i=0;i<pboxes.length;i++){ if(pboxes[i].checked){ c++; } }
+    pkDone.textContent = c;
+    pkAll.textContent = pboxes.length;
+    pkBar.style.width = (c / pboxes.length * 100) + "%";
   }
 
   var st = load();
@@ -882,7 +1028,18 @@
       refresh();
     });
   }
+  for(i=0;i<pboxes.length;i++){
+    k = pboxes[i].getAttribute("data-k");
+    if(st[k]){ pboxes[i].checked = true; }
+    pboxes[i].addEventListener("change", function(){
+      var s = load();
+      s[this.getAttribute("data-k")] = this.checked ? 1 : 0;
+      save(s);
+      refreshPk();
+    });
+  }
   refresh();
+  refreshPk();
 })();
 </script>
 </body>
