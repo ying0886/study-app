@@ -3,9 +3,14 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.37.1
+  APP_VERSION: 4.38.0
   DATA_VERSION: 2026-11-25
-  本次变更: （4.37.1）① 各章「视频（按集标题找，不按集号）」统一改成「视频（新版集号）」——两套目录已核对，集号照抄即可
+  本次变更: （4.38.0）① 刷题记录改用知识点＋题序稳定键，旧键冲突记录保留迁移副本；自建科目知识点按科目隔离
+            ② 收紧导入 HTML 属性，补齐空远端首推、ETag 条件写、逻辑时钟与同步地址校验
+            ③ 修复空白模拟作答、本轮蒙对/迟疑统计、复制/下载、反思提取、讲义富文本、估分和剩余题数口径
+            ④ 英语训练增加本轮小结与音频退出清理；新增不含凭据的完整备份/恢复、跨科全局搜索和今日学习台
+            ⑤ 改善键盘、焦点、触控和抽屉滚动锁；保持单 HTML 离线运行与既有数据兼容
+  上次变更: （4.37.1）① 各章「视频（按集标题找，不按集号）」统一改成「视频（新版集号）」——两套目录已核对，集号照抄即可
             ② 第 01 节说明改为「标的是新版集号，旧版合集才按标题找」，去掉此前自相矛盾的说法
   上次变更: （4.37.0）① 教程源改成入门15/中级16/高级15/参数化5 四级结构，集号已按 B 站合集目录逐一核对，可直接用
             ② 附录 A 升级为 30 天抄图表：5 组×6 天，练什么命令与过关线逐条写清，30 个打卡位与 44 条验收并存
@@ -1680,7 +1685,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.37.1">
+<meta name="app-version" content="4.38.0">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -3251,6 +3256,10 @@
     font:inherit;font-size:13px;font-weight:600;cursor:pointer}
   .tdgo:hover{filter:brightness(1.06)}
   .tdgo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tdhomeacts{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0 0}
+  .tdhomeacts .btn{min-height:40px}
+  .tdempty{margin:8px 0 0;color:var(--ink2);font-size:12px;line-height:1.65}
+  @media (pointer:coarse){.tdhomeacts .btn,.tdbtn,.engacts .btn,.ckbtn{min-height:44px}}
   /* [lect] 路线里的「读讲义」：与「练」分开，虚线框表示这是另一类任务，不计题数 */
   .tdread{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;
     padding:10px 12px;border:1px dashed var(--line2);border-radius:7px}
@@ -4717,7 +4726,8 @@
   .ckchip.on{background:var(--accent);border-color:var(--accent);color:var(--accentInk);font-weight:600}
   .ckstep{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:10px 12px;
     background:var(--card);border:1px solid var(--line);border-radius:4px;
-    margin-bottom:8px;cursor:pointer;font-size:15px;line-height:1.7;color:var(--ink)}
+    margin-bottom:8px;cursor:pointer;font-size:15px;line-height:1.7;color:var(--ink);
+    width:100%;text-align:left;font-family:inherit}
   .ckstep:hover{border-color:var(--ink2)}
   .ckstep .ckno{font-weight:700;color:var(--ink2);flex-shrink:0}
   .ckstep.nope{opacity:.45}
@@ -5037,7 +5047,7 @@
   <!-- [growth] 成长路径：当前科目所处阶段、还差多少、下一步做什么，随进度实时更新 -->
   <section class="growth" id="growth" aria-label="成长路径" hidden></section>
   <!-- [today] 今日路线：把「补漏」和「沿路径推进」合成今天这一组，现算不落盘 -->
-  <section class="today" id="todayRoute" aria-label="今日路线" hidden></section>
+  <section class="today" id="todayRoute" aria-label="今日学习台" hidden></section>
   <!-- [eng] 大学英语独立视图：切到该科目时显示，卡片区让位；内容由 ENG 模块渲染 -->
   <section class="eng" id="engView" aria-label="大学英语" hidden>
     <nav class="engtabs" id="engTabs" aria-label="英语视图"></nav>
@@ -5461,6 +5471,7 @@
   <div class="navpane" id="navSearchPane" role="tabpanel" aria-labelledby="navTabSearch" hidden>
     <div class="navsearch">
       <input class="navinput" id="navInput" type="text" autocomplete="off" spellcheck="false" placeholder="搜编号、名称、章节、内容、易错点…" aria-label="搜索知识点">
+      <button class="btn small" id="navGlobal" type="button" aria-pressed="false" title="切换搜索范围">本科目</button>
       <button class="btn small" id="navClear" type="button">清空</button>
     </div>
     <div class="navmeta" id="navMeta"></div>
@@ -42410,7 +42421,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.37.1";
+  var APP_VERSION = "4.38.0";
   var DATA_VERSION = "2026-11-25";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -42439,10 +42450,17 @@
   function byId(id) { return document.getElementById(id); }
   function el(tag, cls) { var n = document.createElement(tag); if (cls) n.className = cls; return n; }
   function txt(tag, cls, s) { var n = el(tag, cls); n.textContent = s; return n; }
+  function syncDrawerLock() {
+    var nodes = document.querySelectorAll(".drawer,.pathov"), locked = false;
+    for (var i = 0; i < nodes.length; i++) {
+      if (!nodes[i].hidden) { locked = true; break; }
+    }
+    document.body.classList.toggle("drawerOpen", locked);
+  }
 
-  /* 数据里的题目/解析允许少量行内标签（<br> <b> <p> 等），其余字符一律转义：
-     数学公式里的 "0<x<2"、"a<b" 若直接 innerHTML 会被浏览器当成标签，把整段结构撑坏。 */
-  var SAFE_TAG = /<\/?(?:br|b|p|span|em|strong|i|u|sub|sup|small|code)(?:\s+[a-z-]+(?:="[^"]*")?)*\s*\/?>/gi;
+  /* 数据里的题目/解析允许少量行内标签；属性仅保留安全的 class token。
+     事件、style、id 等属性一律随原标签转义，避免自建科目 JSON 形成存储型脚本注入。 */
+  var SAFE_TAG = /<\/?(?:br|b|p|span|em|strong|i|u|sub|sup|small|code)(?:\s+class="[a-zA-Z0-9 _-]+")?\s*\/?>/gi;
   function escText(t) {
     return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
@@ -44188,12 +44206,10 @@
                  track: 0, tcase: 0, lcDone: false, lcPick: -1,
                  lisPos: 0, lisDone: false, lisPick: -1,
                  lisTab: "play", audioName: "", audioUrl: "", sentIdx: 0,
-                 sentMode: true, hideText: true, rate: 1, adjOpen: false, posTxt: "" };
+                 sentMode: true, hideText: true, rate: 1, adjOpen: false, posTxt: "",
+                 sessionDone: false, sessionStats: null };
   var ENG_AUDIO = null;   // 常驻 <audio>：重绘界面时不能把它一起销毁
   var ENG_TICK = null;
-  /* 精听训练器在别的目录，单文件页面没法把它和音频打包进来——只能给入口 */
-  var ENG_LISTEN_DIR = "D:/ASUS/Documents/deepseek harness/听力精听训练器/index.html";
-  var ENG_LISTEN_URL = "file:///" + ENG_LISTEN_DIR.replace(/ /g, "%20");
 
   function engOkData() { return !!(ENG_D && ENG_D.cards && ENG_D.cards.length && ENG_D.papers); }
 
@@ -44210,7 +44226,7 @@
     var d = new Date();
     return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
   }
-  function engOf(id) { var o = engRecs(); return o.cards[id] || null; }
+  function engOf(id, recs) { var o = recs || engRecs(); return o.cards[id] || null; }
   function engMark(id, ok) {
     var o = engRecs(), e = o.cards[id] || { n: 0, ok: 0, streak: 0, t: 0 };
     e.n = (e.n || 0) + 1;
@@ -44222,9 +44238,15 @@
     if (o.daily.d !== k) { o.daily.d = k; o.daily.n = 0; }
     o.daily.n = (o.daily.n || 0) + 1;
     engSave(o);
+    var currentCard = engCardNow();
+    if (ENG_ST.view === "recite" && !ENG_ST.sessionDone && currentCard && currentCard.id === id) {
+      if (!ENG_ST.sessionStats) ENG_ST.sessionStats = { n: 0, ok: 0 };
+      ENG_ST.sessionStats.n++;
+      if (ok) ENG_ST.sessionStats.ok++;
+    }
   }
-  function engRate(id) {
-    var e = engOf(id);
+  function engRate(id, recs) {
+    var e = engOf(id, recs);
     if (!e || !e.n) return 55;          // 没做过排中间：先出错得多的，再出新卡
     return Math.round(e.ok / e.n * 100);
   }
@@ -44254,7 +44276,7 @@
     return a;
   }
   function engPool(mode) {
-    var out = [], i, c;
+    var out = [], i, c, recs = engRecs();
     for (i = 0; i < ENG_D.cards.length; i++) {
       c = ENG_D.cards[i];
       if (mode === "read" && c.type !== "term") continue;
@@ -44262,7 +44284,7 @@
       if (mode === "write" && c.type !== "sentence") continue;
       out.push(c);
     }
-    out.sort(function (a, b) { return engRate(a.id) - engRate(b.id); });
+    out.sort(function (a, b) { return engRate(a.id, recs) - engRate(b.id, recs); });
     return out;
   }
   function engBuild() {
@@ -44271,6 +44293,8 @@
     ENG_ST.done = false;
     ENG_ST.pick = "";
     ENG_ST.typed = null;
+    ENG_ST.sessionDone = false;
+    ENG_ST.sessionStats = { n: 0, ok: 0 };
   }
   function engCardNow() {
     if (!ENG_ST.queue || !ENG_ST.queue.length) return null;
@@ -44309,8 +44333,13 @@
     return ENG_D.papers[0];
   }
 
+  function engStopAudio() {
+    if (ENG_AUDIO) { try { ENG_AUDIO.pause(); } catch (e) {} }
+    engTickStop();
+  }
   function engRender() {
     if (!engOkData()) return;
+    if (ENG_ST.view !== "listen" || ENG_ST.lisTab !== "play") engStopAudio();
     var host = byId("engBody"), tabs = byId("engTabs");
     if (!host || !tabs) return;
     tabs.innerHTML = "";
@@ -44637,7 +44666,8 @@
     return arr;
   }
   function engMMSS(sec) {
-    var m = Math.floor(sec / 60), s = Math.round(sec % 60);
+    var whole = Math.max(0, Math.round(Number(sec) || 0));
+    var m = Math.floor(whole / 60), s = whole % 60;
     return m + ":" + (s < 10 ? "0" : "") + s;
   }
 
@@ -45017,21 +45047,10 @@
 
     var det = el("details", "engbox");
     var sm = el("summary", "");
-    sm.textContent = "用电脑上的训练器（整篇跟读、批量导入、词级复听）";
+    sm.textContent = "页内精听说明";
     det.appendChild(sm);
-    det.appendChild(txt("p", "engsub", "上面这个播放器是给你在手机 / 平板上用的；需要跟读模式或一次导入多套，还是回训练器。"));
-    var a2 = el("a", "btn enga");
-    a2.href = ENG_LISTEN_URL;
-    a2.target = "_blank";
-    a2.rel = "noopener";
-    a2.textContent = "打开精听训练器";
-    det.appendChild(a2);
-    var path = el("code", "engpath");
-    path.textContent = ENG_LISTEN_DIR;
-    det.appendChild(path);
+    det.appendChild(txt("p", "engsub", "导入音频后即可逐句循环、调倍速、隐藏原文和微调句界；无需安装外部训练器，也不依赖固定磁盘路径。切换页面会自动暂停。"));
     host.appendChild(det);
-
-    engTickStart();
   }
 
   function engListenQuiz(host) {
@@ -45162,7 +45181,21 @@
       : "只给中文，整句默写；关键词命中 80% 以上算过。";
     host.appendChild(txt("p", "engsub", tip + "　连续两次通过才算「过关」。"));
 
-    engViewCard(host);
+    if (ENG_ST.sessionDone) engSessionSummary(host);
+    else engViewCard(host);
+  }
+
+  function engSessionSummary(host) {
+    var st = ENG_ST.sessionStats || { n: 0, ok: 0 };
+    var box = el("div", "engcard eng-session");
+    box.appendChild(txt("h3", "", "这一轮完成"));
+    box.appendChild(txt("p", "engcn", "共 " + st.n + " 张 · 通过 " + st.ok + " 张 · 待巩固 " + Math.max(0, st.n - st.ok) + " 张"));
+    box.appendChild(txt("p", "engsub", st.n ? "本轮通过率 " + Math.round(st.ok / st.n * 100) + "%。下一轮会优先安排错误较多和尚未练过的卡片。" : "这一轮还没有作答记录。"));
+    box.appendChild(engActs([
+      engBtn("再练一轮", "primary", function () { engBuild(); engRender(); }),
+      engBtn("回英语地图", "", function () { ENG_ST.view = "map"; engRender(); })
+    ]));
+    host.appendChild(box);
   }
 
   function engViewCard(host) {
@@ -45190,14 +45223,15 @@
     return d;
   }
   function engNextBtn() {
-    return engBtn("下一张", "primary", function () {
+    var last = ENG_ST.pos >= ENG_ST.queue.length - 1;
+    return engBtn(last ? "看本轮小结" : "下一张", "primary", function () {
       ENG_ST.pos++;
       ENG_ST.done = false;
       ENG_ST.pick = "";
       ENG_ST.typed = null;
       if (ENG_ST.pos >= ENG_ST.queue.length) {
-        ENG_ST.pos = 0;
-        ENG_ST.queue = engPool(ENG_ST.mode);
+        ENG_ST.pos = Math.max(0, ENG_ST.queue.length - 1);
+        ENG_ST.sessionDone = true;
       }
       engRender();
     });
@@ -45374,14 +45408,16 @@
     engRender();
   }
   function engHide() {
+    engStopAudio();
     var v = byId("engView");
     if (v) v.hidden = true;
     document.body.classList.remove("engmode");
   }
 
   /* ================= [cad] CAD 自学入口页 ================= */
-  /* 课程正文不在这里，只读它写下的那一把键。键名与课程页共用 "cad.course.v1"，
-     file:// 下各页面共享同一份 localStorage，所以两边勾选是同一份数据，不需要同步逻辑。 */
+  /* 课程正文不在这里，只读它写下的 "cad.course.v1"。
+     file:// 的存储隔离方式因浏览器而异：只有两页同源共享该键时才显示同一进度；
+     换机或浏览器隔离 file 存储时，可通过“完整备份”迁移本页能读到的 CAD 数据。 */
   var CAD_LS = "cad.course.v1";
   /* [章名, 内容, 交付物, 验收条数]。条数必须和课程页的勾选框对得上，
      对不上只会让进度条算错，不会报错——改课程页的时候记得回来改这里。 */
@@ -45424,7 +45460,7 @@
     if (!box) return;
     box.innerHTML = "";
     box.appendChild(txt("h3", "", "八章与交付物"));
-    box.appendChild(txt("p", "cadsub", "进度读自课程页的勾选，两边是同一份数据。"));
+    box.appendChild(txt("p", "cadsub", "读取课程页共享的勾选记录；若浏览器隔离 file 页面存储，请以课程页显示为准，并用完整备份迁移本页可读记录。"));
     for (i = 0; i < CAD_CH.length; i++) {
       name = CAD_CH[i][0];
       del = CAD_CH[i][1];
@@ -45678,7 +45714,7 @@
     if (favDrawer.hidden) return;
     favDrawer.hidden = true;
     favScrim.hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     favBtn.setAttribute("aria-expanded", "false");
     if (!keepFocus) favBtn.focus();
   }
@@ -45957,7 +45993,7 @@
     if (everDrawer.hidden) return;
     everDrawer.hidden = true;
     everScrim.hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     var link = byId("everOpen");
     if (link) link.setAttribute("aria-expanded", "false");
     if (!keepFocus && link) link.focus();
@@ -45977,7 +46013,22 @@
   var LS_SYNCMETA = "review.sync.meta.v1";
   var SNAP = null;
 
-  function nowMs() { return (new Date()).getTime(); }
+  /* 逻辑时钟：远端若来自时钟偏快的设备，本地新改动必须继续向后编号，
+     否则会在“最新时间戳获胜”的合并中被旧内容压住。 */
+  var CLOCK_FLOOR = normT(syncMeta().clockFloor);
+  function nowMs() {
+    var wall = (new Date()).getTime();
+    CLOCK_FLOOR = CLOCK_FLOOR > wall ? CLOCK_FLOOR + 1 : wall;
+    return CLOCK_FLOOR;
+  }
+  function observeSnapClock(o) {
+    var t = normT(o && o.updatedAt);
+    if (t > CLOCK_FLOOR) CLOCK_FLOOR = t;
+    var m = syncMeta();
+    if (t > (new Date()).getTime() + 5000 && t > normT(m.clockFloor)) {
+      syncSetMeta({ clockFloor: t, clockSkew: true });
+    }
+  }
 
   // [sync] 本地改动标记 syncMarkDirty() 在下方「同步引擎」里实现（函数声明提升，这里可提前调用）
 
@@ -46673,6 +46724,13 @@
     saveSyncMeta(m);
   }
 
+  function validSyncUrl(u) {
+    try {
+      var o = new URL(String(u || ""));
+      return o.protocol === "https:" || (o.protocol === "http:" && /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(o.hostname));
+    } catch (e) { return false; }
+  }
+
   function basicAuth(user, pass) {
     var raw = (user || "") + ":" + (pass || "");
     try { return "Basic " + btoa(unescape(encodeURIComponent(raw))); }
@@ -46726,7 +46784,8 @@
             try { body = JSON.parse(r.txt); kind = "json"; }
             catch (e) { body = null; kind = "text"; }
           }
-          end(true, { status: r.res.status, ok: r.res.ok, body: body, text: r.txt, kind: kind });
+          end(true, { status: r.res.status, ok: r.res.ok, body: body, text: r.txt, kind: kind,
+            etag: r.res.headers && r.res.headers.get ? (r.res.headers.get("ETag") || "") : "" });
         }).catch(function (err) {
           if (finished) return;
           var code = (err && err.name === "AbortError") ? "timeout" : "network";
@@ -46747,7 +46806,7 @@
   function classify(r, what) {
     if (r.status === 401 || r.status === 403) throw sErr("auth", "认证失败（HTTP " + r.status + "）：令牌或账号密码无效、或没有读写权限", r.status);
     if (r.status === 404) throw sErr("notfound", what + "不存在（HTTP 404）：请检查 ID 或地址", 404);
-    if (r.status === 409) throw sErr("conflict", what + "版本冲突（HTTP 409）", 409);
+    if (r.status === 409 || r.status === 412) throw sErr("conflict", what + "版本冲突（HTTP " + r.status + "）：远端已被其他设备更新，将重新拉取合并", r.status);
     if (r.status === 429) throw sErr("ratelimit", what + "请求过于频繁（HTTP 429），请稍后再试", 429);
     if (r.status >= 400) throw sErr("http", what + "请求失败：HTTP " + r.status, r.status);
     return r;
@@ -46762,6 +46821,7 @@
       rounds++;
       var reader = (remoteIn === undefined) ? ad.get() : Promise.resolve(remoteIn);
       return reader.then(function (remote) {
+        observeSnapClock(remote);
         var merged = remote ? mergeSnapshot(cur, remote) : cloneSnap(cur);
         if (!merged.deviceId) merged.deviceId = deviceInfo().id;
         var changed = !remote || !sameProgress(merged, remote) || normT(merged.updatedAt) > normT(remote.updatedAt);
@@ -46793,7 +46853,7 @@
 
   // [sync] A) GitHub Gist：PAT + Gist ID；内容写 review-progress.json 字段
   function gistAdapter(cfg) {
-    var g = cfg.gist || {};
+    var g = cfg.gist || {}, etag = "";
     var base = g.apiBase || "https://api.github.com";  // [sync] 仅测试/自建代理时才改
     var api = base.replace(/\/+$/, "") + "/gists/" + encodeURIComponent(g.id || "");
     function hdr() {
@@ -46809,17 +46869,20 @@
       get: function () {
         return httpReq(api, { method: "GET", headers: hdr() }).then(function (r) {
           classify(r, "Gist ");
+          etag = r.etag || "";
           return parseRemoteSnap(gistFileOf(r.body));
         });
       },
       put: function (snapObj) {
-        var payload = { files: {} };
+        var payload = { files: {} }, headers = hdr();
+        if (etag) headers["If-Match"] = etag;
         payload.files[SYNC_FILE] = { content: JSON.stringify(snapObj, null, 2) };
         var body = JSON.stringify(payload);
         return httpReq(api, {
-          method: "PATCH", headers: hdr(), body: body, timeout: syncWriteTimeout(body.length)
+          method: "PATCH", headers: headers, body: body, timeout: syncWriteTimeout(body.length)
         }).then(function (r) {
           classify(r, "Gist ");
+          etag = r.etag || etag;
           return r;
         });
       }
@@ -46828,7 +46891,7 @@
 
   // [sync] B) WebDAV：PUT/GET 一个 .json，Basic Auth，兼容坚果云 / Nextcloud
   function webdavAdapter(cfg) {
-    var w = cfg.webdav || {};
+    var w = cfg.webdav || {}, etag = "", exists = false;
     var url = w.url || "";
     function hdr() {
       var h = { "Content-Type": "application/json" };
@@ -46837,20 +46900,24 @@
     }
     return {
       name: "WebDAV",
-      configured: function () { return !!url; },
+      configured: function () { return validSyncUrl(url); },
       get: function () {
         return httpReq(url, { method: "GET", headers: hdr() }).then(function (r) {
-          if (r.status === 404) return null;  // 文件还没建，视为空远端
+          if (r.status === 404) { etag = ""; exists = false; return null; }
           classify(r, "WebDAV 文件");
+          etag = r.etag || ""; exists = true;
           return parseRemoteSnap(r.text);
         });
       },
       put: function (snapObj) {
-        var body = JSON.stringify(snapObj, null, 2);
+        var body = JSON.stringify(snapObj, null, 2), headers = hdr();
+        if (etag) headers["If-Match"] = etag;
+        else if (!exists) headers["If-None-Match"] = "*";
         return httpReq(url, {
-          method: "PUT", headers: hdr(), body: body, timeout: syncWriteTimeout(body.length)
+          method: "PUT", headers: headers, body: body, timeout: syncWriteTimeout(body.length)
         }).then(function (r) {
           classify(r, "WebDAV 文件");
+          etag = r.etag || etag; exists = true;
           return r;
         });
       }
@@ -46860,9 +46927,10 @@
   // [sync] C) 自定义端点（可自建 Cloudflare Worker / Vercel Function）
   // [sync] 协议：GET <url> 返回快照 JSON（内容为空或 404 表示远端还没有存档）；
   // [sync]       PUT <url> 提交快照 JSON（请求体即快照本身，Content-Type: application/json）。
-  // [sync]       响应需带 Access-Control-Allow-Origin，并允许 GET, PUT, Content-Type 预检。
+  // [sync]       响应需带 Access-Control-Allow-Origin，允许 GET, PUT, Content-Type, Authorization, If-Match, If-None-Match，
+  // [sync]       并用 Access-Control-Expose-Headers 暴露 ETag；支持时以条件写防止并发覆盖。
   function customAdapter(cfg) {
-    var c = cfg.custom || {};
+    var c = cfg.custom || {}, etag = "", exists = false;
     var url = c.url || "";
     function hdr() {
       var h = { "Content-Type": "application/json" };
@@ -46871,20 +46939,24 @@
     }
     return {
       name: "自定义端点",
-      configured: function () { return !!url; },
+      configured: function () { return validSyncUrl(url); },
       get: function () {
         return httpReq(url, { method: "GET", headers: hdr() }).then(function (r) {
-          if (r.status === 404) return null;
+          if (r.status === 404) { etag = ""; exists = false; return null; }
           classify(r, "自定义端点");
+          etag = r.etag || ""; exists = true;
           return parseRemoteSnap(r.text);
         });
       },
       put: function (snapObj) {
-        var body = JSON.stringify(snapObj, null, 2);
+        var body = JSON.stringify(snapObj, null, 2), headers = hdr();
+        if (etag) headers["If-Match"] = etag;
+        else if (!exists) headers["If-None-Match"] = "*";
         return httpReq(url, {
-          method: "PUT", headers: hdr(), body: body, timeout: syncWriteTimeout(body.length)
+          method: "PUT", headers: headers, body: body, timeout: syncWriteTimeout(body.length)
         }).then(function (r) {
           classify(r, "自定义端点");
+          etag = r.etag || etag; exists = true;
           return r;
         });
       }
@@ -47094,27 +47166,39 @@
     }
   }
 
-  /* 复制失败时退回到「选中 + execCommand」，file:// 下也能用 */
-  function copyPlain(t) {
+  /* 复制统一返回 Promise<boolean>：只有浏览器真正确认成功才显示“已复制”。
+     file:// 先走同步 execCommand；失败后再尝试 Clipboard API，最终失败时选中文本。 */
+  function copyText(text, ta) {
+    var ok = false, box;
+    try {
+      box = el("textarea");
+      box.value = text;
+      box.setAttribute("readonly", "");
+      box.style.position = "fixed";
+      box.style.left = "-9999px";
+      box.style.top = "0";
+      document.body.appendChild(box);
+      box.focus();
+      box.select();
+      ok = document.execCommand("copy");
+      document.body.removeChild(box);
+    } catch (e) {
+      if (box && box.parentNode) box.parentNode.removeChild(box);
+      ok = false;
+    }
+    if (ok) return Promise.resolve(true);
+    function failed() {
+      if (ta && ta.select) { ta.focus(); ta.select(); }
+      return false;
+    }
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(t);
-        return true;
+        return Promise.resolve(navigator.clipboard.writeText(text)).then(function () { return true; }, failed);
       }
-    } catch (e) { /* 落到下面的兜底 */ }
-    var ta = document.createElement("textarea");
-    ta.value = t;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.top = "-1000px";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    var ok = false;
-    try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
-    document.body.removeChild(ta);
-    return ok;
+    } catch (e2) { }
+    return Promise.resolve(failed());
   }
+  function copyPlain(t) { return copyText(t); }
 
   /* KaTeX 的报错原文会把出错位置整段附在末尾（还带下划线标记），又长又难读；
      这里只留「错误类型 + at position N」，正文已经单独列出来了。 */
@@ -47149,9 +47233,10 @@
     btn.textContent = "复制原文";
     btn.title = "复制这段公式的原始代码，方便修正";
     btn.addEventListener("click", function () {
-      var ok = copyPlain(it.code);
-      btn.textContent = ok ? "已复制" : "复制失败，请长按选择";
-      setTimeout(function () { btn.textContent = "复制原文"; }, 1800);
+      copyPlain(it.code).then(function (ok) {
+        btn.textContent = ok ? "已复制" : "复制失败，请长按选择";
+        setTimeout(function () { btn.textContent = "复制原文"; }, 1800);
+      });
     });
     li.appendChild(btn);
     return li;
@@ -47565,6 +47650,30 @@
     impBtn.addEventListener("click", function () { impFile.click(); });
     row2.appendChild(impBtn);
     row2.appendChild(impFile);
+
+    var fullBtn = txt("button", "btn small primary", "导出完整备份");
+    fullBtn.id = "fullBackupExport";
+    fullBtn.type = "button";
+    fullBtn.title = "包含主进度、英语、检查力、CAD、自建科目和界面偏好，不含同步凭据";
+    fullBtn.addEventListener("click", exportFullBackup);
+    row2.appendChild(fullBtn);
+    var fullImpBtn = txt("button", "btn small", "恢复完整备份");
+    fullImpBtn.id = "fullBackupImport";
+    fullImpBtn.type = "button";
+    var fullImpFile = el("input");
+    fullImpFile.id = "fullBackupFile";
+    fullImpFile.type = "file";
+    fullImpFile.accept = "application/json,.json";
+    fullImpFile.hidden = true;
+    fullImpFile.addEventListener("change", function () {
+      var f = fullImpFile.files && fullImpFile.files[0];
+      if (f) importFullBackup(f);
+      fullImpFile.value = "";
+    });
+    fullImpBtn.addEventListener("click", function () { fullImpFile.click(); });
+    row2.appendChild(fullImpBtn);
+    row2.appendChild(fullImpFile);
+    syncBodyEl.appendChild(snote("“导出 JSON”仅含主进度；“完整备份”另外包含英语、检查力、CAD、自建科目与界面偏好，不包含同步令牌或密码。"));
     var clrBtn = txt("button", "btn small", "清除同步配置");
     clrBtn.type = "button";
     var armed = false, armTimer = null;
@@ -47615,7 +47724,7 @@
     saveSyncCfg(collectSyncForm());
     syncDrawer.hidden = true;
     syncScrim.hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     syncBtn.setAttribute("aria-expanded", "false");
     if (!keepFocus) syncBtn.focus();
   }
@@ -48024,6 +48133,7 @@
   // [sync] 远端快照落地：合并进本地并刷新界面（主题、勾选、收藏、统计一起走）
   function applyRemote(remote) {
     if (!remote) return false;
+    observeSnapClock(remote);
     var before = snap();
     var merged = mergeSnapshot(before, remote);
     if (!sameProgress(merged, before)) {
@@ -48065,8 +48175,8 @@
   function doPull(ad) {
     return ad.pull().then(function (remote) {
       var changed = applyRemote(remote);
-      // [sync] 合并后若与远端仍有差异（本地多出条目），立即补一次推送
-      var needPush = !!remote && !sameProgress(snap(), remote);
+      // 空远端也必须进入推送分支，否则首次“完整同步”只记录成功却不创建存档。
+      var needPush = !remote || !sameProgress(snap(), remote);
       return {
         changed: changed,
         needPush: needPush,
@@ -48094,11 +48204,12 @@
         // 推送内部是「先读→合并→再写」，他端新增的条目可能被一并带回来，界面要跟上
         if (!sameProgress(keep, before)) afterRemoteApply();
       }
+      var verifiedRemote = r && r.remote ? r.remote : snap();
       return {
         remoteCount: {
-          mastery: countEntries(snap().mastery),
-          favs: countEntries(snap().favs),
-          quiz: countEntries(snap().quiz)
+          mastery: countEntries(verifiedRemote.mastery),
+          favs: countEntries(verifiedRemote.favs),
+          quiz: countEntries(verifiedRemote.quiz)
         },
         changed: !!(r && r.changed)
       };
@@ -48315,6 +48426,7 @@
       try { o = JSON.parse(String(reader.result)); }
       catch (e) { toastSync("导入失败：文件不是合法 JSON，本地进度未变"); return; }
       if (!validSnap(o)) { toastSync("导入失败：不是 v2 进度快照（缺 schema/mastery/favs），本地进度未变"); return; }
+      observeSnapClock(o);
       var merged = mergeSnapshot(snap(), o);
       SNAP = merged;
       commitSnap(merged.updatedAt);
@@ -48324,6 +48436,69 @@
       toastSync("导入完成：合并后共 " + countEntries(merged.mastery) + " 条掌握、" + countEntries(merged.favs) + " 条收藏");
     };
     reader.onerror = function () { toastSync("导入失败：读取文件出错，本地进度未变"); };
+    reader.readAsText(file);
+  }
+
+  /* 完整备份与 v2 同步快照分离：不扩大网络同步协议，也不写入任何同步凭据。 */
+  function fullBackupObject() {
+    return {
+      format: "review-full-backup", version: 1, appVersion: APP_VERSION,
+      exportedAt: nowMs(), progress: cloneSnap(snap()),
+      english: engRecs(),
+      checker: {
+        train: lsGet(window.CK_K_TRAIN || "review.checker.v1", null),
+        log: lsGet(window.CK_K_LOG || "review.checkerlog.v1", null)
+      },
+      cad: lsGet(CAD_LS, null),
+      userSubjects: userSubjectList(),
+      preferences: {
+        theme: lsGet(LS_THEME, null), skin: lsGet(LS_SKIN, null), hint: lsGet(LS_HINT, null),
+        active: lsGet(LS_ACTIVE, null), seen: lsGet(LS_SEEN, null),
+        updateIgnore: lsGet(LS_UPDIGN, null)
+      }
+    };
+  }
+  function exportFullBackup() {
+    var name = "study-full-backup-" + (new Date()).toISOString().slice(0, 10) + ".json";
+    var ok = downloadText(name, JSON.stringify(fullBackupObject(), null, 2), "application/json");
+    toastSync(ok ? "已导出完整备份（不含同步令牌或密码）" : "完整备份导出失败");
+  }
+  function importFullBackup(file) {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toastSync("恢复失败：完整备份超过 8MB"); return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      var o;
+      try { o = JSON.parse(String(reader.result)); } catch (e) { o = null; }
+      if (!o || o.format !== "review-full-backup" || o.version !== 1 || !validSnap(o.progress)) {
+        toastSync("恢复失败：不是受支持的完整备份，本地数据未变"); return;
+      }
+      var msg = "主进度将与本机合并；英语、检查力、CAD、自建科目和界面偏好按备份恢复。\n" +
+        "同步令牌与密码不包含在备份中。确认继续吗？";
+      if (!window.confirm(msg)) return;
+      observeSnapClock(o.progress);
+      SNAP = mergeSnapshot(snap(), o.progress);
+      commitSnap(SNAP.updatedAt);
+      if (o.english && typeof o.english === "object") lsPut(ENG_LS, JSON.stringify(o.english));
+      if (o.checker && typeof o.checker === "object") {
+        if (o.checker.train && typeof o.checker.train === "object") lsPut(window.CK_K_TRAIN || "review.checker.v1", JSON.stringify(o.checker.train));
+        if (o.checker.log && typeof o.checker.log === "object") lsPut(window.CK_K_LOG || "review.checkerlog.v1", JSON.stringify(o.checker.log));
+      }
+      if (o.cad && typeof o.cad === "object") lsPut(CAD_LS, JSON.stringify(o.cad));
+      if (Array.isArray(o.userSubjects)) saveUserSubjectList(o.userSubjects);
+      var p = o.preferences || {};
+      if (p.theme != null) lsSet(LS_THEME, p.theme);
+      if (p.skin != null) lsSet(LS_SKIN, p.skin);
+      if (p.hint != null) lsSet(LS_HINT, p.hint);
+      if (p.active != null) lsSet(LS_ACTIVE, p.active);
+      if (p.seen != null) lsSet(LS_SEEN, p.seen);
+      if (p.updateIgnore != null) lsSet(LS_UPDIGN, p.updateIgnore);
+      syncUserToData();
+      if (syncAdapter()) syncMarkDirty();
+      toastSync("完整备份已恢复，正在刷新页面", 1200);
+      setTimeout(function () { location.reload(); }, 500);
+    };
+    reader.onerror = function () { toastSync("恢复失败：读取文件出错，本地数据未变"); };
     reader.readAsText(file);
   }
 
@@ -48407,6 +48582,8 @@
   var navMeta = byId("navMeta");
   var navInput = byId("navInput");
   var navClear = byId("navClear");
+  var navGlobalBtn = byId("navGlobal");
+  var NAV_GLOBAL = false;
   var lastNavBtn = null;
   var navTab = "toc";
   // 目录分组折叠状态：跨次打开保留（默认 A 展开、B/C 折叠，与正文分组一致）
@@ -48455,8 +48632,83 @@
 
   function navLower(s) { return String(s == null ? "" : s).toLowerCase(); }
 
+  function navGlobalRow(rows, sid, kind, k, fields, extra) {
+    var hay = [], i, j, row = { k: k, sid: sid, kind: kind, fields: fields, pos: rows.length };
+    for (i = 0; i < fields.length; i++) hay.push(navLower(fields[i].text));
+    row.hay = hay.join("\n");
+    if (extra) for (j in extra) if (has0(extra, j)) row[j] = extra[j];
+    rows.push(row);
+  }
+  function navGlobalBuild() {
+    var rows = [], si, i, j, sub, k, ex, fields;
+    function fld(label, value) { return { label: label, text: String(value == null ? "" : value) }; }
+    for (si = 0; si < DATA.subjects.length; si++) {
+      sub = DATA.subjects[si];
+      for (i = 0; i < sub.knowledgePoints.length; i++) {
+        k = sub.knowledgePoints[i];
+        fields = [fld("编号", k.id), fld("名称", k.name), fld("章节", k.section), fld("内容", k.content),
+          fld("易错点", k.trap), fld("拿分动作", k.action), fld("出处", k.refs),
+          fld("我的笔记", noteText(sub.id, noteKeyKp(k.id)))];
+        navGlobalRow(rows, sub.id, "knowledge", k, fields, { kid: k.id, kindLabel: "知识点" });
+        for (j = 0; j < (k.examples || []).length; j++) {
+          ex = k.examples[j];
+          navGlobalRow(rows, sub.id, "question", {
+            id: k.id + " · 第 " + (j + 1) + " 题", name: (ex.type || "题目") + " · " + k.name,
+            section: k.section, level: k.level
+          }, [fld("题干", ex.q), fld("解析", ex.a), fld("题目笔记", noteText(sub.id, noteKeyEx(k.id, j)))],
+            { kid: k.id, ei: j, kindLabel: "题目" });
+        }
+      }
+    }
+    if (typeof FORMULA !== "undefined" && FORMULA && FORMULA.items) {
+      for (i = 0; i < FORMULA.items.length; i++) {
+        var f = FORMULA.items[i];
+        navGlobalRow(rows, f.sid, "formula", { id: f.id, name: f.name, section: f.section, level: f.level },
+          [fld("公式", f.expr), fld("符号", f.vars), fld("用途", f.usage), fld("适用条件", f.cond),
+            fld("易错点", f.trap), fld("示例", f.example), fld("记忆", f.mnemonic)],
+          { fid: f.id, kid: f.kid, kindLabel: "公式" });
+      }
+    }
+    if (ENG_D && ENG_D.cards) {
+      for (i = 0; i < ENG_D.cards.length; i++) {
+        var ec = ENG_D.cards[i];
+        navGlobalRow(rows, ENG_SID, "engcard", { id: ec.id, name: ec.en || ec.cn, section: ec.g, level: "" },
+          [fld("英文", ec.en), fld("中文", ec.cn), fld("挖空", ec.blank), fld("讲解", ec.note)],
+          { engCard: ec.id, kindLabel: "英语卡片" });
+      }
+      for (i = 0; i < engTracks().length; i++) {
+        var tr = engTracks()[i];
+        for (j = 0; j < tr.cases.length; j++) {
+          var ca = tr.cases[j];
+          navGlobalRow(rows, ENG_SID, "englecture", { id: tr.id + "-" + (j + 1), name: ca.title || tr.short,
+            section: tr.short, level: "" },
+            [fld("题干", ca.q), fld("原文", ca.text), fld("答案", ca.a), fld("解析", ca.why)],
+            { engTrack: i, engCase: j, kindLabel: "英语讲义" });
+        }
+      }
+    }
+    var sources = lecSrcEnsure();
+    for (var key in sources) if (has0(sources, key)) {
+      var src = sources[key], paras = [];
+      for (i = 0; i < (src.paras || []).length; i++) {
+        var para = src.paras[i];
+        paras.push(typeof para === "string" ? para : String(para.text || para.t || ""));
+      }
+      navGlobalRow(rows, src.sid, "lecture", { id: src.sid + " · " + src.sec,
+        name: "讲义原文 · " + src.sec, section: src.sec, level: "" },
+        [fld("讲义原文", paras.join("\n"))], { lectureSec: src.sec, kindLabel: "讲义" });
+    }
+    return rows;
+  }
+
   /* 搜索索引：编号 / 名称 / 章节 / 内容 / 易错点 / 最低拿分动作 / 例题题干与解析 */
   function navBuildIndex() {
+    if (NAV_GLOBAL) {
+      if (navIdx.sid === "*" && navIdx.list) return navIdx.list;
+      var globalRows = navGlobalBuild();
+      navIdx.sid = "*"; navIdx.list = globalRows;
+      return globalRows;
+    }
     if (navIdx.sid === SID && navIdx.list) return navIdx.list;
     var rows = [];
     pts().forEach(function (k) {
@@ -48600,7 +48852,9 @@
     if (!q) {
       navMeta.textContent = "";
       navHits.appendChild(txt("p", "navempty",
-        "输入关键词即时过滤：编号、名称、章节、内容、易错点、最低拿分动作、例题题干与解析都能搜。回车跳第一个结果，Esc 关闭。"));
+        NAV_GLOBAL
+          ? "正在搜索全部资料：知识点、题目、笔记、公式、英语卡片、英语讲义与讲义原文。回车打开第一个结果。"
+          : "输入关键词即时过滤：编号、名称、章节、内容、易错点、最低拿分动作、例题题干与解析都能搜。回车跳第一个结果，Esc 关闭。"));
       return;
     }
 
@@ -48635,21 +48889,26 @@
     }
 
     var shown = Math.min(total, NAV_MAX);
-    navMeta.textContent = "共 " + total + " 条" + (total > shown ? "，显示前 " + shown + " 条" : "");
+    navMeta.textContent = (NAV_GLOBAL ? "全部资料 · " : "本科目 · ") + "共 " + total + " 条" + (total > shown ? "，显示前 " + shown + " 条" : "");
 
     for (i = 0; i < shown; i++) {
       var h = hits[i], k = h.row.k;
       var it = el("div", "navhit");
+      it._navRow = h.row;
       it.setAttribute("data-level", k.level);
       it.setAttribute("data-kid", k.id);
       it.setAttribute("role", "button");
       it.setAttribute("tabindex", "0");
-      it.title = "跳到该知识点";
+      it.title = h.row.kind === "question" ? "打开对应题目" : "打开对应资料";
 
       var ih = el("div", "navhithead");
+      if (NAV_GLOBAL) {
+        var hs = subjectById(h.row.sid);
+        ih.appendChild(txt("span", "badge", (hs ? hs.name : h.row.sid) + " · " + (h.row.kindLabel || "资料")));
+      }
       ih.appendChild(txt("span", "tocid", k.id));
       ih.appendChild(txt("span", "", k.section || ""));
-      ih.appendChild(txt("span", "badge lv", k.level));
+      if (k.level) ih.appendChild(txt("span", "badge lv", k.level));
       it.appendChild(ih);
 
       var nmSpan = el("span", "navhitname");
@@ -48662,18 +48921,50 @@
         it.appendChild(sn);
       }
 
-      navBindHit(it, k.id);
+      navBindHit(it, k.id, h.row);
       navHits.appendChild(it);
     }
     renderMath(navHits);
   }
 
-  function navBindHit(node, kid) {
-    node.addEventListener("click", function () { jumpToPoint(kid); });
+  function navOpenRow(kid, row) {
+    if (!row || !row.kind) { jumpToPoint(kid); return; }
+    closeNav(true);
+    if (row.sid && row.sid !== SID) switchSubject(row.sid);
+    if (row.kind === "question") { gotoCard(row.kid, row.ei); return; }
+    if (row.kind === "knowledge") { jumpToPoint(row.kid); return; }
+    if (row.kind === "formula") {
+      F.sid = row.sid; F.sec = "all"; F.lv = "all"; F.q = "";
+      if (fSearch) fSearch.value = "";
+      fEnter();
+      var fc = byId("f-" + row.fid);
+      if (fc) { fc.scrollIntoView({ block: "center", behavior: "smooth" }); fc.classList.add("flash"); }
+      return;
+    }
+    if (row.kind === "engcard") {
+      var ec = null, i;
+      for (i = 0; i < ENG_D.cards.length; i++) if (ENG_D.cards[i].id === row.engCard) { ec = ENG_D.cards[i]; break; }
+      ENG_ST.view = "recite"; ENG_ST.mode = ec && ec.type === "term" ? "read" : "write";
+      ENG_ST.queue = ec ? [ec] : []; ENG_ST.pos = 0; ENG_ST.done = false; ENG_ST.pick = ""; ENG_ST.typed = null;
+      ENG_ST.sessionDone = false; ENG_ST.sessionStats = { n: 0, ok: 0 };
+      engShow(); return;
+    }
+    if (row.kind === "englecture") {
+      ENG_ST.view = "lecture"; ENG_ST.track = row.engTrack; ENG_ST.tcase = row.engCase;
+      ENG_ST.lcDone = false; ENG_ST.lcPick = -1; engShow(); return;
+    }
+    if (row.kind === "lecture") {
+      var secs = lecSecs(row.sid), at = 0;
+      for (var i2 = 0; i2 < secs.length; i2++) if (secs[i2].sec === row.lectureSec) { at = i2; break; }
+      lecOpen(at);
+    }
+  }
+  function navBindHit(node, kid, row) {
+    node.addEventListener("click", function () { navOpenRow(kid, row); });
     node.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
         e.preventDefault();
-        jumpToPoint(kid);
+        navOpenRow(kid, row);
       }
     });
   }
@@ -48820,7 +49111,7 @@
     navTabSearch.setAttribute("aria-selected", isToc ? "false" : "true");
     navTabToc.setAttribute("tabindex", isToc ? "0" : "-1");
     navTabSearch.setAttribute("tabindex", isToc ? "-1" : "0");
-    navTitle.textContent = isToc ? "知识点目录" : "搜索知识点";
+    navTitle.textContent = isToc ? "知识点目录" : (NAV_GLOBAL ? "全局搜索" : "搜索知识点");
     navTocPane.hidden = !isToc;
     navSearchPane.hidden = isToc;
     if (rebuild) renderNav();
@@ -48844,11 +49135,26 @@
     else byId("navClose").focus();
   }
 
+  function navSetGlobal(on) {
+    NAV_GLOBAL = !!on;
+    if (navGlobalBtn) {
+      navGlobalBtn.textContent = NAV_GLOBAL ? "全部资料" : "本科目";
+      navGlobalBtn.setAttribute("aria-pressed", NAV_GLOBAL ? "true" : "false");
+    }
+    navIdx.sid = null; navIdx.list = null;
+    if (!navDrawer.hidden && navTab === "search") setNavTab("search", true);
+  }
+  function openGlobalSearch() {
+    lastNavBtn = navBtnSearch;
+    navSetGlobal(true);
+    openNav("search");
+  }
+
   function closeNav(keepFocus) {
     if (navDrawer.hidden) return;
     navDrawer.hidden = true;
     navScrim.hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     navBtnToc.setAttribute("aria-expanded", "false");
     navBtnSearch.setAttribute("aria-expanded", "false");
     if (!keepFocus && lastNavBtn) lastNavBtn.focus();
@@ -48860,7 +49166,7 @@
   });
   navBtnSearch.addEventListener("click", function () {
     lastNavBtn = navBtnSearch;
-    if (navDrawer.hidden) openNav("search"); else closeNav();
+    if (navDrawer.hidden) { navSetGlobal(false); openNav("search"); } else closeNav();
   });
   byId("navClose").addEventListener("click", function () { closeNav(); });
   navScrim.addEventListener("click", function () { closeNav(); });
@@ -48878,6 +49184,10 @@
     renderSearch();
     navInput.focus();
   });
+  if (navGlobalBtn) navGlobalBtn.addEventListener("click", function () {
+    navSetGlobal(!NAV_GLOBAL);
+    navInput.focus();
+  });
   navInput.addEventListener("input", function () {
     if (NAV_DEBOUNCE) clearTimeout(NAV_DEBOUNCE);
     NAV_DEBOUNCE = setTimeout(function () {
@@ -48889,7 +49199,7 @@
     if (e.key === "Enter") {
       e.preventDefault();
       var first = navHits.querySelector(".navhit");
-      if (first) jumpToPoint(first.getAttribute("data-kid"));
+      if (first) navOpenRow(first.getAttribute("data-kid"), first._navRow);
     }
   });
   document.addEventListener("keydown", function (e) {
@@ -49828,16 +50138,15 @@
     if (answered < PRED_MIN) {
       return { enough: false, answered: answered, need: PRED_MIN, poolN: pool.length };
     }
-    /* 全局正确率：按「已做过的题里答对的比例」，没做过的题不计入分子也不计入分母，
-       避免「只做了 5 题全对就估 100 分」这种自欺。 */
-    var doneN = 0, doneRight = 0, i;
+    /* 全局估分与题型估分统一口径：没做过的题按尚未得分处理。
+       这样分母与界面展示一致，少量全对不会被放大为满分。 */
+    var doneRight = 0, i;
     for (i = 0; i < pool.length; i++) {
       r = qzRecOf(sid, pool[i].key);
       if (!r) continue;
-      doneN++;
       if (r.r === 1) doneRight++;
     }
-    var base = doneN ? doneRight / doneN : 0;
+    var base = all.total ? doneRight / all.total : 0;
     var fmt = examFormatOf(sub), items = [], total = 0, est = 0, j, st, w, acc, t;
     if (fmt) {
       total = fmt.total || 0;
@@ -49880,9 +50189,9 @@
         t = order[j]; var d = by[t];
         w = Math.floor(raw[j]) + (bonus[j] ? 1 : 0);
         if (!w) continue;
-        acc = d.done ? Math.min(1, d.right / d.done) : base;
+        acc = d.n ? Math.min(1, d.right / d.n) : base;
         items.push({ type: t, label: t, score: w, total: d.n, right: d.right,
-                     rate: Math.round(acc * 100), est: w * acc, guess: !d.done });
+                     rate: Math.round(acc * 100), est: w * acc, guess: !d.n });
         est += w * acc;
       }
     }
@@ -49918,6 +50227,11 @@
     return n;
   }
 
+  /* 新记录键只使用稳定的「知识点 + 例题序号」，不再截取题干。
+     题库构建约定：已有例题的 i 不复用；新增例题追加，删除后保留空位。 */
+  function qzKeyOf(it) { return it.k + "#i" + it.i; }
+  function qzLegacyKeyOf(it, ex) { return it.k + "#" + qzFp(ex && ex.q); }
+
   function qzPoolOf(sid) {
     var sub = qzSubject(sid), out = [];
     if (!sub) return out;
@@ -49926,15 +50240,36 @@
       if (it.s !== sid) continue;
       var kp = qzKpOf(sub, it.k);
       if (!kp || !kp.examples || !kp.examples[it.i]) continue;
-      out.push({ it: it, kp: kp, ex: kp.examples[it.i], key: it.k + "#" + qzFp(kp.examples[it.i].q) });
+      out.push({ it: it, kp: kp, ex: kp.examples[it.i], key: qzKeyOf(it) });
     }
     return out;
   }
 
+  /* 旧键可能同时属于多道不同题。迁移时为每个新键各保留一份旧状态，
+     不猜测哪一道才是用户当初做的题；迁移完成后各题独立积累新记录。 */
+  function qzMigrateAllKeys() {
+    if (!QZ_READY) return 0;
+    var q = qzData(), touched = 0, moved = 0;
+    for (var n = 0; n < DATA.subjects.length; n++) {
+      var sid = DATA.subjects[n].id, pool = qzPoolOf(sid), legacy = [];
+      if (!pool.length) continue;
+      if (!q[sid]) q[sid] = {};
+      for (var i = 0; i < pool.length; i++) {
+        var row = pool[i], oldKey = qzLegacyKeyOf(row.it, row.ex);
+        if (oldKey === row.key || !q[sid][oldKey]) continue;
+        var oldRec = cloneSnap(q[sid][oldKey]);
+        q[sid][row.key] = q[sid][row.key] ? pickEntry(q[sid][row.key], oldRec) : oldRec;
+        legacy.push(oldKey); moved++;
+      }
+      for (var j = 0; j < legacy.length; j++) { delete q[sid][legacy[j]]; touched++; }
+    }
+    if (touched) { commitSnap(nowMs()); syncMarkDirty(); }
+    return moved;
+  }
+
   /* ---------- 知识点 / 例题 与刷题记录的关联 ---------- */
-  /* 不新增存储：启动时由内嵌题库重建索引 sid → 知识点 → 例题下标 → 记录键，
-     记录键与刷题写入时完全同构（知识点#题干前20字），因此旧记录零迁移、旧数据照常命中。
-     用题库的 item.i（真实例题下标）定位，同一知识点内题干前 20 字雷同的两道题也不会互相串记录。 */
+  /* 不新增存储：启动时由内嵌题库重建索引 sid → 知识点 → 例题下标 → 稳定记录键。
+     键与刷题写入共用 qzKeyOf；旧题干前缀键只在启动迁移时读取，冲突记录按题保留独立副本。 */
   var QZIDX = null;
   var QZITEM = null;    // 同一份索引顺带存题库条目：展示错答时要取选项文本与正确答案
 
@@ -49948,7 +50283,7 @@
       if (!kp || !kp.examples || !kp.examples[it.i]) continue;
       if (!out[it.s]) out[it.s] = {};
       if (!out[it.s][it.k]) out[it.s][it.k] = {};
-      out[it.s][it.k][it.i] = it.k + "#" + qzFp(kp.examples[it.i].q);
+      out[it.s][it.k][it.i] = qzKeyOf(it);
       if (!items[it.s]) items[it.s] = {};
       if (!items[it.s][it.k]) items[it.s][it.k] = {};
       items[it.s][it.k][it.i] = it;
@@ -49966,7 +50301,7 @@
     m = m && m[kid];
     return (m && m[i]) ? m[i] : null;
   }
-  /* 记录键：知识点#题干前20字；题不在题库里返回空串 */
+  /* 稳定记录键：知识点#i例题下标；题不在题库里返回空串 */
   function qzKeyAt(sid, kid, i) {
     var m = qzIdx()[sid];
     m = m && m[kid];
@@ -50329,7 +50664,7 @@
     if (!evDrawer || evDrawer.hidden) return;
     evDrawer.hidden = true;
     if (evScrim) evScrim.hidden = true;
-    if (!EV_LOCK) document.body.classList.remove("drawerOpen");   // 首屏路径视图本来就锁着，别顺手解锁
+    if (!EV_LOCK) syncDrawerLock();   // 首屏路径视图本来就锁着，别顺手解锁
     if (!keepFocus && EV_KID) {
       var back = document.querySelector('[data-ev="' + EV_KID + '"]');
       if (back) back.focus();     // 焦点回到打开它的那颗按钮，键盘用户不迷路
@@ -51424,7 +51759,7 @@
     if (!d || d.hidden) return;
     d.hidden = true;
     if (s) s.hidden = true;
-    if (!RE_LOCK) document.body.classList.remove("drawerOpen");
+    if (!RE_LOCK) syncDrawerLock();
   }
   function reRender() {
     var box = byId("reBody"), title = byId("reTitle"), hint = byId("reHintD");
@@ -51606,6 +51941,7 @@
     var pool = QZ.pool, n = 0, i;
     for (i = 0; i < pool.length; i++) {
       if (QZ.cfg.sec !== "全部" && pool[i].kp.section !== QZ.cfg.sec) continue;
+      if (qzNum(QZ.cfg.ly) && qzLyOf(pool[i].it) !== qzNum(QZ.cfg.ly)) continue;
       if (QZ.cfg.type !== "全部" && pool[i].ex.type !== QZ.cfg.type) continue;
       if (qzRecOf(QZ.sid, pool[i].key)) continue;
       n++;
@@ -51952,7 +52288,8 @@
     byId("qPrev").disabled = QZ.pos === 0;
     byId("qFill").value = "";
     byId("qFill").disabled = false;
-    byId("qFillCheck").disabled = false;
+    byId("qFillCheck").disabled = qzSimOn();
+    byId("qFillCheck").textContent = qzSimOn() ? "交卷时统一判定" : "判定";
     byId("qNext").textContent = (QZ.pos === QZ.list.length - 1) ? "看小结" : "下一题";
 
     if (mode === "opt" || mode === "multi") qzRenderOpts(it);
@@ -52607,6 +52944,14 @@
   /* ---------- [reflect] 待复盘清单：把笔记里 [反思] 那一条抽出来单列 ---------- */
   /* 反思本来就写在该例题的笔记里（前缀 [反思]），这里只是换一个按时间倒序的入口，
      不复制、不新存：`setNote` 仍是唯一写入路径，改反思会就地同步到这里。 */
+  function qzReflectText(note) {
+    var lines = String(note || "").split(/\r?\n/), i, m;
+    for (i = lines.length - 1; i >= 0; i--) {
+      m = lines[i].match(/^\s*\[反思\]\s*([\s\S]*)$/);
+      if (m) return m[1].trim();
+    }
+    return "";
+  }
   function qzReflectList(sid) {
     var sub = qzSubject(sid), map = noteMap(sid), out = [], k, m, kid, ei, ex, kp, text;
     if (!sub) return out;
@@ -52621,7 +52966,7 @@
       ex = kp && kp.examples && kp.examples[ei];
       if (!kp || !ex) continue;
       out.push({ kid: kid, ei: ei, key: k, kp: kp, ex: ex, t: normT(m.t),
-                 text: text.replace(/^\s*\[反思\]\s*/m, "").replace(/\n[\s\S]*$/, "") });
+                 text: qzReflectText(text) });
     }
     out.sort(function (a, b) { return b.t - a.t; });
     return out;
@@ -52822,12 +53167,15 @@
        那时再算 qzDispLetters 会得到别的题的排列，字母全是错的。 */
     var ad = qzAnsDisp(q.it);
     if (mode === "fill") {
-      QZ.sim.picks[QZ.pos] = { mode: "fill", val: byId("qFill").value };
+      var fv = String(byId("qFill").value || "");
+      if (!fv.trim()) delete QZ.sim.picks[QZ.pos];
+      else QZ.sim.picks[QZ.pos] = { mode: "fill", val: fv };
       return;
     }
     if (mode === "multi") {
       var pk = qzChosen();
-      QZ.sim.picks[QZ.pos] = { mode: "multi", picked: pk, disp: qzDispLetters(pk), ansdisp: ad };
+      if (!pk.length) delete QZ.sim.picks[QZ.pos];
+      else QZ.sim.picks[QZ.pos] = { mode: "multi", picked: pk, disp: qzDispLetters(pk), ansdisp: ad };
       return;
     }
     var o = qzSimSel();
@@ -52862,8 +53210,14 @@
     QZ.sim.picks[QZ.pos] = { mode: "opt", picked: idx, disp: qzDispLetters([idx]), ansdisp: qzAnsDisp(q && q.it) };
   }
   function qzSimAnswered() {
-    var n = 0, k;
-    for (k in QZ.sim.picks) if (has0(QZ.sim.picks, k)) n++;
+    var n = 0, k, p;
+    for (k in QZ.sim.picks) if (has0(QZ.sim.picks, k)) {
+      p = QZ.sim.picks[k];
+      if (!p) continue;
+      if (p.mode === "fill" && !String(p.val == null ? "" : p.val).trim()) continue;
+      if (p.mode === "multi" && (!p.picked || !p.picked.length)) continue;
+      n++;
+    }
     return n;
   }
   /* 交卷：一次性判分、写记录、出分。auto=true 是限时到点自动交 */
@@ -52875,8 +53229,9 @@
     var keep = QZ.pos, i, k, markWrote = false;
     for (i = 0; i < QZ.list.length; i++) {
       var p = QZ.sim.picks[i];
-      /* [sim-mark] 标了「蒙的 / 想了很久」但最后没作答的题：标记本身没处落，跳过 */
       if (!p) continue;
+      if (p.mode === "fill" && !String(p.val == null ? "" : p.val).trim()) continue;
+      if (p.mode === "multi" && (!p.picked || !p.picked.length)) continue;
       var q = QZ.list[i], it = q.it, right = false, wrong = null, picked = null;
       if (p.mode === "opt") {
         picked = p.picked;
@@ -52919,31 +53274,37 @@
      扣掉蒙的还剩多少」。不传时 estAdj 与 est 相同，旧调用方行为不变。 */
   function qzSimScore(rec, fold) {
     var sub = qzSubject(QZ.sid), fmt = examFormatOf(sub);
-    var ratio = rec.answered ? rec.right / rec.answered : 0;
-    var ft = fold ? qzNum(fold.total) : 0;
+    var totalN = qzNum(rec.total), ft = fold ? qzNum(fold.total) : 0;
+    var ratio = totalN ? rec.right / totalN : 0;
     if (!fmt) {
-      var adjR = rec.answered ? Math.max(0, rec.right - ft) / rec.answered : 0;
+      var adjR = totalN ? Math.max(0, rec.right - ft) / totalN : 0;
       return { est: Math.round(ratio * 100), estAdj: Math.round(adjR * 100), total: 100,
-               kind: "按正确率折算", items: [] };
+               kind: "按本组总题量折算（未答计 0）", items: [] };
+    }
+    var totals = {}, qi;
+    for (qi = 0; qi < QZ.list.length; qi++) {
+      var qrow = QZ.list[qi], qt = qrow && qrow.ex && qrow.ex.type;
+      if (qt) totals[qt] = (totals[qt] || 0) + 1;
     }
     var items = [], j, t, d, acc, est = 0, estAdj = 0, total = 0;
     for (j = 0; j < fmt.items.length; j++) {
       t = fmt.items[j];
       if (!t.score) continue;
       total += t.score;
-      d = rec.byType[t.type];
-      if (!d || !d.n) {
+      d = rec.byType[t.type] || { n: 0, right: 0 };
+      var typeN = totals[t.type] || 0;
+      if (!typeN) {
         items.push({ type: t.type, label: t.label || t.type, n: 0, right: 0, score: t.score, got: 0 });
         continue;
       }
-      acc = d.right / d.n;
-      items.push({ type: t.type, label: t.label || t.type, n: d.n, right: d.right, score: t.score, got: t.score * acc });
+      acc = d.right / typeN;
+      items.push({ type: t.type, label: t.label || t.type, n: typeN, right: d.right, score: t.score, got: t.score * acc });
       est += t.score * acc;
       var gf = (fold && fold.byType[t.type]) ? qzNum(fold.byType[t.type]) : 0;
-      estAdj += t.score * Math.max(0, d.right - gf) / d.n;
+      estAdj += t.score * Math.max(0, d.right - gf) / typeN;
     }
     return { est: Math.round(est), estAdj: Math.round(estAdj), total: total || 100,
-             kind: "按题型分值折算", items: items };
+             kind: "按题型分值折算（未答计 0）", items: items };
   }
   /* 设置页那个开关：文案、限时与题量都从 QZ.sim 现画，不用另存状态 */
   var SIM_COUNTS = [10, 20, 30, 50, 100];   // [sim] 下拉里的固定档；不在这里的数一律算「自定义」
@@ -53374,14 +53735,15 @@
     if (QZ.sim.done) {
       for (mkI = 0; mkI < QZ.list.length; mkI++) {
         var mq = QZ.list[mkI], mr = qzRecOf(QZ.sid, mq.key), mmk = QZ.sim.mark[mkI];
-        if (qzGuessOn(mr)) {
-          mkFold.total++;
-          mkFold.byType[mq.ex.type] = (mkFold.byType[mq.ex.type] || 0) + 1;
-        } else if (mmk && mmk.g) {
-          if (mr && mr.r === 0) mkLose++;
-          else mkSkip++;                 // 标完没作答：record 都没有，标记无处可挂
+        var answered = !!QZ.sim.picks[mkI];
+        if (mmk && mmk.g) {
+          if (answered && mr && mr.r === 1) {
+            mkFold.total++;
+            mkFold.byType[mq.ex.type] = (mkFold.byType[mq.ex.type] || 0) + 1;
+          } else if (answered && mr && mr.r === 0) mkLose++;
+          else mkSkip++;
         }
-        if (qzHesOn(mr)) mkH++;
+        if (mmk && mmk.h && answered) mkH++;
       }
     }
 
@@ -53693,8 +54055,8 @@
     ta.rows = 2;
     ta.placeholder = "一句话就行 —— " + QZ_RF_Q;
     ta.setAttribute("aria-label", "这道题的反思");
-    var old = noteText(QZ.sid, key), m = old.match(/\[反思\][^\n]*/);
-    if (m) ta.value = m[0].replace(/^\[反思\]\s*/, "");
+    var old = noteText(QZ.sid, key);
+    ta.value = qzReflectText(old);
     wrap.appendChild(ta);
 
     var save = txt("button", "btn small primary", "保存");
@@ -54016,9 +54378,10 @@
     return true;
   }
 
-  function downloadText(fname, text) {
+  function downloadText(fname, text, mime) {
     try {
-      var blob = new Blob([text], { type: "application/json;charset=utf-8" });
+      var type = mime || (/\.json$/i.test(fname) ? "application/json" : "text/markdown");
+      var blob = new Blob([text], { type: type + ";charset=utf-8" });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url;
@@ -54268,14 +54631,34 @@
     return { streak: streak, today: todayN };
   }
 
+  function todayHomeActions(box) {
+    var acts = el("div", "tdhomeacts");
+    var resume = txt("button", "btn small", "继续上次");
+    resume.type = "button";
+    resume.addEventListener("click", function () { lnResumeLast(); });
+    acts.appendChild(resume);
+    var search = txt("button", "btn small", "全局搜索");
+    search.type = "button";
+    search.addEventListener("click", openGlobalSearch);
+    acts.appendChild(search);
+    box.appendChild(acts);
+  }
+
   function renderToday() {
     var box = byId("todayRoute");
     if (!box) return;
     var r = todayRoute(SID), picks = r.fix.concat(r.rev).concat(r.fresh), i;
-    /* 没有要练的题、但有讲义可读时不能整块藏掉——那正好是「今天就去读一节」的日子 */
-    if (!picks.length && !r.read) { box.hidden = true; box.innerHTML = ""; return; }
     box.hidden = false;
     box.innerHTML = "";
+    if (!picks.length && !r.read) {
+      var emptyHead = el("div", "tdhead");
+      emptyHead.appendChild(txt("h2", "", "今日学习台"));
+      emptyHead.appendChild(txt("span", "tdsub", "今天没有到期任务"));
+      box.appendChild(emptyHead);
+      box.appendChild(txt("p", "tdempty", "可以继续上次学习，或用全局搜索定位知识点、题目、公式和讲义。"));
+      todayHomeActions(box);
+      return;
+    }
 
     var sub = picks.length ? (picks.length + " 个点 · 约 " + r.questions + " 题") : "今天没有要补的题";
     if (r.read) sub += " · 读 1 节";
@@ -54284,9 +54667,10 @@
     if (st.streak > 0) sub = "连续 " + st.streak + " 天 · 今日已练 " + st.today + " 题 · " + sub;
 
     var head = el("div", "tdhead");
-    head.appendChild(txt("h2", "", "今日路线"));
+    head.appendChild(txt("h2", "", "今日学习台"));
     head.appendChild(txt("span", "tdsub", sub));
     box.appendChild(head);
+    todayHomeActions(box);
 
     if (picks.length) {
       var ol = el("ol", "tdlist");
@@ -54491,12 +54875,14 @@
     dataBtn.setAttribute("aria-expanded", "true");
     renderData();
     closeMore();
+    syncDrawerLock();
     dataDrawer.focus();
   }
   function dataShut(keepFocus) {
     dataDrawer.hidden = true;
     dataScrim.hidden = true;
     dataBtn.setAttribute("aria-expanded", "false");
+    syncDrawerLock();
     if (!keepFocus && dataBtn.focus) dataBtn.focus();
   }
 
@@ -55313,8 +55699,9 @@
     lnBind("lnPractice", lnPractice);
     lnBind("lnMap", function () { lnClose(); pathOpen(); });
     lnBind("lnCopyEss", function () {
-      var ok = copyText(lnCourseMarkdown(), lnBodyEl);
-      qzToast(ok ? "已复制本课精华" : "复制被浏览器拦住了，换个浏览器试试");
+      copyText(lnCourseMarkdown(), lnBodyEl).then(function (ok) {
+        qzToast(ok ? "已复制本课精华" : "复制被浏览器拦住了，已选中文本，可按 Ctrl+C");
+      });
     });
     lnBind("lnDlEss", function () {
       var name = (LN.sid || "course") + "-本课精华.md";
@@ -55614,20 +56001,33 @@
     if (bl.length) {
       box.appendChild(txt("div", "lctlb", "讲义要点"));
       ol = el("ol", "lctul");
-      for (i = 0; i < bl.length; i++) ol.appendChild(txt("li", "", bl[i]));
+      for (i = 0; i < bl.length; i++) {
+        var li = el("li");
+        li.innerHTML = safeHtml(bl[i]);
+        ol.appendChild(li);
+      }
       box.appendChild(ol);
+      renderMath(ol);
     } else {
       box.appendChild(txt("p", "lctp", "这条没写讲义正文，先看下面的易错点与动作。"));
     }
     if (mis.length) {
       box.appendChild(txt("div", "lctlb warn", "最容易记错"));
       ul = el("ul", "lctul");
-      for (i = 0; i < mis.length; i++) ul.appendChild(txt("li", "", mis[i]));
+      for (i = 0; i < mis.length; i++) {
+        var mi = el("li");
+        mi.innerHTML = safeHtml(mis[i]);
+        ul.appendChild(mi);
+      }
       box.appendChild(ul);
+      renderMath(ul);
     }
     if (k.action) {
       box.appendChild(txt("div", "lctlb", "最低拿分动作"));
-      box.appendChild(txt("p", "lctp", String(k.action)));
+      var act = el("p", "lctp");
+      act.innerHTML = safeHtml(k.action);
+      box.appendChild(act);
+      renderMath(act);
     }
     box.appendChild(txt("div", "lctlb", "出处"));
     box.appendChild(txt("p", "lctp", "讲义 " + (k.section || "—") + (k.source ? " · " + k.source : "")));
@@ -56174,7 +56574,7 @@
     if (!d || d.hidden) return;
     d.hidden = true;
     byId("fcScrim").hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     fcPillUpd(Date.now());
   }
   var fcMenuBtn = byId("fcBtn");
@@ -56293,13 +56693,13 @@
   function lnRecallText() { var ta = byId("lnRecall"); return ta ? ta.value : ""; }
   /* 三个新键都单调：rc 次数、rb 最高命中率、rt 最近时刻 —— 合并取 max 即幂等。
      不动 p（教学进度由 lnSaveProg 管），也不碰 snap.quiz：复述不是做题。 */
-  function lnSaveRecall(kid, rate) {
+  function lnSaveRecall(kid, rate, countAttempt) {
     var sid = LN.sid || SID, d = lnData(), m = d[sid], old, t = nowMs(), rec;
     if (!m) { m = {}; d[sid] = m; }
     old = m[kid] || {};
     rec = {
       p: qzNum(old.p), t: normT(old.t) || t,
-      rc: qzNum(old.rc) + 1,
+      rc: qzNum(old.rc) + (countAttempt === false ? 0 : 1),
       rb: Math.max(qzNum(old.rb), qzNum(rate)),
       rt: t
     };
@@ -56341,23 +56741,15 @@
         var next = lnRecallScore(lnRecallText(), LN.recall.keys, LN.recall.manual);
         LN.recall.sc = next;
         lnRecallPaint(kid, next);
-        lnSaveRecall(kid, next.rate);   /* 手补后重存；rb 取 max，点两次不会把分数推高 */
+        lnSaveRecall(kid, next.rate, false);   /* 手补只更新命中情况，不新增一次复述 */
       });
     }
   }
 
   /* ---------- 二、精华卡（结） ---------- */
-  /* 文本化：去标签、去公式定界符、压空白。精华卡是给人「一眼看完」的，
-     所以这里刻意不保留任何富文本——公式在精华里只留符号本身。 */
+  /* 文本化复用刷题区的 LaTeX 降级器，保留分式、根式、上下标等语义。 */
   function kpPlainText(s) {
-    return String(s == null ? "" : s)
-      .replace(/<br\s*\/?>/gi, " ")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\\\(|\\\)|\\\[|\\\]/g, "")   /* 公式定界符先拆 */
-      .replace(/\\[a-zA-Z]+/g, "")           /* \mathrm \ge \sqrt \rightleftharpoons 这类命令整条去掉 */
-      .replace(/[{}$^_]/g, "")               /* 剩下花括号与上下标符：留着只会变成乱码 */
-      .replace(/\s+/g, " ")
-      .trim();
+    return qzTexPlain(s).replace(/\s+/g, " ").trim();
   }
   function kpFirstClause(s, n) {
     var t = kpPlainText(s), cut;
@@ -56389,14 +56781,14 @@
     for (i = 0; i < DATA.subjects.length; i++) {
       s = DATA.subjects[i];
       for (j = 0; j < s.knowledgePoints.length; j++) {
-        m[s.knowledgePoints[j].id] = { sid: s.id, k: s.knowledgePoints[j] };
+        m[s.id + "::" + s.knowledgePoints[j].id] = { sid: s.id, k: s.knowledgePoints[j] };
       }
     }
     KPMAP = m;
     return m;
   }
   function findPointIn(sid, kid) {
-    var e = kpMap()[kid];
+    var e = kpMap()[sid + "::" + kid];
     return (e && e.sid === sid) ? e.k : null;
   }
   function kpEssence(k) {
@@ -56430,45 +56822,6 @@
     L.push("");
     L.push("**关键词**：" + e.terms.join(" / "));
     return L.join("\n");
-  }
-  /* 复制双通道：先试 execCommand（file:// 下这条最稳），失败再试 clipboard API。
-     两个都失败时不假装成功——把文本选中，让用户自己 Ctrl+C。 */
-  function copyText(text, ta) {
-    var ok = false, box;
-    try {
-      box = el("textarea");
-      box.value = text;
-      box.style.position = "fixed";
-      box.style.left = "-9999px";
-      box.style.top = "0";
-      document.body.appendChild(box);
-      box.focus();
-      box.select();
-      ok = document.execCommand("copy");
-      document.body.removeChild(box);
-    } catch (e) { ok = false; }
-    if (ok) return true;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text); return true; }
-    } catch (e2) { }
-    if (ta && ta.select) { ta.focus(); ta.select(); }
-    return false;
-  }
-  function downloadText(name, text) {
-    try {
-      var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var a = el("a");
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () {
-        if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 0);
-      return true;
-    } catch (e) { return false; }
   }
   function buildEssBtn(k) {
     var b = el("button", "essbtn"), e = kpEssence(k);
@@ -56520,8 +56873,9 @@
     bCopy.type = "button";
     bCopy.textContent = "复制 Markdown";
     bCopy.addEventListener("click", function () {
-      var ok = copyText(essMarkdown(k), byId("essBody"));
-      qzToast(ok ? "已复制，可以直接贴到笔记里" : "浏览器不让复制，已帮你选中，按 Ctrl+C");
+      copyText(essMarkdown(k), byId("essBody")).then(function (ok) {
+        qzToast(ok ? "已复制，可以直接贴到笔记里" : "浏览器不让复制，已帮你选中，按 Ctrl+C");
+      });
     });
     var bDl = el("button", "btn small");
     bDl.type = "button";
@@ -56550,7 +56904,7 @@
     if (!d || d.hidden) return;
     d.hidden = true;
     byId("essScrim").hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     if (!keepFocus) byId("essClose").focus();
   }
 
@@ -57117,8 +57471,9 @@
     b.type = "button";
     b.textContent = "复制档案";
     b.addEventListener("click", function () {
-      var ok = copyText(repMarkdown(st), byId("repBody"));
-      qzToast(ok ? "已复制" : "复制被浏览器拦住了");
+      copyText(repMarkdown(st), byId("repBody")).then(function (ok) {
+        qzToast(ok ? "已复制" : "复制被浏览器拦住了，已选中文本，可按 Ctrl+C");
+      });
     });
     acts.appendChild(b);
     var bd = el("button", "btn small");
@@ -57287,7 +57642,7 @@
     if (!d || d.hidden) return;
     d.hidden = true;
     byId("repScrim").hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     if (!keepFocus) byId("repClose").focus();
   }
 
@@ -57504,6 +57859,7 @@
     // [sync] 两次旧键迁移跑完，再把结果收敛进 v2 快照（首次升级只发生一次）
     snap();
     migrateQuizToSnap();   // [sync] 旧版 review.quiz.v1 并入 snap.quiz（幂等）
+    qzMigrateAllKeys();    // [quiz] 题干截断旧键迁移到稳定例题键；冲突题各自保留可恢复副本
     SID = pickSubject();
     lsSet(LS_ACTIVE, SID);
     /* [v3.47.1] 主题以快照 prefs 为准、本地键为兜底：换设备或清过本地键时，
@@ -58137,7 +58493,7 @@
     if (pathPanel.hidden) return;
     pathPopShut();
     pathPanel.hidden = true;
-    document.body.classList.remove("drawerOpen");
+    syncDrawerLock();
     pathBtn.setAttribute("aria-expanded", "false");
     pathSetBtn();
     if (!keepFocus && pathBtn.focus) pathBtn.focus();
@@ -58521,6 +58877,24 @@
     }
   });
 
+  // 自动化回归出口：与既有公式/路径测试出口一样，不改变正常界面行为。
+  window.__studyTest = {
+    safeHtml: safeHtml, validSyncUrl: validSyncUrl, httpReq: httpReq, classify: classify,
+    qzKeyOf: qzKeyOf, qzLegacyKeyOf: qzLegacyKeyOf, qzPoolOf: qzPoolOf,
+    qzData: qzData, qzMigrateAllKeys: qzMigrateAllKeys, qzSimAnswered: qzSimAnswered,
+    qzSimScore: qzSimScore, qzRestCount: qzRestCount,
+    nowMs: nowMs, observeSnapClock: observeSnapClock,
+    qzReflectText: qzReflectText, qzTexPlain: qzTexPlain, downloadText: downloadText,
+    copyText: copyText, buildAdapter: buildAdapter, syncNow: syncNow,
+    engStopAudio: engStopAudio,
+    fullBackupObject: fullBackupObject, validSnap: validSnap, mergeSnapshot: mergeSnapshot,
+    navGlobalBuild: navGlobalBuild, navOpenRow: navOpenRow, navSetGlobal: navSetGlobal,
+    engBuild: engBuild, engMark: engMark,
+    engState: function () { return ENG_ST; }, qzState: function () { return QZ; },
+    snap: snap, subjects: function () { return DATA.subjects; }, kpMap: kpMap,
+    syncUserToData: syncUserToData
+  };
+
   // [formula] 调试出口：仅供自动化测试
   window.__reviewFormula = {
     FORMULA: FORMULA, enter: fEnter, exit: fExit, list: fListOf, matches: fMatches,
@@ -58852,7 +59226,6 @@ function ckShowNext() {
   stepsBox.id = "ckStepsBox";
   card.appendChild(stepsBox);
   box.appendChild(card);
-  box.appendChild(ckRenderStats());
 }
 function ckPickPred(t, chips) {
   CK.pred = t;
@@ -58869,7 +59242,9 @@ function ckRenderSteps() {
   var list = ckEl("div"), i;
   for (i = 0; i < CK.cur.steps.length; i++) {
     (function (i) {
-      var row = ckEl("div", "ckstep");
+      var row = ckEl("button", "ckstep");
+      row.type = "button";
+      row.setAttribute("aria-label", "第 " + (i + 1) + " 步：" + CK.cur.steps[i]);
       row.appendChild(ckEl("span", "ckno", CK_CIRC[i]));
       row.appendChild(ckEl("span", null, CK.cur.steps[i]));
       row.onclick = function () { ckGuess(i, row); };
@@ -58909,6 +59284,7 @@ function ckReveal(caught, hitRow) {
   var rows = box.querySelectorAll(".ckstep"), i;
   for (i = 0; i < rows.length; i++) {
     rows[i].onclick = null;
+    rows[i].disabled = true;
     rows[i].style.cursor = "default";
     if (!caught && i === CK.cur.err) rows[i].className = "ckstep bad";
   }
