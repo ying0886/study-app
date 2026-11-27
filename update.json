@@ -1,6 +1,6 @@
 {
-  "version": "4.38.0",
+  "version": "4.38.1",
   "url": "https://ying0886.github.io/study-app/study.html",
-  "notes": "① 刷题记录改用知识点＋题序稳定键，旧键冲突记录保留迁移副本；自建科目知识点按科目隔离",
-  "date": "2026-11-26"
+  "notes": "① 修复 GitHub Gist 推送失败（HTTP 400）：v4.38.0 给 PATCH 加了 If-Match 条件写，Gist 端点不接受，导致手机端一直「有本地改动待推送」；改回不带条件头，并发保护仍由「读→合并→写→回读校验」承担② 4xx 错误文案带上服务端原话（如 Problems parsing JSON）并写进「原始信息」，下次同步失败能直接看出是令牌、端点还是请求体问题",
+  "date": "2026-11-27"
 }

@@ -3,9 +3,11 @@
   study.html — 学习软件（单文件，file:// 可直接打开，离线可用）
   文件名: 2026-10-23 「复习界面.html」→「review.html」；2026-11-02 →「study.html」（学习软件）。
           线上同址改为 study.html，review.html 保留一个跳转页，旧链接与旧副本的「立即更新」仍可用。
-  APP_VERSION: 4.38.0
+  APP_VERSION: 4.38.1
   DATA_VERSION: 2026-11-25
-  本次变更: （4.38.0）① 刷题记录改用知识点＋题序稳定键，旧键冲突记录保留迁移副本；自建科目知识点按科目隔离
+  本次变更: （4.38.1）① 修复 GitHub Gist 推送失败（HTTP 400）：v4.38.0 给 PATCH 加了 If-Match 条件写，Gist 端点不接受，导致手机端一直「有本地改动待推送」；改回不带条件头，并发保护仍由「读→合并→写→回读校验」承担
+            ② 4xx 错误文案带上服务端原话（如 Problems parsing JSON）并写进「原始信息」，下次同步失败能直接看出是令牌、端点还是请求体问题
+  上次变更: （4.38.0）① 刷题记录改用知识点＋题序稳定键，旧键冲突记录保留迁移副本；自建科目知识点按科目隔离
             ② 收紧导入 HTML 属性，补齐空远端首推、ETag 条件写、逻辑时钟与同步地址校验
             ③ 修复空白模拟作答、本轮蒙对/迟疑统计、复制/下载、反思提取、讲义富文本、估分和剩余题数口径
             ④ 英语训练增加本轮小结与音频退出清理；新增不含凭据的完整备份/恢复、跨科全局搜索和今日学习台
@@ -1685,7 +1687,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="app-version" content="4.38.0">
+<meta name="app-version" content="4.38.1">
 <title>学习软件</title>
 <!-- katex-bundle:css:start -->
 <!-- KaTeX 0.19.0 · 公式样式与字体（base64 内嵌，共 20 个 woff2） -->
@@ -42421,7 +42423,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "4.38.0";
+  var APP_VERSION = "4.38.1";
   var DATA_VERSION = "2026-11-25";
   /* 产品名：只在「产品名出现的地方」用它——科目名仍是科目名。
      页面标题、打印页眉页脚、导出文件名、空状态文案都读这一个常量，改名只改这里。 */
@@ -46803,12 +46805,28 @@
     });
   }
 
+  /* [sync] 把服务端返回的 message 提出来（GitHub 是 {"message":"..."}）。
+     以前 4xx 只显示「HTTP 400」，看不出是请求体、令牌还是端点的问题；带上这句才能对症下药。 */
+  function remoteMsg(r, max) {
+    var b = r && r.body, m = "";
+    if (b && typeof b === "object") m = b.message || b.error || "";
+    if (typeof m !== "string") m = "";
+    m = m.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    if (max > 0 && m.length > max) m = m.slice(0, max) + "…";
+    return m;
+  }
   function classify(r, what) {
-    if (r.status === 401 || r.status === 403) throw sErr("auth", "认证失败（HTTP " + r.status + "）：令牌或账号密码无效、或没有读写权限", r.status);
-    if (r.status === 404) throw sErr("notfound", what + "不存在（HTTP 404）：请检查 ID 或地址", 404);
+    var srv = remoteMsg(r, 60);
+    var tail = srv ? "（" + srv + "）" : "";
+    if (r.status === 401 || r.status === 403) throw sErr("auth", "认证失败（HTTP " + r.status + "）：令牌或账号密码无效、或没有读写权限" + tail, r.status);
+    if (r.status === 404) throw sErr("notfound", what + "不存在（HTTP 404）：请检查 ID 或地址" + tail, 404);
     if (r.status === 409 || r.status === 412) throw sErr("conflict", what + "版本冲突（HTTP " + r.status + "）：远端已被其他设备更新，将重新拉取合并", r.status);
     if (r.status === 429) throw sErr("ratelimit", what + "请求过于频繁（HTTP 429），请稍后再试", 429);
-    if (r.status >= 400) throw sErr("http", what + "请求失败：HTTP " + r.status, r.status);
+    if (r.status >= 400) {
+      var e = sErr("http", what + "请求失败：HTTP " + r.status + tail, r.status);
+      e.raw = remoteMsg(r, 200);   // 完整原话写进「原始信息」一行，便于事后排查
+      throw e;
+    }
     return r;
   }
 
@@ -46874,8 +46892,10 @@
         });
       },
       put: function (snapObj) {
+        /* [sync] Gist 的 PATCH 端点不支持 If-Match 条件写：v4.38.0 加上这行后，手机端每次推送都被
+           判成无效请求（HTTP 400），改动一直卡在本地。这里不再发送条件头，并发保护交给驱动层的
+           「先读→合并→再写→回读校验」，效果一样但不会被服务端拒。GET 拿到的 etag 仅留作记录。 */
         var payload = { files: {} }, headers = hdr();
-        if (etag) headers["If-Match"] = etag;
         payload.files[SYNC_FILE] = { content: JSON.stringify(snapObj, null, 2) };
         var body = JSON.stringify(payload);
         return httpReq(api, {
